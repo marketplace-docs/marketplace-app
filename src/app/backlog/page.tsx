@@ -71,8 +71,10 @@ export default function BacklogPage() {
   const [chartGrouping, setChartGrouping] = useState<GroupingKey>('storeName');
   const { toast } = useToast();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
     const backlogDataFromStores: BacklogItem[] = initialStores.map(store => ({
         id: store.id,
         storeName: store.storeName,
@@ -103,7 +105,7 @@ export default function BacklogPage() {
     return Object.entries(grouped).map(([platform, paymentAccepted]) => ({
         platform,
         paymentAccepted
-    }));
+    })).sort((a, b) => b.paymentAccepted - a.paymentAccepted);
   }, [backlogItems]);
 
 
@@ -219,14 +221,17 @@ export default function BacklogPage() {
   }, [backlogItems, chartGrouping]);
 
   const totalMarketplaceStore = useMemo(() => {
-    const uniqueStores = new Set(initialStores.map(store => store.storeName));
-    return uniqueStores.size;
+    return initialStores.length;
   }, []);
 
   const totalPaymentAccepted = useMemo(() => {
     return backlogItems.reduce((acc, item) => acc + item.paymentAccepted, 0);
   }, [backlogItems]);
 
+
+  if (!isClient) {
+    return null;
+  }
 
   return (
     <div className="w-full space-y-6">
@@ -427,7 +432,7 @@ export default function BacklogPage() {
                             return null
                           }}
                         />
-                        <Bar dataKey="Payment Accepted" fill="hsl(232 47% 28%)" radius={[4, 4, 0, 0]}>
+                        <Bar dataKey="Payment Accepted" fill="#4f46e5" radius={[4, 4, 0, 0]}>
                             <LabelList dataKey="Payment Accepted" position="top" className="fill-foreground" fontSize={12} formatter={(value: number) => value.toLocaleString()} />
                         </Bar>
                     </BarChart>
@@ -438,5 +443,3 @@ export default function BacklogPage() {
     </div>
   );
 }
-
-    
