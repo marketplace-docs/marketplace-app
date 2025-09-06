@@ -126,7 +126,11 @@ export default function AdminReportsPage() {
 
   const handleExport = () => {
     const headers = ["Store Name", "Type", "Value"];
-    const rows = templateStoreNames.map(name => `"${name}","",""`);
+    const rows: string[] = [];
+    templateStoreNames.forEach(name => {
+        rows.push(`"${name}","Instan","0"`);
+        rows.push(`"${name}","Reguler","0"`);
+    });
     const csvContent = [headers.join(","), ...rows].join("\n");
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -146,65 +150,66 @@ export default function AdminReportsPage() {
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-  
+
     const reader = new FileReader();
     reader.onload = (e) => {
-      const text = e.target?.result as string;
-      try {
-        const lines = text.split('\n').map(line => line.trim()).filter(line => line);
-        const newEntriesList: PicklistEntry[] = [];
-        let maxId = entries.length > 0 ? Math.max(...entries.map(s => s.id)) : 0;
-        
-        const headerIndex = lines.findIndex(line => line.toLowerCase().includes('store name'));
-        const dataLines = headerIndex !== -1 ? lines.slice(headerIndex + 1) : lines;
+        const text = e.target?.result as string;
+        try {
+            const lines = text.split('\n').map(line => line.trim()).filter(line => line);
+            const newEntriesList: PicklistEntry[] = [];
+            let maxId = entries.length > 0 ? Math.max(...entries.map(s => s.id)) : 0;
 
-        dataLines.forEach((line, index) => {
-          // Use a regex to split by comma or tab, and trim whitespace from parts
-          const parts = line.split(/[\t,]/).map(s => s.trim().replace(/"/g, ''));
-          
-          if (parts.length < 3) {
-            if (parts.length === 1 && parts[0]) return; // Allow template rows with just store name
-            throw new Error(`Invalid format on line ${index + 1 + (headerIndex !== -1 ? headerIndex + 1 : 0)}: ${line}`);
-          }
-          
-          const [storeName, type, valueStr] = parts;
+            const headerIndex = lines.findIndex(line => line.toLowerCase().includes('store name'));
+            const dataLines = headerIndex !== -1 ? lines.slice(headerIndex + 1) : lines;
 
-          if (!storeName || !type || !valueStr) {
-             if(storeName && !type && !valueStr) return; // Allow empty template rows
-             throw new Error(`Invalid data on line ${index + 1 + (headerIndex !== -1 ? headerIndex + 1 : 0)}: ${line}`);
-          }
+            dataLines.forEach((line, index) => {
+                const parts = line.split(',');
+                if (parts.length < 3) {
+                     if (line) { // Only throw error for non-empty invalid lines
+                        throw new Error(`Invalid format on line ${index + 1 + (headerIndex + 1)}: ${line}`);
+                     }
+                     return; // Skip empty or invalid lines silently
+                }
+                
+                const valueStr = parts.pop()?.trim() || '';
+                const typeStr = parts.pop()?.trim() || '';
+                const storeName = parts.join(',').trim().replace(/"/g, '');
 
-          const value = parseInt(valueStr, 10);
-  
-          if ((type === 'Instan' || type === 'Reguler') && !isNaN(value)) {
-            newEntriesList.push({
-              id: ++maxId,
-              storeName,
-              type: type as 'Instan' | 'Reguler',
-              value
+                if (!storeName || !typeStr || !valueStr) {
+                    if (storeName && !typeStr && !valueStr) return; // Allow template rows with just store name
+                    throw new Error(`Invalid data on line ${index + 1 + (headerIndex + 1)}: ${line}`);
+                }
+
+                const value = parseInt(valueStr, 10);
+                const type = typeStr as 'Instan' | 'Reguler';
+
+                if ((type === 'Instan' || type === 'Reguler') && !isNaN(value)) {
+                    newEntriesList.push({
+                        id: ++maxId,
+                        storeName,
+                        type: type,
+                        value
+                    });
+                } else {
+                    throw new Error(`Invalid type or value on line ${index + 1 + (headerIndex + 1)}: ${line}`);
+                }
             });
-          } else {
-             if (type && valueStr) {
-                throw new Error(`Invalid type or value on line ${index + 1 + (headerIndex !== -1 ? headerIndex + 1 : 0)}: ${line}`);
-             }
-          }
-        });
-  
-        if (newEntriesList.length > 0) {
-          setEntries(prev => [...prev, ...newEntriesList]);
-          toast({
-              title: "Success",
-              description: `${newEntriesList.length} entries uploaded successfully.`,
-          });
+
+            if (newEntriesList.length > 0) {
+                setEntries(prev => [...prev, ...newEntriesList]);
+                toast({
+                    title: "Success",
+                    description: `${newEntriesList.length} entries uploaded successfully.`,
+                });
+            }
+
+        } catch (error: any) {
+            toast({
+                variant: "destructive",
+                title: "Upload Failed",
+                description: error.message || "An error occurred while parsing the file.",
+            });
         }
-  
-      } catch (error: any) {
-        toast({
-            variant: "destructive",
-            title: "Upload Failed",
-            description: error.message || "An error occurred while parsing the CSV file.",
-        });
-      }
     };
     reader.readAsText(file);
     if (event.target) event.target.value = '';
