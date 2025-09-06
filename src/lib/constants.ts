@@ -19,6 +19,11 @@ export const NAV_LINKS: NavLink[] = [
         icon: ListTodo,
     },
     {
+        href: '/marketplace-store',
+        label: 'Marketplace Store',
+        icon: Store,
+    },
+    {
         href: '/admin-marketplace',
         label: 'Admin Marketplace',
         icon: Store,
@@ -34,11 +39,6 @@ export const NAV_LINKS: NavLink[] = [
                 icon: FileText,
             },
         ]
-    },
-    {
-        href: '/marketplace-store',
-        label: 'Marketplace Store',
-        icon: Store,
     },
     {
         href: '/backlog',
