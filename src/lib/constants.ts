@@ -20,7 +20,7 @@ export const NAV_LINKS: NavLink[] = [
     },
     {
         href: '/marketplace-store',
-        label: 'Marketplace Store',
+        label: 'Marketplace : Store Name',
         icon: Store,
     },
     {
