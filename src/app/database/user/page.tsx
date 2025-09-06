@@ -19,7 +19,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Pencil, Trash2, Loader2, AlertCircle } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -66,35 +66,35 @@ export default function DatabaseUserPage() {
     const { toast } = useToast();
 
     const [currentPage, setCurrentPage] = useState(1);
-    const [rowsPerPage, setRowsPerPage] = useState(10); // Changed to 10 for better view
+    const [rowsPerPage, setRowsPerPage] = useState(10); 
+
+    const fetchUsers = useCallback(async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const response = await fetch('/api/users');
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.details || `Failed to fetch users: ${response.statusText}`);
+            }
+            const data = await response.json();
+            setUsers(data);
+        } catch (err: any) {
+            console.error("Fetch error:", err);
+            setError(err.message);
+            toast({
+                variant: "destructive",
+                title: "Failed to load data",
+                description: err.message,
+            });
+        } finally {
+            setLoading(false);
+        }
+    }, [toast]);
 
     useEffect(() => {
-        const fetchUsers = async () => {
-            try {
-                setLoading(true);
-                setError(null);
-                const response = await fetch('/api/users');
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.details || `Failed to fetch users: ${response.statusText}`);
-                }
-                const data = await response.json();
-                setUsers(data);
-            } catch (err: any) {
-                console.error("Fetch error:", err);
-                setError(err.message);
-                toast({
-                    variant: "destructive",
-                    title: "Failed to load data",
-                    description: err.message,
-                });
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchUsers();
-    }, [toast]);
+    }, [fetchUsers]);
 
     const totalPages = Math.ceil(users.length / rowsPerPage);
     const paginatedUsers = users.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
@@ -108,7 +108,7 @@ export default function DatabaseUserPage() {
     };
 
     const handleOpenEditDialog = (user: User) => {
-        setSelectedUser(user);
+        setSelectedUser({...user});
         setEditDialogOpen(true);
     };
 
@@ -117,26 +117,60 @@ export default function DatabaseUserPage() {
         setDeleteDialogOpen(true);
     };
 
-    const handleSaveChanges = () => {
-        // This functionality would require a PUT/PATCH API endpoint
-        if (selectedUser) {
-            setUsers(users.map(u => u.id === selectedUser.id ? selectedUser : u));
+    const handleSaveChanges = async () => {
+        if (!selectedUser) return;
+
+        try {
+            const response = await fetch(`/api/users/${selectedUser.id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: selectedUser.name,
+                    status: selectedUser.status,
+                    role: selectedUser.role,
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.details || 'Failed to update user.');
+            }
+            
+            await fetchUsers(); // Re-fetch all users to get updated data
             setEditDialogOpen(false);
             setSelectedUser(null);
-            toast({ title: "Success", description: "User has been updated locally. API integration needed to persist." });
+            toast({ title: "Success", description: "User has been updated successfully." });
+        } catch (err: any) {
+             toast({ variant: "destructive", title: "Update Failed", description: err.message });
         }
     };
 
-    const handleDeleteUser = () => {
-        // This functionality would require a DELETE API endpoint
-        if (selectedUser) {
-            setUsers(users.filter(u => u.id !== selectedUser.id));
+    const handleDeleteUser = async () => {
+        if (!selectedUser) return;
+        
+        try {
+             const response = await fetch(`/api/users/${selectedUser.id}`, {
+                method: 'DELETE',
+            });
+
+            if (!response.ok) {
+                 const errorData = await response.json();
+                throw new Error(errorData.details || 'Failed to delete user.');
+            }
+            
+            await fetchUsers();
             setDeleteDialogOpen(false);
             setSelectedUser(null);
-            toast({ variant: "destructive", title: "Success", description: "User has been deleted locally. API integration needed to persist." });
+            toast({ variant: "destructive", title: "Success", description: "User has been deleted." });
+
+            // Adjust current page if the last item on a page was deleted
             if (paginatedUsers.length === 1 && currentPage > 1) {
                 setCurrentPage(currentPage - 1);
             }
+        } catch (err: any) {
+            toast({ variant: "destructive", title: "Delete Failed", description: err.message });
         }
     };
 
