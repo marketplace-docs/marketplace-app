@@ -18,7 +18,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
   if (loading || !user) {
     return (
        <div className="flex h-screen w-full items-center justify-center">
-         <div className="text-2xl font-semibold">Loading...</div>
+         <div className="text-2xl font-semibold">Market Place..</div>
        </div>
     );
   }
