@@ -99,7 +99,7 @@ export default function MarketplaceStorePage() {
               <TableRow>
                 <TableHead className="w-[100px]">ID</TableHead>
                 <TableHead>Marketplace</TableHead>
-                <TableHead>Store Name</TableHead>
+                <TableHead>Marketplace Store</TableHead>
                 <TableHead>Name Store</TableHead>
               </TableRow>
             </TableHeader>
