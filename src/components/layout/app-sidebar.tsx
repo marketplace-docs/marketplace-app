@@ -78,10 +78,10 @@ export function AppSidebar() {
                     }}
                     className="w-full justify-between"
                   >
-                    <div className="flex items-center gap-2">
+                    <span className="flex items-center gap-2">
                       <link.icon className="h-5 w-5" />
                       <span>{link.label}</span>
-                    </div>
+                    </span>
                     <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 data-[state=open]:rotate-180 group-data-[collapsible=icon]:hidden" />
                   </SidebarMenuButton>
                 </CollapsibleTrigger>
