@@ -53,6 +53,16 @@ type PicklistEntry = {
 
 type NewEntry = Omit<PicklistEntry, 'id'>;
 
+const templateStoreNames = [
+    "Shopee Jung Saem Mool", "Shopee Amuse", "Shopee Carasun", "Shopee Ariul", "Shopee Dr G", 
+    "Shopee Im From", "Shopee COSRX", "Shopee Espoir", "Shopee Mediheal", "Shopee Keana", 
+    "Shopee Lilla Baby", "Shopee lilla", "Shopee", "Shopee Round Lab", "Shopee Speak to me", 
+    "Shopee Sukin", "Shopee Woshday", "Shopee Gemistry", "Shopee Sungboon Editor", 
+    "Shopee Derma Angel", "Shopee UIQ", "Shopee UB Mom", "Shopee Bioheal", "Lazada Cosrx", 
+    "Tiktok_lilla", "Tiktok_cosrx", "Tiktok_carasun", "Tiktok_derma_angel", 
+    "Tiktok_lilla_Baby", "Tiktok", "Tiktok_roundlab"
+];
+
 export default function AdminReportsPage() {
   const [entries, setEntries] = useState<PicklistEntry[]>([]);
   const [nama, setNama] = useState('');
@@ -112,7 +122,8 @@ export default function AdminReportsPage() {
 
   const handleExport = () => {
     const headers = ["Store Name", "Type", "Value"];
-    const csvContent = headers.join(",");
+    const rows = templateStoreNames.map(name => `"${name}","",""`);
+    const csvContent = [headers.join(","), ...rows].join("\n");
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
@@ -143,17 +154,21 @@ export default function AdminReportsPage() {
             lines.forEach((line, index) => {
               if (index === 0 && line.toLowerCase().includes('store name')) return; // Skip header
 
-              const [storeName, type, valueStr] = line.split(',').map(s => s.trim());
+              const [storeName, type, valueStr] = line.split(',').map(s => s.trim().replace(/"/g, ''));
               const value = parseInt(valueStr, 10);
 
               if (storeName && (type === 'Instan' || type === 'Reguler') && !isNaN(value)) {
                   newEntriesList.push({
                       id: ++maxId,
                       storeName,
-                      type,
+                      type: type as 'Instan' | 'Reguler',
                       value
                   });
-              } else {
+              } else if (storeName && !type && isNaN(value)) {
+                  // This handles the template case where type and value might be empty
+                  return;
+              }
+               else {
                  throw new Error(`Invalid CSV format on line ${index + 1}: ${line}`);
               }
             });
@@ -345,5 +360,3 @@ export default function AdminReportsPage() {
     </MainLayout>
   );
 }
-
-    

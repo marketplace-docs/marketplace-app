@@ -80,12 +80,10 @@ export default function BacklogPage() {
   const [chartGrouping, setChartGrouping] = useState<GroupingKey>('storeName');
   const { toast } = useToast();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const [isClient, setIsClient] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedItems, setEditedItems] = useState<Record<number, string>>({});
 
   useEffect(() => {
-    setIsClient(true);
     const backlogDataFromStores: BacklogItem[] = initialStores.map(store => ({
         id: store.id,
         storeName: store.storeName,
@@ -263,10 +261,6 @@ export default function BacklogPage() {
   const handleItemChange = (id: number, value: string) => {
     setEditedItems(prev => ({...prev, [id]: value}));
   };
-
-  if (!isClient) {
-    return null;
-  }
 
   return (
     <MainLayout>
