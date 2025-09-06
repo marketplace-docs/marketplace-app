@@ -1,17 +1,350 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+'use client';
+
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Plus,
+  Upload,
+  Download,
+  ChevronLeft,
+  ChevronRight,
+  X,
+} from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
+
+type PicklistEntry = {
+  id: number;
+  storeName: string;
+  type: 'Instan' | 'Reguler';
+  value: number; // Placeholder for the numeric value shown next to the type
+};
+
+type NewEntry = Omit<PicklistEntry, 'id'>;
 
 export default function AdminReportsPage() {
-    return (
-        <div className="w-full max-w-7xl">
-            <h1 className="text-3xl font-bold mb-6">Admin Reports</h1>
-            <Card>
-                <CardHeader>
-                    <CardTitle>Marketplace Reports</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-muted-foreground">Detailed reports for the marketplace will be displayed here.</p>
-                </CardContent>
-            </Card>
+  const [entries, setEntries] = useState<PicklistEntry[]>([]);
+  const [nama, setNama] = useState('');
+  const [shift, setShift] = useState('');
+  const [isAddDialogOpen, setAddDialogOpen] = useState(false);
+  const [newEntry, setNewEntry] = useState<Omit<NewEntry, 'type'>>({ storeName: '', value: 0});
+  const [newEntryType, setNewEntryType] = useState<'Instan' | 'Reguler'>('Instan');
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  const instanEntries = entries.filter((e) => e.type === 'Instan');
+  const regularEntries = entries.filter((e) => e.type === 'Reguler');
+
+  const totalPages = Math.ceil(Math.max(instanEntries.length, regularEntries.length) / rowsPerPage);
+  
+  const paginatedInstan = instanEntries.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+  const paginatedRegular = regularEntries.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+
+
+  const handleNextPage = () => {
+    setCurrentPage((prev) => (prev < totalPages ? prev + 1 : prev));
+  };
+
+  const handlePrevPage = () => {
+    setCurrentPage((prev) => (prev > 1 ? prev - 1 : prev));
+  };
+  
+  const handleAddEntry = () => {
+    if (!newEntry.storeName) {
+         toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Store name cannot be empty.",
+        });
+        return;
+    }
+    const newId = entries.length > 0 ? Math.max(...entries.map(e => e.id)) + 1 : 1;
+    setEntries([...entries, { id: newId, ...newEntry, type: newEntryType }]);
+    setNewEntry({ storeName: '', value: 0 });
+    setAddDialogOpen(false);
+    toast({
+        title: "Success",
+        description: "New entry added.",
+    });
+  };
+
+  const handleExport = () => {
+    const headers = ["ID", "Store Name", "Type", "Value"];
+    const csvContent = [
+        headers.join(","),
+        ...entries.map(e => [e.id, e.storeName, e.type, e.value].join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "picklist_report.csv";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({ title: "Success", description: "Report exported as CSV." });
+  };
+  
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const text = e.target?.result as string;
+        try {
+            const lines = text.split('\n').filter(line => line.trim() !== '');
+            const newEntriesList: PicklistEntry[] = [];
+            let maxId = entries.length > 0 ? Math.max(...entries.map(s => s.id)) : 0;
+            
+            lines.forEach((line, index) => {
+              if (index === 0 && line.toLowerCase().includes('store name')) return; // Skip header
+
+              const [storeName, type, valueStr] = line.split(',').map(s => s.trim());
+              const value = parseInt(valueStr, 10);
+
+              if (storeName && (type === 'Instan' || type === 'Reguler') && !isNaN(value)) {
+                  newEntriesList.push({
+                      id: ++maxId,
+                      storeName,
+                      type,
+                      value
+                  });
+              } else {
+                 throw new Error(`Invalid CSV format on line ${index + 1}: ${line}`);
+              }
+            });
+
+            setEntries(prev => [...prev, ...newEntriesList]);
+            toast({
+                title: "Success",
+                description: `${newEntriesList.length} entries uploaded successfully.`,
+            });
+
+        } catch (error: any) {
+            toast({
+                variant: "destructive",
+                title: "Upload Failed",
+                description: error.message || "An error occurred while parsing the CSV file.",
+            });
+        }
+    };
+    reader.readAsText(file);
+    if (event.target) event.target.value = '';
+  };
+
+
+  return (
+    <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-7xl relative">
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-xl font-bold">REPORT ADMIN PICKLIST</h1>
+        <Button variant="ghost" size="icon">
+          <X className="h-5 w-5" />
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4 mb-4">
+        <div className="col-span-2 bg-primary text-primary-foreground p-4 rounded-lg flex flex-col gap-2">
+            <div className="flex items-center">
+                <Label htmlFor="nama" className="w-16">NAMA</Label>
+                <Input id="nama" value={nama} onChange={e => setNama(e.target.value)} className="bg-white text-gray-900 h-8" />
+            </div>
+             <div className="flex items-center">
+                <Label htmlFor="shift" className="w-16">SHIFT</Label>
+                <Input id="shift" value={shift} onChange={e => setShift(e.target.value)} className="bg-white text-gray-900 h-8" />
+            </div>
         </div>
-    )
+        <div className="bg-primary text-primary-foreground p-4 rounded-lg flex flex-col items-center justify-center">
+            <p className="font-bold text-sm">TOTAL PROGRESS SHIFT</p>
+            <p className="text-5xl font-bold">{entries.length}</p>
+        </div>
+      </div>
+      
+      <div className="border rounded-lg overflow-hidden">
+        <div className="grid grid-cols-2">
+          {/* Instan Table */}
+          <div className="border-r">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-primary hover:bg-primary">
+                  <TableHead className="text-primary-foreground">STORE NAME</TableHead>
+                  <TableHead className="text-primary-foreground w-[120px]">INSTAN</TableHead>
+                  <TableHead className="text-right w-[60px] text-primary-foreground">
+                     <Dialog open={isAddDialogOpen} onOpenChange={setAddDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-primary-foreground hover:bg-primary/80" onClick={() => setNewEntryType('Instan')}>
+                          <Plus className="h-5 w-5" />
+                        </Button>
+                      </DialogTrigger>
+                    </Dialog>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginatedInstan.length > 0 ? (
+                  paginatedInstan.map(entry => (
+                    <TableRow key={entry.id}>
+                      <TableCell className="font-medium">{entry.storeName}</TableCell>
+                      <TableCell>{entry.value}</TableCell>
+                      <TableCell></TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
+                      No data available.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Regular Table */}
+          <div>
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-primary hover:bg-primary">
+                  <TableHead className="text-primary-foreground">STORE NAME</TableHead>
+                  <TableHead className="text-primary-foreground w-[120px]">REGULAR</TableHead>
+                   <TableHead className="text-right w-[60px] text-primary-foreground">
+                    <Dialog open={isAddDialogOpen} onOpenChange={setAddDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 text-primary-foreground hover:bg-primary/80" onClick={() => setNewEntryType('Reguler')}>
+                                <Plus className="h-5 w-5" />
+                            </Button>
+                        </DialogTrigger>
+                         <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Add New {newEntryType} Entry</DialogTitle>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                               <Input placeholder="Store Name" value={newEntry.storeName} onChange={e => setNewEntry({...newEntry, storeName: e.target.value})} />
+                               <Input type="number" placeholder="Value" value={newEntry.value} onChange={e => setNewEntry({...newEntry, value: parseInt(e.target.value) || 0})} />
+                            </div>
+                            <DialogFooter>
+                                <Button onClick={handleAddEntry}>Add Entry</Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                 {paginatedRegular.length > 0 ? (
+                  paginatedRegular.map(entry => (
+                    <TableRow key={entry.id}>
+                      <TableCell className="font-medium">{entry.storeName}</TableCell>
+                      <TableCell>{entry.value}</TableCell>
+                      <TableCell></TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
+                       No data available.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      </div>
+      
+      <div className="flex items-center justify-between py-4">
+        <div className="flex items-center space-x-2">
+            <span className="text-sm text-muted-foreground">Rows per page:</span>
+            <Select
+                value={`${rowsPerPage}`}
+                onValueChange={(value) => {
+                    setRowsPerPage(Number(value));
+                    setCurrentPage(1);
+                }}
+                >
+                <SelectTrigger className="h-8 w-[70px]">
+                    <SelectValue placeholder={rowsPerPage} />
+                </SelectTrigger>
+                <SelectContent side="top">
+                    {[10, 25, 50].map((pageSize) => (
+                    <SelectItem key={pageSize} value={`${pageSize}`}>
+                        {pageSize}
+                    </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+        </div>
+        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+            Page {totalPages > 0 ? currentPage : 0} of {totalPages}
+            <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePrevPage}
+                disabled={currentPage === 1}
+            >
+                <ChevronLeft className="h-4 w-4" />
+                <span className="sr-only">Previous</span>
+            </Button>
+            <Button
+                variant="outline"
+                size="sm"
+                onClick={handleNextPage}
+                disabled={currentPage === totalPages || totalPages === 0}
+            >
+                <span className="sr-only">Next</span>
+                <ChevronRight className="h-4 w-4" />
+            </Button>
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-2 mt-4">
+        <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
+        <Button variant="outline" onClick={handleUploadClick}><Upload className="mr-2 h-4 w-4" /> Upload CSV</Button>
+        <Button variant="outline" onClick={handleExport}><Download className="mr-2 h-4 w-4"/> Export CSV</Button>
+        <Button variant="outline">Close</Button>
+      </div>
+
+    </div>
+  );
 }
+
+    
