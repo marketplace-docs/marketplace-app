@@ -46,11 +46,6 @@ export const NAV_LINKS: NavLink[] = [
         icon: Archive,
     },
     {
-        href: '/productivity',
-        label: 'Productivity',
-        icon: BarChart3,
-    },
-    {
         href: '/reports',
         label: 'Database User',
         icon: Users,
