@@ -1,3 +1,5 @@
+'use client';
+
 import {
   Card,
   CardContent,
@@ -14,17 +16,30 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Pencil, Printer, Plus, X, ArrowUp } from 'lucide-react';
+import { Pencil, Printer, Plus, X, ArrowUp, ArrowDown } from 'lucide-react';
+import React, { useState } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
-const leaders = [
+const initialLeaders = [
   { role: 'LEADER PAGI', name: 'Arlan Testing' },
   { role: 'LEADER SORE', name: 'Nama Leader Sore' },
   { role: 'CAPTAIN PAGI', name: 'Nama Captain Pagi' },
   { role: 'CAPTAIN SORE', name: 'Nama Captain Sore' },
 ];
 
-const staff = [
+const initialStaff = [
   {
+    id: 1,
     name: 'Nova Aurelia Herman',
     job: 'Admin',
     shift: 'PAGI',
@@ -32,6 +47,7 @@ const staff = [
     status: 'REGULER',
   },
   {
+    id: 2,
     name: 'Arlan Testing 3',
     job: 'Putaway',
     shift: 'Siang',
@@ -39,6 +55,7 @@ const staff = [
     status: 'EVENT',
   },
   {
+    id: 3,
     name: 'Arlan Testing 2',
     job: 'Picker',
     shift: 'Pagi',
@@ -46,6 +63,7 @@ const staff = [
     status: 'EVENT',
   },
   {
+    id: 4,
     name: 'Arlan Testing 1',
     job: 'Packer',
     shift: 'Sore',
@@ -54,7 +72,51 @@ const staff = [
   },
 ];
 
+type Leader = (typeof initialLeaders)[0];
+type Staff = (typeof initialStaff)[0];
+type SortOrder = 'asc' | 'desc';
+
 export default function AdminMarketplacePage() {
+  const [leaders, setLeaders] = useState<Leader[]>(initialLeaders);
+  const [staff, setStaff] = useState<Staff[]>(initialStaff);
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+  const [editingLeader, setEditingLeader] = useState<Leader | null>(null);
+  const [newStaffMember, setNewStaffMember] = useState<Omit<Staff, 'id'>>({
+    name: '',
+    job: '',
+    shift: '',
+    time: '',
+    status: '',
+  });
+
+  const handleSort = () => {
+    const newSortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+    const sortedStaff = [...staff].sort((a, b) => {
+      if (a.name < b.name) return newSortOrder === 'asc' ? -1 : 1;
+      if (a.name > b.name) return newSortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+    setStaff(sortedStaff);
+    setSortOrder(newSortOrder);
+  };
+
+  const handleSaveLeader = (newName: string) => {
+    if (editingLeader) {
+      setLeaders(
+        leaders.map((l) =>
+          l.role === editingLeader.role ? { ...l, name: newName } : l
+        )
+      );
+      setEditingLeader(null);
+    }
+  };
+
+  const handleAddStaff = () => {
+    const newId = staff.length > 0 ? Math.max(...staff.map(s => s.id)) + 1 : 1;
+    setStaff([...staff, { id: newId, ...newStaffMember }]);
+    setNewStaffMember({ name: '', job: '', shift: '', time: '', status: '' });
+  };
+
   return (
     <div className="bg-white p-8 rounded-lg shadow-lg max-w-4xl mx-auto relative">
       <Button variant="ghost" size="icon" className="absolute top-4 right-4">
@@ -80,9 +142,34 @@ export default function AdminMarketplacePage() {
             >
               <div className="flex justify-between items-center mb-1">
                 <p className="text-xs text-muted-foreground">{leader.role}</p>
-                <Button variant="ghost" size="icon" className="h-6 w-6">
-                  <Pencil className="h-3 w-3" />
-                </Button>
+                 <Dialog onOpenChange={(open) => !open && setEditingLeader(null)}>
+                  <DialogTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setEditingLeader(leader)}>
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                  </DialogTrigger>
+                   {editingLeader?.role === leader.role && (
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Edit Leader/Captain</DialogTitle>
+                        <DialogDescription>
+                          Update the name for {editingLeader.role}.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="name" className="text-right">Name</Label>
+                          <Input id="name" defaultValue={editingLeader.name} className="col-span-3" 
+                            onChange={(e) => setEditingLeader({...editingLeader, name: e.target.value})}
+                          />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button onClick={() => handleSaveLeader(editingLeader.name)}>Save changes</Button>
+                      </DialogFooter>
+                    </DialogContent>
+                   )}
+                </Dialog>
               </div>
               <p className="font-semibold">{leader.name}</p>
             </div>
@@ -93,9 +180,9 @@ export default function AdminMarketplacePage() {
       <div>
         <div className="bg-primary text-primary-foreground p-3 flex justify-between items-center rounded-t-lg">
           <div className="flex items-center gap-6 font-bold">
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 cursor-pointer" onClick={handleSort}>
               <span>Name</span>
-              <ArrowUp className="h-4 w-4" />
+              {sortOrder === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
             </div>
             <span>Job</span>
             <span>Shift</span>
@@ -106,16 +193,35 @@ export default function AdminMarketplacePage() {
             <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary/80">
               <Printer className="h-5 w-5" />
             </Button>
-            <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary/80">
-              <Plus className="h-5 w-5" />
-            </Button>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary/80">
+                  <Plus className="h-5 w-5" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add New Staff</DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <Input placeholder="Name" value={newStaffMember.name} onChange={e => setNewStaffMember({...newStaffMember, name: e.target.value})} />
+                  <Input placeholder="Job" value={newStaffMember.job} onChange={e => setNewStaffMember({...newStaffMember, job: e.target.value})} />
+                  <Input placeholder="Shift" value={newStaffMember.shift} onChange={e => setNewStaffMember({...newStaffMember, shift: e.target.value})} />
+                  <Input placeholder="Time Work" value={newStaffMember.time} onChange={e => setNewStaffMember({...newStaffMember, time: e.target.value})} />
+                  <Input placeholder="Status" value={newStaffMember.status} onChange={e => setNewStaffMember({...newStaffMember, status: e.target.value})} />
+                </div>
+                <DialogFooter>
+                  <Button onClick={handleAddStaff}>Add Staff</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
         <div className="border border-t-0 rounded-b-lg">
           <Table>
             <TableBody>
-              {staff.map((person, index) => (
-                <TableRow key={index}>
+              {staff.map((person) => (
+                <TableRow key={person.id}>
                   <TableCell className="font-medium w-1/4">{person.name}</TableCell>
                   <TableCell className="w-1/6">{person.job}</TableCell>
                   <TableCell className="w-1/6">{person.shift}</TableCell>
