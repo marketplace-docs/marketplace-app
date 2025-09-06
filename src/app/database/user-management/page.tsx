@@ -161,10 +161,15 @@ export default function DatabaseUserPage() {
     
     const handleAddUser = async () => {
         try {
+            const userToAdd = { ...newUser };
+            if (!isSuperAdmin) {
+                userToAdd.role = 'Admin'; // Force role to 'Admin' if not super admin
+            }
+
             const response = await fetch('/api/users', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newUser),
+                body: JSON.stringify(userToAdd),
             });
 
             if (!response.ok) {
@@ -201,7 +206,7 @@ export default function DatabaseUserPage() {
             if (paginatedUsers.length === 1 && currentPage > 1) {
                 setCurrentPage(currentPage - 1);
             }
-        } catch (err: any) {
+        } catch (err: any) => {
             toast({ variant: "destructive", title: "Delete Failed", description: err.message });
         }
     };
@@ -446,4 +451,5 @@ export default function DatabaseUserPage() {
         </div>
       </MainLayout>
     )
-}
+
+    
