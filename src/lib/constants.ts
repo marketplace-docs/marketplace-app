@@ -1,9 +1,10 @@
-import { LayoutDashboard, ListTodo, Store, FileText, Settings, type LucideIcon } from 'lucide-react';
+import { LayoutDashboard, ListTodo, Store, FileText, Settings, type LucideIcon, Briefcase } from 'lucide-react';
 
 export type NavLink = {
     href: string;
     label: string;
     icon: LucideIcon;
+    children?: NavLink[];
 };
 
 export const NAV_LINKS: NavLink[] = [
@@ -21,6 +22,18 @@ export const NAV_LINKS: NavLink[] = [
         href: '/admin-marketplace',
         label: 'Admin Marketplace',
         icon: Store,
+        children: [
+            {
+                href: '/admin-marketplace/absensi-manpower',
+                label: 'Absensi Manpower',
+                icon: Briefcase,
+            },
+            {
+                href: '/admin-marketplace/reports',
+                label: 'Reports',
+                icon: FileText,
+            },
+        ]
     },
     {
         href: '/reports',

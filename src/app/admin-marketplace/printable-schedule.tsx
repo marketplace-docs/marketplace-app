@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import type { Leader, Staff } from './page';
+import type { Leader, Staff } from './absensi-manpower/page';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface PrintableScheduleProps {
