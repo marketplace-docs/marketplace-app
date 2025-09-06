@@ -1,3 +1,4 @@
+
 'use server';
 
 import {NextResponse} from 'next/server';
@@ -13,6 +14,26 @@ const isValidUser = (user: any): boolean => {
     ['Leader', 'Reguler', 'Event'].includes(user.status)
   );
 };
+
+export async function POST(request: Request) {
+    try {
+        const body = await request.json();
+        if (!isValidUser(body)) {
+            return NextResponse.json({ error: 'Invalid user data provided' }, { status: 400 });
+        }
+        const { name, status, role } = body;
+        const { rows } = await query(
+            'INSERT INTO users (name, status, role) VALUES ($1, $2, $3) RETURNING *',
+            [name, status, role]
+        );
+        return NextResponse.json(rows[0], { status: 201 });
+    } catch (error) {
+        console.error('API Error:', error);
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        return NextResponse.json({ error: 'Failed to create user', details: errorMessage }, { status: 500 });
+    }
+}
+
 
 export async function PATCH(
   request: Request,

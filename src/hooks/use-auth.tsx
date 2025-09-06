@@ -6,6 +6,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 type User = {
   email: string;
   name: string;
+  role: string;
 };
 
 type AuthContextType = {
@@ -40,7 +41,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for a logged-in user in localStorage
     try {
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
@@ -56,13 +56,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (credentials: { email: string; password?: string }): Promise<boolean> => {
     const lowercasedEmail = credentials.email.toLowerCase();
     if (allowedEmails.includes(lowercasedEmail) && credentials.password === validPassword) {
-        const loggedInUser: User = { 
-            email: lowercasedEmail,
-            name: formatUserName(lowercasedEmail) 
-        };
-        setUser(loggedInUser);
-        localStorage.setItem('user', JSON.stringify(loggedInUser));
-        return true;
+        try {
+            // Fetch user role from the database
+            const response = await fetch(`/api/users?email=${encodeURIComponent(lowercasedEmail)}`);
+            if (!response.ok) {
+                console.error("Failed to fetch user role, proceeding without it.");
+                 const loggedInUser: User = { 
+                    email: lowercasedEmail,
+                    name: formatUserName(lowercasedEmail),
+                    role: 'Reguler' // Default role on failure
+                };
+                setUser(loggedInUser);
+                localStorage.setItem('user', JSON.stringify(loggedInUser));
+                return true;
+            }
+            const userData = await response.json();
+            
+            const loggedInUser: User = { 
+                email: lowercasedEmail,
+                name: userData.name || formatUserName(lowercasedEmail),
+                role: userData.role || 'Reguler' // Default role if not found
+            };
+            setUser(loggedInUser);
+            localStorage.setItem('user', JSON.stringify(loggedInUser));
+            return true;
+
+        } catch (error) {
+            console.error("Error fetching user role:", error);
+             const loggedInUser: User = { 
+                email: lowercasedEmail,
+                name: formatUserName(lowercasedEmail),
+                role: 'Reguler' // Default role on fetch error
+            };
+            setUser(loggedInUser);
+            localStorage.setItem('user', JSON.stringify(loggedInUser));
+            return true;
+        }
     }
     return false;
   };

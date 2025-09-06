@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Pencil, Trash2, Loader2, AlertCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pencil, Trash2, Loader2, AlertCircle, Plus } from "lucide-react";
 import React, { useState, useEffect, useCallback } from "react";
 import {
   Dialog,
@@ -42,6 +42,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { MainLayout } from "@/components/layout/main-layout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useAuth } from "@/hooks/use-auth";
 
 
 type User = {
@@ -51,6 +52,8 @@ type User = {
     role: string;
 };
 
+type NewUser = Omit<User, 'id'>;
+
 const statusVariantMap: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
     'Leader': 'destructive',
     'Reguler': 'default',
@@ -58,16 +61,24 @@ const statusVariantMap: { [key: string]: "default" | "secondary" | "destructive"
 };
 
 export default function DatabaseUserPage() {
+    const { user: currentUser } = useAuth();
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    
+    const [isAddDialogOpen, setAddDialogOpen] = useState(false);
     const [isEditDialogOpen, setEditDialogOpen] = useState(false);
     const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    const [newUser, setNewUser] = useState<NewUser>({ name: '', status: 'Reguler', role: 'Admin' });
+
     const { toast } = useToast();
 
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10); 
+
+    const isSuperAdmin = currentUser?.role === 'Super Admin';
 
     const fetchUsers = useCallback(async () => {
         try {
@@ -139,12 +150,33 @@ export default function DatabaseUserPage() {
                 throw new Error(errorData.details || 'Failed to update user.');
             }
             
-            await fetchUsers(); // Re-fetch all users to get updated data
+            await fetchUsers();
             setEditDialogOpen(false);
             setSelectedUser(null);
             toast({ title: "Success", description: "User has been updated successfully." });
         } catch (err: any) {
              toast({ variant: "destructive", title: "Update Failed", description: err.message });
+        }
+    };
+    
+    const handleAddUser = async () => {
+        try {
+            const response = await fetch('/api/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newUser),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.details || 'Failed to add user.');
+            }
+            await fetchUsers();
+            setAddDialogOpen(false);
+            setNewUser({ name: '', status: 'Reguler', role: 'Admin' });
+            toast({ title: "Success", description: "New user added." });
+        } catch (err: any) {
+            toast({ variant: "destructive", title: "Add Failed", description: err.message });
         }
     };
 
@@ -166,7 +198,6 @@ export default function DatabaseUserPage() {
             setSelectedUser(null);
             toast({ title: "Success", description: "User has been deleted.", variant: "destructive" });
 
-            // Adjust current page if the last item on a page was deleted
             if (paginatedUsers.length === 1 && currentPage > 1) {
                 setCurrentPage(currentPage - 1);
             }
@@ -178,7 +209,59 @@ export default function DatabaseUserPage() {
     return (
       <MainLayout>
         <div className="w-full">
-            <h1 className="text-3xl font-bold mb-6">Database User</h1>
+            <div className="flex justify-between items-center mb-6">
+              <h1 className="text-3xl font-bold">Database User</h1>
+               <Dialog open={isAddDialogOpen} onOpenChange={setAddDialogOpen}>
+                    <DialogTrigger asChild>
+                        <Button>
+                            <Plus className="mr-2 h-4 w-4" /> Add User
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Add New User</DialogTitle>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                             <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="new-name" className="text-right">Name</Label>
+                                <Input id="new-name" value={newUser.name} className="col-span-3" onChange={(e) => setNewUser({ ...newUser, name: e.target.value })} />
+                            </div>
+                             <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="new-status" className="text-right">Status</Label>
+                                <Select value={newUser.status} onValueChange={(value: User['status']) => setNewUser({ ...newUser, status: value })}>
+                                    <SelectTrigger className="col-span-3">
+                                        <SelectValue placeholder="Select Status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Leader">Leader</SelectItem>
+                                        <SelectItem value="Reguler">Reguler</SelectItem>
+                                        <SelectItem value="Event">Event</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="new-role" className="text-right">Role</Label>
+                                 <Select value={newUser.role} onValueChange={(value: string) => setNewUser({ ...newUser, role: value })} disabled={!isSuperAdmin}>
+                                    <SelectTrigger className="col-span-3">
+                                        <SelectValue placeholder="Select Role" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Super Admin">Super Admin</SelectItem>
+                                        <SelectItem value="Admin">Admin</SelectItem>
+                                        <SelectItem value="Supervisor">Supervisor</SelectItem>
+                                        <SelectItem value="Captain">Captain</SelectItem>
+                                        <SelectItem value="Event Staff">Event Staff</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setAddDialogOpen(false)}>Cancel</Button>
+                            <Button onClick={handleAddUser}>Add User</Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            </div>
              {error && (
                 <Alert variant="destructive" className="mb-4">
                     <AlertCircle className="h-4 w-4" />
@@ -322,7 +405,18 @@ export default function DatabaseUserPage() {
                             </div>
                             <div className="grid grid-cols-4 items-center gap-4">
                                 <Label htmlFor="role" className="text-right">Role</Label>
-                                <Input id="role" value={selectedUser.role} className="col-span-3" onChange={(e) => setSelectedUser({ ...selectedUser, role: e.target.value })}/>
+                                 <Select value={selectedUser.role} onValueChange={(value) => setSelectedUser({ ...selectedUser, role: value })} disabled={!isSuperAdmin}>
+                                    <SelectTrigger className="col-span-3">
+                                        <SelectValue placeholder="Select Role" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Super Admin">Super Admin</SelectItem>
+                                        <SelectItem value="Admin">Admin</SelectItem>
+                                        <SelectItem value="Supervisor">Supervisor</SelectItem>
+                                        <SelectItem value="Captain">Captain</SelectItem>
+                                        <SelectItem value="Event Staff">Event Staff</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
                         </div>
                     )}
