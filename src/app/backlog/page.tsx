@@ -344,7 +344,7 @@ export default function BacklogPage() {
                                   <SelectValue placeholder={rowsPerPage} />
                               </SelectTrigger>
                               <SelectContent side="top">
-                                  {[10, 20, 50].map((pageSize) => (
+                                  {[3, 10, 20].map((pageSize) => (
                                   <SelectItem key={pageSize} value={`${pageSize}`}>
                                       {pageSize}
                                   </SelectItem>
@@ -476,7 +476,7 @@ export default function BacklogPage() {
                             return null
                           }}
                         />
-                        <Bar dataKey="Payment Accepted" fill="#4f46e5" radius={[4, 4, 0, 0]}>
+                        <Bar dataKey="Payment Accepted" fill="#6366f1" radius={[4, 4, 0, 0]}>
                             <LabelList dataKey="Payment Accepted" position="top" className="fill-foreground" fontSize={12} formatter={(value: number) => value.toLocaleString()} />
                         </Bar>
                     </BarChart>
