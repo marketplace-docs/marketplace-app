@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Pencil, Printer, Plus, ArrowUp, ArrowDown } from 'lucide-react';
+import { Pencil, Printer, Plus, ArrowUp, ArrowDown, Upload, Download } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -350,6 +350,8 @@ export default function AdminMarketplacePage() {
                                       <Input placeholder="Status" value={newStaffMember.status} readOnly disabled />
                                   </div>
                                   <DialogFooter>
+                                      <Button variant="outline"><Upload className="mr-2 h-4 w-4" /> Upload</Button>
+                                      <Button variant="outline"><Download className="mr-2 h-4 w-4" /> Export</Button>
                                       <Button onClick={handleAddStaff}>Add Staff</Button>
                                   </DialogFooter>
                                   </DialogContent>
