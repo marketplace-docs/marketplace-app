@@ -18,7 +18,7 @@ export const NAV_LINKS: NavLink[] = [
         icon: ListTodo,
     },
     {
-        href: '/inventory',
+        href: '/admin-marketplace',
         label: 'Admin Marketplace',
         icon: Package,
     },
