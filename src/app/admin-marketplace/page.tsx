@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Pencil, Printer, Plus, ArrowUp, ArrowDown, Upload, Download } from 'lucide-react';
+import { Pencil, Printer, Plus, ArrowUp, ArrowDown, Upload, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
@@ -79,6 +79,15 @@ const initialStaff = [
     time: '16:00 - 00:00',
     status: 'EVENT',
   },
+  { id: 5, name: 'Staff 5', job: 'Admin', shift: 'PAGI', time: '08:00 - 17:00', status: 'REGULER' },
+  { id: 6, name: 'Staff 6', job: 'Picker', shift: 'Sore', time: '16:00 - 00:00', status: 'EVENT' },
+  { id: 7, name: 'Staff 7', job: 'Packer', shift: 'Pagi', time: '09:00 - 17:00', status: 'EVENT' },
+  { id: 8, name: 'Staff 8', job: 'Putaway', shift: 'Siang', time: '13:00 - 21:00', status: 'EVENT' },
+  { id: 9, name: 'Staff 9', job: 'Admin', shift: 'Sore', time: '15:00 - 00:00', status: 'Event' },
+  { id: 10, name: 'Staff 10', job: 'Captain', shift: 'Pagi', time: '09:00 - 18:00', status: 'Reguler' },
+  { id: 11, name: 'Staff 11', job: 'Leader', shift: 'Sore', time: '15:00 - 00:00', status: 'Staff' },
+  { id: 12, name: 'Staff 12', job: 'Parakerja', shift: 'Pagi', time: '08:00 - 17:00', status: 'Reguler' },
+
 ];
 
 const jobSchedules = {
@@ -141,6 +150,25 @@ export default function AdminMarketplacePage() {
   const [showScroll, setShowScroll] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  const totalPages = Math.ceil(staff.length / rowsPerPage);
+  const paginatedStaff = staff.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+
+  const handleNextPage = () => {
+    setCurrentPage((prev) => (prev < totalPages ? prev + 1 : prev));
+  };
+
+  const handlePrevPage = () => {
+    setCurrentPage((prev) => (prev > 1 ? prev - 1 : prev));
+  };
+  
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [rowsPerPage]);
+
 
   useEffect(() => {
     const { job, shift } = newStaffMember;
@@ -469,7 +497,7 @@ export default function AdminMarketplacePage() {
                   </TableRow>
               </TableHeader>
               <TableBody>
-                {staff.map((person) => (
+                {paginatedStaff.map((person) => (
                   <TableRow key={person.id}>
                     <TableCell className="font-medium">{person.name}</TableCell>
                     <TableCell>{person.job}</TableCell>
@@ -481,6 +509,49 @@ export default function AdminMarketplacePage() {
                 ))}
               </TableBody>
             </Table>
+        </div>
+        <div className="flex items-center justify-end space-x-2 py-4">
+            <div className="flex-1 text-sm text-muted-foreground">
+                Page {currentPage} of {totalPages}
+            </div>
+            <div className="flex items-center space-x-2">
+                <span className="text-sm text-muted-foreground">Rows per page:</span>
+                <Select
+                    value={`${rowsPerPage}`}
+                    onValueChange={(value) => {
+                        setRowsPerPage(Number(value));
+                    }}
+                    >
+                    <SelectTrigger className="h-8 w-[70px]">
+                        <SelectValue placeholder={rowsPerPage} />
+                    </SelectTrigger>
+                    <SelectContent side="top">
+                        {[5, 10, 25, 50].map((pageSize) => (
+                        <SelectItem key={pageSize} value={`${pageSize}`}>
+                            {pageSize}
+                        </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+            <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePrevPage}
+                disabled={currentPage === 1}
+            >
+                <ChevronLeft className="h-4 w-4" />
+                <span className="sr-only">Previous</span>
+            </Button>
+            <Button
+                variant="outline"
+                size="sm"
+                onClick={handleNextPage}
+                disabled={currentPage === totalPages}
+            >
+                <span className="sr-only">Next</span>
+                <ChevronRight className="h-4 w-4" />
+            </Button>
         </div>
 
           {showScroll && (
@@ -497,5 +568,3 @@ export default function AdminMarketplacePage() {
     </>
   );
 }
-
-    
