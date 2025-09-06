@@ -14,7 +14,7 @@ export default function AppSettingsPage() {
     const { user } = useAuth();
     return (
       <MainLayout>
-        <div className="w-full max-w-7xl space-y-8">
+        <div className="w-full space-y-8">
             <h1 className="text-3xl font-bold">Settings</h1>
             
             <Card>
