@@ -233,7 +233,7 @@ export default function BacklogPage() {
   }, [backlogItems, chartGrouping]);
 
   const totalMarketplaceStore = useMemo(() => {
-    const uniqueStores = new Set(initialStores.map(s => s.storeName));
+    const uniqueStores = new Set(initialStores.map(s => s.id));
     return uniqueStores.size;
   }, []);
 
@@ -445,7 +445,7 @@ export default function BacklogPage() {
                  <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                         data={chartData}
-                        margin={{ top: 20, right: 20, left: -10, bottom: 60 }}
+                        margin={{ top: 20, right: 20, left: -10, bottom: 80 }}
                     >
                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
                         <XAxis 
@@ -456,6 +456,7 @@ export default function BacklogPage() {
                             angle={-45}
                             textAnchor="end"
                             interval={0}
+                            height={100}
                         />
                         <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12 }} allowDecimals={false}/>
                         <Tooltip
