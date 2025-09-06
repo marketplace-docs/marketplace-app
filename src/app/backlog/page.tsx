@@ -353,7 +353,7 @@ export default function BacklogPage() {
                                     <SelectValue placeholder={rowsPerPage} />
                                 </SelectTrigger>
                                 <SelectContent side="top">
-                                    {[3, 10, 20].map((pageSize) => (
+                                    {[10, 20, 30].map((pageSize) => (
                                     <SelectItem key={pageSize} value={`${pageSize}`}>
                                         {pageSize}
                                     </SelectItem>
