@@ -249,11 +249,6 @@ export default function AdminMarketplacePage() {
             </TableBody>
           </Table>
       </div>
-
-      <div className="flex justify-end gap-4 mt-8">
-        <Button variant="outline">Close</Button>
-        <Button>Save Changes</Button>
-      </div>
     </div>
   );
 }
