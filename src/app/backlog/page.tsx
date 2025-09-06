@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   Card,
   CardContent,
@@ -44,16 +44,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-
-// Adapted from marketplace-store data
-const initialStoresData = [
-  { id: 1, marketplace: 'Shopee', storeName: 'Jung Saem Mool Official Store', paymentAccepted: 150, platform: 'Mobile' },
-  { id: 2, marketplace: 'Shopee', storeName: 'Amuse Official Store', paymentAccepted: 200, platform: 'Desktop' },
-  { id: 3, marketplace: 'Shopee', storeName: 'Carasun.id Official Store', paymentAccepted: 120, platform: 'Mobile' },
-  { id: 4, marketplace: 'Lazada', storeName: 'COSRX Official Store', paymentAccepted: 300, platform: 'Desktop' },
-  { id: 25, marketplace: 'Tiktok', storeName: 'Lilla Official store', paymentAccepted: 80, platform: 'Mobile' },
-];
-
+import { useToast } from '@/hooks/use-toast';
 
 type BacklogItem = {
   id: number;
@@ -63,10 +54,16 @@ type BacklogItem = {
   platform: string;
 };
 
+type GroupingKey = "storeName" | "marketplace" | "platform";
+
 export default function BacklogPage() {
   const [backlogItems, setBacklogItems] = useState<BacklogItem[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [chartGrouping, setChartGrouping] = useState<GroupingKey>('storeName');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+
 
   const totalPages = Math.ceil(backlogItems.length / rowsPerPage);
   const paginatedItems = useMemo(() => {
@@ -87,17 +84,109 @@ export default function BacklogPage() {
   const handleFirstPage = () => setCurrentPage(1);
   const handleLastPage = () => setCurrentPage(totalPages);
 
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const text = e.target?.result as string;
+        try {
+            const lines = text.split('\n').filter(line => line.trim() !== '');
+            const newItems: BacklogItem[] = [];
+            
+            lines.forEach((line, index) => {
+              if (index === 0 && line.toLowerCase().includes('store name')) return; // Skip header
+
+              const [storeName, paymentAcceptedStr, marketplace, platform] = line.split(',').map(s => s.trim());
+              const paymentAccepted = parseInt(paymentAcceptedStr, 10);
+
+              if (storeName && !isNaN(paymentAccepted) && marketplace && platform) {
+                  newItems.push({
+                      id: Date.now() + index, // simple unique id
+                      storeName,
+                      paymentAccepted,
+                      marketplace,
+                      platform
+                  });
+              } else {
+                 throw new Error(`Invalid CSV format on line ${index + 1}: ${line}`);
+              }
+            });
+
+            setBacklogItems(prev => [...prev, ...newItems]);
+            toast({
+                title: "Success",
+                description: `${newItems.length} items uploaded successfully.`,
+            });
+
+        } catch (error: any) {
+            toast({
+                variant: "destructive",
+                title: "Upload Failed",
+                description: error.message || "An error occurred while parsing the CSV file.",
+            });
+        }
+    };
+    reader.readAsText(file);
+    if (event.target) event.target.value = '';
+  };
+
+  const handleExport = () => {
+    if (backlogItems.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "No Data",
+        description: "There is no data to export.",
+      });
+      return;
+    }
+    const headers = ["Store Name", "Payment Accepted", "Marketplace", "Platform"];
+    const csvContent = [
+        headers.join(","),
+        ...backlogItems.map(item => [item.storeName, item.paymentAccepted, item.marketplace, item.platform].join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `backlog_data_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({ title: "Success", description: "Backlog data exported as CSV." });
+  };
+
+
   const chartData = useMemo(() => {
-    // This is placeholder logic. You might want to aggregate data differently.
-    return backlogItems.map(item => ({
-      name: item.storeName.slice(0, 15) + '...', // Shorten name for chart labels
-      'Marketplace Store': 1, // Dummy data
-      'Payment Accepted': item.paymentAccepted,
+    const groupedData: { [key: string]: number } = {};
+
+    backlogItems.forEach(item => {
+      const key = item[chartGrouping];
+      if (!groupedData[key]) {
+        groupedData[key] = 0;
+      }
+      groupedData[key] += item.paymentAccepted;
+    });
+
+    return Object.entries(groupedData).map(([name, value]) => ({
+      name: name.slice(0, 25) + (name.length > 25 ? '...' : ''), // Shorten name for chart labels
+      'Payment Accepted': value,
     }));
+  }, [backlogItems, chartGrouping]);
+
+  const totalMarketplaceStore = useMemo(() => {
+    const uniqueStores = new Set(backlogItems.map(item => item.storeName));
+    return uniqueStores.size;
   }, [backlogItems]);
 
-  const totalMarketplaceStore = backlogItems.length;
-  const totalPaymentAccepted = backlogItems.reduce((acc, item) => acc + item.paymentAccepted, 0);
+  const totalPaymentAccepted = useMemo(() => {
+    return backlogItems.reduce((acc, item) => acc + item.paymentAccepted, 0);
+  }, [backlogItems]);
 
 
   return (
@@ -115,10 +204,11 @@ export default function BacklogPage() {
               <Button variant="outline">
                 <Pencil className="mr-2 h-4 w-4" /> Edit
               </Button>
-              <Button variant="outline">
+              <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
+              <Button variant="outline" onClick={handleUploadClick}>
                 <Upload className="mr-2 h-4 w-4" /> Upload
               </Button>
-              <Button variant="default">
+              <Button variant="default" onClick={handleExport}>
                 <Download className="mr-2 h-4 w-4" /> Export
               </Button>
             </div>
@@ -203,9 +293,9 @@ export default function BacklogPage() {
            <div className="flex justify-between items-start">
             <div>
               <CardTitle>Grafik Backlog</CardTitle>
-              <Tabs defaultValue="store-name" className="mt-2">
+              <Tabs defaultValue="storeName" onValueChange={(value) => setChartGrouping(value as GroupingKey)} className="mt-2">
                 <TabsList>
-                  <TabsTrigger value="store-name">Store Name</TabsTrigger>
+                  <TabsTrigger value="storeName">Store Name</TabsTrigger>
                   <TabsTrigger value="marketplace">Marketplace</TabsTrigger>
                   <TabsTrigger value="platform">Platform</TabsTrigger>
                 </TabsList>
@@ -218,7 +308,7 @@ export default function BacklogPage() {
                 </div>
                  <div className="flex items-center justify-between p-2 border rounded-md border-green-500 text-green-600">
                     <span>Payment Accepted</span>
-                    <span className="font-bold ml-4">{totalPaymentAccepted}</span>
+                    <span className="font-bold ml-4">{totalPaymentAccepted.toLocaleString()}</span>
                 </div>
             </div>
           </div>
@@ -232,19 +322,24 @@ export default function BacklogPage() {
                     >
                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
                         <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
-                        <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12 }}/>
+                        <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12 }} allowDecimals={false}/>
                         <Tooltip
-                          content={({ active, payload }) => {
+                          content={({ active, payload, label }) => {
                             if (active && payload && payload.length) {
                               return (
                                 <div className="rounded-lg border bg-background p-2 shadow-sm">
-                                  <div className="grid grid-cols-2 gap-2">
+                                  <div className="grid grid-cols-1 gap-2">
+                                     <div className="flex flex-col">
+                                       <span className="text-[0.8rem] font-bold">
+                                         {label}
+                                       </span>
+                                     </div>
                                     <div className="flex flex-col">
                                       <span className="text-[0.70rem] uppercase text-muted-foreground">
                                         Payment Accepted
                                       </span>
-                                      <span className="font-bold text-muted-foreground">
-                                        {payload[0].value}
+                                      <span className="font-bold text-foreground">
+                                        {payload[0].value?.toLocaleString()}
                                       </span>
                                     </div>
                                   </div>
@@ -254,8 +349,7 @@ export default function BacklogPage() {
                             return null
                           }}
                         />
-                        <Legend />
-                        <Bar dataKey="Payment Accepted" fill="#82ca9d" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="Payment Accepted" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                     </BarChart>
                 </ResponsiveContainer>
             </div>
@@ -264,4 +358,3 @@ export default function BacklogPage() {
     </div>
   );
 }
-
