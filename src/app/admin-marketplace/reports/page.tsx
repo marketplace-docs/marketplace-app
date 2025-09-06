@@ -92,6 +92,10 @@ export default function AdminReportsPage() {
     setIsClient(true);
   }, []);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [rowsPerPage]);
+
   const handleNextPage = () => {
     setCurrentPage((prev) => (prev < totalPages ? prev + 1 : prev));
   };
@@ -151,18 +155,23 @@ export default function AdminReportsPage() {
         const newEntriesList: PicklistEntry[] = [];
         let maxId = entries.length > 0 ? Math.max(...entries.map(s => s.id)) : 0;
         
-        // Find header index
         const headerIndex = lines.findIndex(line => line.toLowerCase().includes('store name'));
-        // Start processing from the line after the header, or from the start if no header
         const dataLines = headerIndex !== -1 ? lines.slice(headerIndex + 1) : lines;
 
         dataLines.forEach((line, index) => {
-          const [storeName, type, valueStr] = line.split(',').map(s => s.trim().replace(/"/g, ''));
+          // Use a regex to split by comma or tab, and trim whitespace from parts
+          const parts = line.split(/[\t,]/).map(s => s.trim().replace(/"/g, ''));
           
+          if (parts.length < 3) {
+            if (parts.length === 1 && parts[0]) return; // Allow template rows with just store name
+            throw new Error(`Invalid format on line ${index + 1 + (headerIndex !== -1 ? headerIndex + 1 : 0)}: ${line}`);
+          }
+          
+          const [storeName, type, valueStr] = parts;
+
           if (!storeName || !type || !valueStr) {
-            // Allow empty template rows
-            if(storeName && !type && !valueStr) return;
-            throw new Error(`Invalid CSV format on line ${index + 1 + (headerIndex !== -1 ? headerIndex + 1 : 0)}: ${line}`);
+             if(storeName && !type && !valueStr) return; // Allow empty template rows
+             throw new Error(`Invalid data on line ${index + 1 + (headerIndex !== -1 ? headerIndex + 1 : 0)}: ${line}`);
           }
 
           const value = parseInt(valueStr, 10);
@@ -175,7 +184,6 @@ export default function AdminReportsPage() {
               value
             });
           } else {
-             // If type is not Instan/Reguler or value is not a number, but they are not empty, it's an error
              if (type && valueStr) {
                 throw new Error(`Invalid type or value on line ${index + 1 + (headerIndex !== -1 ? headerIndex + 1 : 0)}: ${line}`);
              }
@@ -234,7 +242,7 @@ export default function AdminReportsPage() {
                     </div>
                     <DialogFooter>
                         <div className="flex-1">
-                            <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
+                            <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv,.txt" className="hidden" />
                             <Button variant="outline" onClick={handleUploadClick}><Upload className="mr-2 h-4 w-4" /> Upload</Button>
                             <Button variant="outline" onClick={handleExport} className="ml-2"><Download className="mr-2 h-4 w-4"/> Export</Button>
                         </div>
@@ -259,7 +267,7 @@ export default function AdminReportsPage() {
           </div>
           <div className="bg-primary text-primary-foreground p-4 rounded-lg flex flex-col items-center justify-center">
               <p className="font-bold text-sm">TOTAL PROGRESS SHIFT</p>
-              <p className="text-5xl font-bold">{entries.length}</p>
+              <p className="text-5xl font-bold">{entries.reduce((acc, entry) => acc + entry.value, 0)}</p>
           </div>
         </div>
         
@@ -371,3 +379,5 @@ export default function AdminReportsPage() {
     </MainLayout>
   );
 }
+
+    
