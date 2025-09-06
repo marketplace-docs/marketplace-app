@@ -15,7 +15,7 @@ import { NAV_LINKS, type NavLink } from '@/lib/constants';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '../ui/button';
-import { MoreHorizontal, ChevronsLeft } from 'lucide-react';
+import { MoreHorizontal, ChevronsLeft, ChevronDown } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import { useState } from 'react';
 
@@ -45,14 +45,18 @@ function AppLogo() {
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const { toggleSidebar } = useSidebar();
+  const { toggleSidebar, state } = useSidebar();
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(
     NAV_LINKS.find(link => link.children?.some(child => pathname.startsWith(child.href)))?.label || null
   );
 
   const isActive = (link: NavLink) => {
     if (link.href === '/') return pathname === '/';
-    return pathname.startsWith(link.href);
+    // For parent links, check if the current path starts with the link's href.
+    if (link.children) {
+      return pathname.startsWith(link.href);
+    }
+    return pathname === link.href;
   };
 
   const handleSubmenuToggle = (label: string) => {
@@ -60,12 +64,14 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar>
+    <Sidebar collapsible="icon">
       <SidebarHeader className="border-b">
         <div className="flex w-full items-center justify-between p-2">
-            <AppLogo />
-            <Button variant="ghost" size="icon" className="md:hidden" onClick={toggleSidebar}>
-                <ChevronsLeft />
+            <div className="group-data-[collapsible=icon]:hidden">
+              <AppLogo />
+            </div>
+            <Button variant="ghost" size="icon" onClick={toggleSidebar}>
+                <ChevronsLeft className="duration-200 group-data-[state=expanded]:rotate-0 group-data-[state=collapsed]:rotate-180" />
             </Button>
         </div>
       </SidebarHeader>
@@ -82,10 +88,13 @@ export function AppSidebar() {
                       side: 'right',
                       align: 'center',
                     }}
-                    className="w-full"
+                    className="w-full justify-between"
                   >
-                    <link.icon className="h-5 w-5" />
-                    <span>{link.label}</span>
+                    <div className="flex items-center gap-2">
+                      <link.icon className="h-5 w-5" />
+                      <span>{link.label}</span>
+                    </div>
+                    <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 data-[state=open]:rotate-180 group-data-[collapsible=icon]:hidden" />
                   </SidebarMenuButton>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
