@@ -10,12 +10,23 @@ type User = {
 
 type AuthContextType = {
   user: User | null;
-  login: (credentials: { email: string }) => Promise<boolean>;
+  login: (credentials: { email: string; password?: string }) => Promise<boolean>;
   logout: () => void;
   loading: boolean;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const allowedEmails = [
+    'arlan saputra@marketplace.com',
+    'rudi.setiawan@marketplace.com',
+    'nova.aurelia@marketplace.com',
+    'nurul.tanzilla@marketplace.com',
+    'regina.rifana@marketplace.com'
+];
+
+const validPassword = 'Marketplace@123!!!';
+
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -35,12 +46,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   }, []);
 
-  const login = async (credentials: { email: string }): Promise<boolean> => {
-    // Simulate a real auth flow
-    const loggedInUser = { email: credentials.email };
-    setUser(loggedInUser);
-    localStorage.setItem('user', JSON.stringify(loggedInUser));
-    return true; 
+  const login = async (credentials: { email: string; password?: string }): Promise<boolean> => {
+    if (allowedEmails.includes(credentials.email.toLowerCase()) && credentials.password === validPassword) {
+        const loggedInUser = { email: credentials.email };
+        setUser(loggedInUser);
+        localStorage.setItem('user', JSON.stringify(loggedInUser));
+        return true;
+    }
+    return false;
   };
 
   const logout = () => {

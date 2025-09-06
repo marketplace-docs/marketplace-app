@@ -32,7 +32,7 @@ export default function LoginPage() {
     setLoading(true);
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
-    const success = await login({ email });
+    const success = await login({ email, password });
     setLoading(false);
     if (success) {
       router.push('/dashboard');
@@ -53,7 +53,7 @@ export default function LoginPage() {
                  <Store className="h-10 w-10 text-primary" />
             </div>
           <CardTitle className="text-2xl">Market Place</CardTitle>
-          <CardDescription>Enter your credentials to access your account</CardDescription>
+          <CardDescription>Welcome to Fulfillment Marketplace Dashboard</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
