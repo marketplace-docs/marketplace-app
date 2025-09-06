@@ -36,6 +36,7 @@ export default function LoginPage() {
     const success = await login({ email, password });
     setLoading(false);
     if (success) {
+      sessionStorage.setItem('showLoginSuccessToast', 'true');
       router.push('/dashboard');
     } else {
       toast({
