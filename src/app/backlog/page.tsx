@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -218,7 +219,8 @@ export default function BacklogPage() {
   }, [backlogItems, chartGrouping]);
 
   const totalMarketplaceStore = useMemo(() => {
-    return initialStores.length;
+    const uniqueStores = new Set(initialStores.map(store => store.storeName));
+    return uniqueStores.size;
   }, []);
 
   const totalPaymentAccepted = useMemo(() => {
@@ -425,7 +427,7 @@ export default function BacklogPage() {
                             return null
                           }}
                         />
-                        <Bar dataKey="Payment Accepted" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]}>
+                        <Bar dataKey="Payment Accepted" fill="hsl(232 47% 28%)" radius={[4, 4, 0, 0]}>
                             <LabelList dataKey="Payment Accepted" position="top" className="fill-foreground" fontSize={12} formatter={(value: number) => value.toLocaleString()} />
                         </Bar>
                     </BarChart>
@@ -436,3 +438,5 @@ export default function BacklogPage() {
     </div>
   );
 }
+
+    
