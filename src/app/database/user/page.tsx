@@ -139,7 +139,7 @@ export default function DatabaseUserPage() {
 
     return (
       <MainLayout>
-        <div className="w-full max-w-7xl">
+        <div className="w-full">
             <h1 className="text-3xl font-bold mb-6">Database User</h1>
             <Card>
                 <CardHeader>
@@ -289,3 +289,5 @@ export default function DatabaseUserPage() {
       </MainLayout>
     )
 }
+
+    

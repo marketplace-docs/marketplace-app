@@ -179,7 +179,7 @@ export default function AdminReportsPage() {
 
   return (
     <MainLayout>
-      <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-7xl relative">
+      <div className="bg-white p-6 rounded-lg shadow-lg w-full relative">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-xl font-bold">REPORT ADMIN PICKLIST</h1>
           {isClient && (
@@ -345,3 +345,5 @@ export default function AdminReportsPage() {
     </MainLayout>
   );
 }
+
+    

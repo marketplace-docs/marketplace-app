@@ -343,7 +343,7 @@ export default function AbsensiManpowerPage() {
       <div id="printable-schedule" className="hidden print:block">
         <PrintableSchedule leaders={leaders} staff={staff} />
       </div>
-      <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-7xl print:hidden">
+      <div className="bg-white p-8 rounded-lg shadow-lg w-full print:hidden">
         <div className="mb-6">
           <h1 className="text-2xl font-bold">Absensi Manpower</h1>
           <div className="text-muted-foreground flex items-center gap-2">
@@ -604,3 +604,5 @@ export default function AbsensiManpowerPage() {
     </MainLayout>
   );
 }
+
+    
