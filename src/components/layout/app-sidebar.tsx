@@ -15,30 +15,18 @@ import { NAV_LINKS, type NavLink } from '@/lib/constants';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '../ui/button';
-import { MoreHorizontal, ChevronsLeft, ChevronDown } from 'lucide-react';
+import { MoreHorizontal, ChevronsLeft, ChevronDown, Store } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import { useState } from 'react';
 
 function AppLogo() {
   return (
     <Link href="/" className="flex items-center gap-2 font-bold text-lg">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className="h-6 w-6 text-red-500"
-      >
-        <path d="M21 10.9999C21 11.5522 20.5523 11.9999 20 11.9999L4 11.9999C3.44772 11.9999 3 11.5522 3 10.9999C3 10.4476 3.44772 9.99994 4 9.99994L20 9.99994C20.5523 9.99994 21 10.4476 21 10.9999Z" />
-        <path d="M18 16L18 4" />
-        <path d="M13 16L13 4" />
-        <path d="M8 16L8 4" />
-      </svg>
-      <span className="text-red-500">Market</span>
-      <span className="text-red-500">Place</span>
+      <Store
+        className="h-6 w-6 text-primary"
+      />
+      <span className="text-primary">Market</span>
+      <span className="text-primary">Place</span>
     </Link>
   );
 }
