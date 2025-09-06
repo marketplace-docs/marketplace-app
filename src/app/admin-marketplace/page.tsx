@@ -15,8 +15,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Pencil, Printer, Plus, X, ArrowUp, ArrowDown } from 'lucide-react';
-import React, { useState } from 'react';
+import { Pencil, Printer, Plus, ArrowUp, ArrowDown } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -89,6 +89,24 @@ export default function AdminMarketplacePage() {
     time: '',
     status: '',
   });
+  const [showScroll, setShowScroll] = useState(false);
+
+  const checkScrollTop = () => {
+    if (!showScroll && window.pageYOffset > 400){
+      setShowScroll(true)
+    } else if (showScroll && window.pageYOffset <= 400){
+      setShowScroll(false)
+    }
+  };
+
+  const scrollTop = () =>{
+    window.scrollTo({top: 0, behavior: 'smooth'});
+  };
+
+  useEffect(() => {
+    window.addEventListener('scroll', checkScrollTop)
+    return () => window.removeEventListener('scroll', checkScrollTop)
+  }, [showScroll]);
 
   const handleSort = () => {
     const newSortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
@@ -132,10 +150,6 @@ export default function AdminMarketplacePage() {
 
   return (
     <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-7xl relative">
-      <Button variant="ghost" size="icon" className="absolute top-4 right-4">
-        <X className="h-5 w-5" />
-      </Button>
-
       <div className="mb-6">
         <h1 className="text-2xl font-bold">FULFILLMENT MARKETPLACE</h1>
         <p className="text-muted-foreground">
@@ -249,6 +263,17 @@ export default function AdminMarketplacePage() {
             </TableBody>
           </Table>
       </div>
+
+        {showScroll && (
+            <Button
+            onClick={scrollTop}
+            variant="ghost"
+            size="icon"
+            className="fixed bottom-10 right-10 h-12 w-12 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90"
+            >
+            <ArrowUp className="h-6 w-6" />
+            </Button>
+        )}
     </div>
   );
 }
