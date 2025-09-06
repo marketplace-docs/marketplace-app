@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Pencil, Printer, Plus, ArrowUp, ArrowDown, Upload, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Pencil, Printer, Plus, ArrowUp, ArrowDown, Upload, Download, ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
@@ -37,6 +37,11 @@ import {
 } from '@/components/ui/select';
 import { PrintableSchedule } from '../printable-schedule';
 import { useToast } from '@/hooks/use-toast';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { DateRange } from 'react-day-picker';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 
 const initialLeaders = [
@@ -118,6 +123,11 @@ export default function AbsensiManpowerPage() {
   const [showScroll, setShowScroll] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  const [date, setDate] = React.useState<DateRange | undefined>({
+    from: new Date(),
+    to: new Date(),
+  });
 
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -330,9 +340,45 @@ export default function AbsensiManpowerPage() {
       <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-7xl print:hidden">
         <div className="mb-6">
           <h1 className="text-2xl font-bold">Absensi Manpower</h1>
-          <p className="text-muted-foreground">
-            Jadwal Marketplace, 31 Agustus 2025
-          </p>
+          <div className="text-muted-foreground flex items-center gap-2">
+            <span>Jadwal Marketplace,</span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  id="date"
+                  variant={"outline"}
+                  className={cn(
+                    "w-[240px] justify-start text-left font-normal",
+                    !date && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {date?.from ? (
+                    date.to ? (
+                      <>
+                        {format(date.from, "LLL dd, y")} -{" "}
+                        {format(date.to, "LLL dd, y")}
+                      </>
+                    ) : (
+                      format(date.from, "LLL dd, y")
+                    )
+                  ) : (
+                    <span>Pick a date</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  defaultMonth={date?.from}
+                  selected={date}
+                  onSelect={setDate}
+                  numberOfMonths={2}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
 
         <Card className="mb-6">
@@ -542,3 +588,5 @@ export default function AbsensiManpowerPage() {
     </>
   );
 }
+
+    
