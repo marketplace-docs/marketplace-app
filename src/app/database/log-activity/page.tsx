@@ -30,17 +30,19 @@ type LogEntry = {
     details: string;
 };
 
+const today = new Date().toISOString().split('T')[0];
+
 const initialLogs: LogEntry[] = [
-    { id: 1, user: 'Arlan Saputra', action: 'Login', date: '2024-07-29 08:00:15', details: 'User logged in successfully.' },
-    { id: 2, user: 'Rudi Setiawan', action: 'Update User', date: '2024-07-29 08:10:22', details: 'Updated role for user "Diki Mauli" to Captain.' },
-    { id: 3, user: 'Admin System', action: 'Automatic Backup', date: '2024-07-29 09:00:00', details: 'Database backup completed successfully.' },
-    { id: 4, user: 'Nova Aurelia', action: 'Add Staff', date: '2024-07-29 09:05:45', details: 'Added 5 new staff members via CSV upload.' },
-    { id: 5, user: 'Nurul Tanzilla', action: 'Export Report', date: '2024-07-29 09:30:11', details: 'Exported "Admin Picklist Report".' },
-    { id: 6, user: 'Arlan Saputra', action: 'Update Schedule', date: '2024-07-29 10:00:00', details: 'Updated name for LEADER PAGI.' },
-    { id: 7, user: 'Regina Rifana', action: 'Delete User', date: '2024-07-29 10:15:30', details: 'Deleted user "Old User".' },
-    { id: 8, user: 'Rudi Setiawan', action: 'Edit Backlog', date: '2024-07-29 11:00:50', details: 'Updated payment accepted for "Shopee Jung Saem Mool".' },
-    { id: 9, user: 'Arlan Saputra', action: 'Logout', date: '2024-07-29 11:30:00', details: 'User logged out.' },
-    { id: 10, user: 'Nova Aurelia', action: 'Login', date: '2024-07-29 12:00:10', details: 'User logged in successfully.' },
+    { id: 1, user: 'Arlan Saputra', action: 'Login', date: `${today} 08:00:15`, details: 'User logged in successfully.' },
+    { id: 2, user: 'Rudi Setiawan', action: 'Update User', date: `${today} 08:10:22`, details: 'Updated role for user "Diki Mauli" to Captain.' },
+    { id: 3, user: 'Admin System', action: 'Automatic Backup', date: `${today} 09:00:00`, details: 'Database backup completed successfully.' },
+    { id: 4, user: 'Nova Aurelia', action: 'Add Staff', date: `${today} 09:05:45`, details: 'Added 5 new staff members via CSV upload.' },
+    { id: 5, user: 'Nurul Tanzilla', action: 'Export Report', date: `${today} 09:30:11`, details: 'Exported "Admin Picklist Report".' },
+    { id: 6, user: 'Arlan Saputra', action: 'Update Schedule', date: `${today} 10:00:00`, details: 'Updated name for LEADER PAGI.' },
+    { id: 7, user: 'Regina Rifana', action: 'Delete User', date: `${today} 10:15:30`, details: 'Deleted user "Old User".' },
+    { id: 8, user: 'Rudi Setiawan', action: 'Edit Backlog', date: `${today} 11:00:50`, details: 'Updated payment accepted for "Shopee Jung Saem Mool".' },
+    { id: 9, user: 'Arlan Saputra', action: 'Logout', date: `${today} 11:30:00`, details: 'User logged out.' },
+    { id: 10, user: 'Nova Aurelia', action: 'Login', date: `${today} 12:00:10`, details: 'User logged in successfully.' },
 ];
 
 export default function LogActivityPage() {
