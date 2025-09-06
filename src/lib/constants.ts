@@ -1,4 +1,4 @@
-import { LayoutDashboard, ListTodo, Package, FileText, Settings, type LucideIcon } from 'lucide-react';
+import { LayoutDashboard, ListTodo, Store, FileText, Settings, type LucideIcon } from 'lucide-react';
 
 export type NavLink = {
     href: string;
@@ -20,7 +20,7 @@ export const NAV_LINKS: NavLink[] = [
     {
         href: '/admin-marketplace',
         label: 'Admin Marketplace',
-        icon: Package,
+        icon: Store,
     },
     {
         href: '/reports',
