@@ -26,6 +26,7 @@ import {
   Pencil,
   ChevronsLeft,
   ChevronsRight,
+  Save,
 } from 'lucide-react';
 import {
   Select,
@@ -48,6 +49,7 @@ import {
 } from 'recharts';
 import { useToast } from '@/hooks/use-toast';
 import { initialStores } from '@/lib/data';
+import { Input } from '@/components/ui/input';
 
 type BacklogItem = {
   id: number;
@@ -72,6 +74,8 @@ export default function BacklogPage() {
   const { toast } = useToast();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [isClient, setIsClient] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedItems, setEditedItems] = useState<Record<number, string>>({});
 
   useEffect(() => {
     setIsClient(true);
@@ -221,13 +225,30 @@ export default function BacklogPage() {
   }, [backlogItems, chartGrouping]);
 
   const totalMarketplaceStore = useMemo(() => {
-    return initialStores.length;
+    const uniqueStores = new Set(initialStores.map(s => s.storeName));
+    return uniqueStores.size;
   }, []);
 
   const totalPaymentAccepted = useMemo(() => {
     return backlogItems.reduce((acc, item) => acc + item.paymentAccepted, 0);
   }, [backlogItems]);
 
+  const handleEditToggle = () => {
+    if (isEditing) {
+      // Save changes
+      const updatedBacklogItems = backlogItems.map(item => 
+        editedItems[item.id] ? { ...item, storeName: editedItems[item.id] } : item
+      );
+      setBacklogItems(updatedBacklogItems);
+      setEditedItems({});
+      toast({ title: "Success", description: "Store names have been updated." });
+    }
+    setIsEditing(!isEditing);
+  };
+
+  const handleItemChange = (id: number, value: string) => {
+    setEditedItems(prev => ({...prev, [id]: value}));
+  };
 
   if (!isClient) {
     return null;
@@ -241,6 +262,10 @@ export default function BacklogPage() {
             <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
             <Button variant="outline" onClick={handleUploadClick}>
                 <Upload className="mr-2 h-4 w-4" /> Import
+            </Button>
+            <Button variant="outline" onClick={handleEditToggle}>
+              {isEditing ? <Save className="mr-2 h-4 w-4" /> : <Pencil className="mr-2 h-4 w-4" />}
+              {isEditing ? 'Save' : 'Edit'}
             </Button>
             <Button variant="default" onClick={handleExport}>
                 <Download className="mr-2 h-4 w-4" /> Export
@@ -270,7 +295,17 @@ export default function BacklogPage() {
                           {paginatedItems.length > 0 ? (
                           paginatedItems.map((item) => (
                               <TableRow key={item.id}>
-                              <TableCell className="font-medium">{item.storeName}</TableCell>
+                               <TableCell className="font-medium">
+                                {isEditing ? (
+                                  <Input 
+                                    value={editedItems[item.id] ?? item.storeName} 
+                                    onChange={(e) => handleItemChange(item.id, e.target.value)} 
+                                    className="h-8"
+                                  />
+                                ) : (
+                                  item.storeName
+                                )}
+                              </TableCell>
                               <TableCell>{item.paymentAccepted}</TableCell>
                               <TableCell>{item.marketplace}</TableCell>
                               <TableCell>{item.platform}</TableCell>
