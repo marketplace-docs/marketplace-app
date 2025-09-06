@@ -82,3 +82,22 @@
     @apply bg-background text-foreground;
   }
 }
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-schedule, #printable-schedule * {
+    visibility: visible;
+  }
+  #printable-schedule {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+  @page {
+    size: auto;
+    margin: 0.5in;
+  }
+}
