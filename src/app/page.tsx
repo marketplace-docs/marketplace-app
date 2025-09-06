@@ -17,8 +17,8 @@ export default function Home() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center h-full">
-        <div className="flex flex-col items-center animate-pulse">
-            <Store className="w-24 h-24 text-primary mb-4" />
+        <div className="flex flex-col items-center">
+            <Store className="w-24 h-24 text-primary mb-4 animate-spin" />
             <span className="text-2xl font-bold text-primary">Marketplace</span>
         </div>
       </div>
