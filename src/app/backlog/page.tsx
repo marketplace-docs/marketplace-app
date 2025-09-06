@@ -235,13 +235,19 @@ export default function BacklogPage() {
 
   const handleEditToggle = () => {
     if (isEditing) {
-      // Save changes
-      const updatedBacklogItems = backlogItems.map(item => 
-        editedItems[item.id] ? { ...item, storeName: editedItems[item.id] } : item
-      );
+      const updatedBacklogItems = backlogItems.map(item => {
+        const editedValue = editedItems[item.id];
+        if (editedValue !== undefined) {
+          const newPaymentAccepted = parseInt(editedValue, 10);
+          if (!isNaN(newPaymentAccepted)) {
+            return { ...item, paymentAccepted: newPaymentAccepted };
+          }
+        }
+        return item;
+      });
       setBacklogItems(updatedBacklogItems);
       setEditedItems({});
-      toast({ title: "Success", description: "Store names have been updated." });
+      toast({ title: "Success", description: "Payment accepted values have been updated." });
     }
     setIsEditing(!isEditing);
   };
@@ -296,17 +302,20 @@ export default function BacklogPage() {
                           paginatedItems.map((item) => (
                               <TableRow key={item.id}>
                                <TableCell className="font-medium">
+                                {item.storeName}
+                              </TableCell>
+                              <TableCell>
                                 {isEditing ? (
                                   <Input 
-                                    value={editedItems[item.id] ?? item.storeName} 
+                                    type="number"
+                                    value={editedItems[item.id] ?? item.paymentAccepted} 
                                     onChange={(e) => handleItemChange(item.id, e.target.value)} 
                                     className="h-8"
                                   />
                                 ) : (
-                                  item.storeName
+                                  item.paymentAccepted
                                 )}
                               </TableCell>
-                              <TableCell>{item.paymentAccepted}</TableCell>
                               <TableCell>{item.marketplace}</TableCell>
                               <TableCell>{item.platform}</TableCell>
                               </TableRow>
