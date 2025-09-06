@@ -18,7 +18,7 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const allowedEmails = [
-    'arlan saputra@marketplace.com',
+    'arlan.saputra@marketplace.com',
     'rudi.setiawan@marketplace.com',
     'nova.aurelia@marketplace.com',
     'nurul.tanzilla@marketplace.com',
