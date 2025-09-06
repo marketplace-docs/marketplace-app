@@ -36,6 +36,11 @@ export const NAV_LINKS: NavLink[] = [
         ]
     },
     {
+        href: '/marketplace-store',
+        label: 'Marketplace Store',
+        icon: Store,
+    },
+    {
         href: '/reports',
         label: 'Database User',
         icon: Users,
