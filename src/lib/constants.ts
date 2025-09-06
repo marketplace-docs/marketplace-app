@@ -22,6 +22,13 @@ export const NAV_LINKS: NavLink[] = [
         href: '/marketplace-store',
         label: 'Marketplace',
         icon: Store,
+        children: [
+            {
+                href: '/marketplace-store',
+                label: 'Store Name',
+                icon: Store,
+            }
+        ]
     },
     {
         href: '/admin-marketplace',
