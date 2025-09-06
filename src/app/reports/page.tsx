@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -140,7 +141,7 @@ export default function DatabaseUserPage() {
             <h1 className="text-3xl font-bold mb-6">Database User</h1>
             <Card>
                 <CardHeader>
-                    <CardTitle>User Management</CardTitle>
+                    <CardTitle>Marketplace Team Work</CardTitle>
                     <CardDescription>A list of all the users in the system.</CardDescription>
                 </CardHeader>
                 <CardContent>
