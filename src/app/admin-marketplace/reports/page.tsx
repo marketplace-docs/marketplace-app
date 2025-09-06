@@ -142,50 +142,61 @@ export default function AdminReportsPage() {
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
+  
     const reader = new FileReader();
     reader.onload = (e) => {
-        const text = e.target?.result as string;
-        try {
-            const lines = text.split('\n').filter(line => line.trim() !== '');
-            const newEntriesList: PicklistEntry[] = [];
-            let maxId = entries.length > 0 ? Math.max(...entries.map(s => s.id)) : 0;
-            
-            lines.forEach((line, index) => {
-              if (index === 0 && line.toLowerCase().includes('store name')) return; // Skip header
+      const text = e.target?.result as string;
+      try {
+        const lines = text.split('\n').map(line => line.trim()).filter(line => line);
+        const newEntriesList: PicklistEntry[] = [];
+        let maxId = entries.length > 0 ? Math.max(...entries.map(s => s.id)) : 0;
+        
+        // Find header index
+        const headerIndex = lines.findIndex(line => line.toLowerCase().includes('store name'));
+        // Start processing from the line after the header, or from the start if no header
+        const dataLines = headerIndex !== -1 ? lines.slice(headerIndex + 1) : lines;
 
-              const [storeName, type, valueStr] = line.split(',').map(s => s.trim().replace(/"/g, ''));
-              const value = parseInt(valueStr, 10);
+        dataLines.forEach((line, index) => {
+          const [storeName, type, valueStr] = line.split(',').map(s => s.trim().replace(/"/g, ''));
+          
+          if (!storeName || !type || !valueStr) {
+            // Allow empty template rows
+            if(storeName && !type && !valueStr) return;
+            throw new Error(`Invalid CSV format on line ${index + 1 + (headerIndex !== -1 ? headerIndex + 1 : 0)}: ${line}`);
+          }
 
-              if (storeName && (type === 'Instan' || type === 'Reguler') && !isNaN(value)) {
-                  newEntriesList.push({
-                      id: ++maxId,
-                      storeName,
-                      type: type as 'Instan' | 'Reguler',
-                      value
-                  });
-              } else if (storeName && !type && isNaN(value)) {
-                  // This handles the template case where type and value might be empty
-                  return;
-              }
-               else {
-                 throw new Error(`Invalid CSV format on line ${index + 1}: ${line}`);
-              }
+          const value = parseInt(valueStr, 10);
+  
+          if ((type === 'Instan' || type === 'Reguler') && !isNaN(value)) {
+            newEntriesList.push({
+              id: ++maxId,
+              storeName,
+              type: type as 'Instan' | 'Reguler',
+              value
             });
-
-            setEntries(prev => [...prev, ...newEntriesList]);
-            toast({
-                title: "Success",
-                description: `${newEntriesList.length} entries uploaded successfully.`,
-            });
-
-        } catch (error: any) {
-            toast({
-                variant: "destructive",
-                title: "Upload Failed",
-                description: error.message || "An error occurred while parsing the CSV file.",
-            });
+          } else {
+             // If type is not Instan/Reguler or value is not a number, but they are not empty, it's an error
+             if (type && valueStr) {
+                throw new Error(`Invalid type or value on line ${index + 1 + (headerIndex !== -1 ? headerIndex + 1 : 0)}: ${line}`);
+             }
+          }
+        });
+  
+        if (newEntriesList.length > 0) {
+          setEntries(prev => [...prev, ...newEntriesList]);
+          toast({
+              title: "Success",
+              description: `${newEntriesList.length} entries uploaded successfully.`,
+          });
         }
+  
+      } catch (error: any) {
+        toast({
+            variant: "destructive",
+            title: "Upload Failed",
+            description: error.message || "An error occurred while parsing the CSV file.",
+        });
+      }
     };
     reader.readAsText(file);
     if (event.target) event.target.value = '';
