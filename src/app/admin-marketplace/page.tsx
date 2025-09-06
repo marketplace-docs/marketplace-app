@@ -82,18 +82,22 @@ const jobSchedules = {
   Admin: {
     Pagi: { time: '08:00 - 17:00', status: 'Reguler' },
     Sore: { time: '15:00 - 00:00', status: 'Event' },
+    Siang: { time: '13:00 - 22:00', status: 'Reguler' },
   },
   Captain: {
     Pagi: { time: '09:00 - 18:00', status: 'Reguler' },
     Sore: { time: '15:00 - 00:00', status: 'Event' },
+    Siang: { time: '13:00 - 22:00', status: 'Reguler' },
   },
   Picker: {
     Pagi: { time: '08:00 - 16:00', status: 'Event' },
     Sore: { time: '16:00 - 00:00', status: 'Event' },
+    Siang: { time: '13:00 - 22:00', status: 'Reguler' },
   },
   Packer: {
     Pagi: { time: '09:00 - 17:00', status: 'Event' },
     Sore: { time: '16:00 - 00:00', status: 'Event' },
+    Siang: { time: '13:00 - 22:00', status: 'Reguler' },
   },
   Putaway: {
     Pagi: { time: '09:00 - 17:00', status: 'Event' },
@@ -106,7 +110,6 @@ const jobSchedules = {
   },
   Parakerja: {
     Pagi: { time: '08:00 - 17:00', status: 'Reguler' },
-    // Note: Two 'Pagi' shifts for Parakerja, using the first one.
   },
 };
 
@@ -258,7 +261,6 @@ export default function AdminMarketplacePage() {
                 </div>
               </div>
               <DialogFooter>
-                <Button onClick={handleSaveLeader}>Save changes</Button>
               </DialogFooter>
             </DialogContent>
         )}
