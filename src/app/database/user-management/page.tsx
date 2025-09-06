@@ -187,14 +187,14 @@ export default function DatabaseUserPage() {
 
     const handleDeleteUser = async () => {
         if (!selectedUser) return;
-        
+
         try {
-             const response = await fetch(`/api/users/${selectedUser.id}`, {
+            const response = await fetch(`/api/users/${selectedUser.id}`, {
                 method: 'DELETE',
             });
 
             if (!response.ok) {
-                 const errorData = await response.json();
+                const errorData = await response.json();
                 throw new Error(errorData.details || 'Failed to delete user.');
             }
             
@@ -452,5 +452,3 @@ export default function DatabaseUserPage() {
       </MainLayout>
     )
 }
-
-    
