@@ -218,9 +218,8 @@ export default function BacklogPage() {
   }, [backlogItems, chartGrouping]);
 
   const totalMarketplaceStore = useMemo(() => {
-    const uniqueStores = new Set(backlogItems.map(item => item.storeName));
-    return uniqueStores.size;
-  }, [backlogItems]);
+    return initialStores.length;
+  }, []);
 
   const totalPaymentAccepted = useMemo(() => {
     return backlogItems.reduce((acc, item) => acc + item.paymentAccepted, 0);
