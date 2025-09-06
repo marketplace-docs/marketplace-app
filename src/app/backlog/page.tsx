@@ -228,7 +228,7 @@ export default function BacklogPage() {
 
 
   return (
-    <div className="w-full max-w-7xl space-y-6">
+    <div className="w-full space-y-6">
        <div className="flex justify-between items-center">
         <div>
             <h1 className="text-2xl font-bold mb-2">Backlog Marketplace</h1>
