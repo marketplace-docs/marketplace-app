@@ -163,7 +163,7 @@ export default function DatabaseUserPage() {
             await fetchUsers();
             setDeleteDialogOpen(false);
             setSelectedUser(null);
-            toast({ variant: "destructive", title: "Success", description: "User has been deleted." });
+            toast({ title: "Success", description: "User has been deleted.", variant: "destructive" });
 
             // Adjust current page if the last item on a page was deleted
             if (paginatedUsers.length === 1 && currentPage > 1) {
@@ -339,7 +339,7 @@ export default function DatabaseUserPage() {
                         <DialogTitle>Are you sure?</DialogTitle>
                         <DialogDescription>
                             This action cannot be undone. This will permanently delete the user <span className="font-semibold">{selectedUser?.name}</span>.
-                        </Description>
+                        </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
