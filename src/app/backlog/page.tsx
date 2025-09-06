@@ -45,23 +45,33 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { useToast } from '@/hooks/use-toast';
+import { initialStores } from '@/lib/data'; // Mengimpor data dari sumber data terpusat
 
 type BacklogItem = {
   id: number;
   storeName: string;
-  paymentAccepted: number;
+  paymentAccepted: number; // Ini akan kita buat datanya secara acak untuk contoh
   marketplace: string;
-  platform: string;
+  platform: string; // Ini akan kita ambil dari marketplace
 };
 
 type GroupingKey = "storeName" | "marketplace" | "platform";
 
+// Mengubah data toko menjadi format backlog
+const backlogDataFromStores: BacklogItem[] = initialStores.map(store => ({
+    id: store.id,
+    storeName: store.storeName,
+    // Menambahkan data paymentAccepted secara acak untuk keperluan visualisasi
+    paymentAccepted: Math.floor(Math.random() * 500) + 50, 
+    marketplace: store.marketplace,
+    platform: store.marketplace, // Menggunakan marketplace sebagai platform untuk contoh
+}));
+
 export default function BacklogPage() {
-  const [backlogItems, setBacklogItems] = useState<BacklogItem[]>([]);
+  const [backlogItems, setBacklogItems] = useState<BacklogItem[]>(backlogDataFromStores);
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [chartGrouping, setChartGrouping] = useState<GroupingKey>('storeName');
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
 
@@ -83,58 +93,6 @@ export default function BacklogPage() {
   
   const handleFirstPage = () => setCurrentPage(1);
   const handleLastPage = () => setCurrentPage(totalPages);
-
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const text = e.target?.result as string;
-        try {
-            const lines = text.split('\n').filter(line => line.trim() !== '');
-            const newItems: BacklogItem[] = [];
-            
-            lines.forEach((line, index) => {
-              if (index === 0 && line.toLowerCase().includes('store name')) return; // Skip header
-
-              const [storeName, paymentAcceptedStr, marketplace, platform] = line.split(',').map(s => s.trim());
-              const paymentAccepted = parseInt(paymentAcceptedStr, 10);
-
-              if (storeName && !isNaN(paymentAccepted) && marketplace && platform) {
-                  newItems.push({
-                      id: Date.now() + index, // simple unique id
-                      storeName,
-                      paymentAccepted,
-                      marketplace,
-                      platform
-                  });
-              } else {
-                 throw new Error(`Invalid CSV format on line ${index + 1}: ${line}`);
-              }
-            });
-
-            setBacklogItems(prev => [...prev, ...newItems]);
-            toast({
-                title: "Success",
-                description: `${newItems.length} items uploaded successfully.`,
-            });
-
-        } catch (error: any) {
-            toast({
-                variant: "destructive",
-                title: "Upload Failed",
-                description: error.message || "An error occurred while parsing the CSV file.",
-            });
-        }
-    };
-    reader.readAsText(file);
-    if (event.target) event.target.value = '';
-  };
 
   const handleExport = () => {
     if (backlogItems.length === 0) {
@@ -209,10 +167,6 @@ export default function BacklogPage() {
               <Button variant="outline">
                 <Pencil className="mr-2 h-4 w-4" /> Edit
               </Button>
-              <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
-              <Button variant="outline" onClick={handleUploadClick}>
-                <Upload className="mr-2 h-4 w-4" /> Upload
-              </Button>
               <Button variant="default" onClick={handleExport}>
                 <Download className="mr-2 h-4 w-4" /> Export
               </Button>
@@ -243,7 +197,7 @@ export default function BacklogPage() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                      No backlog data. Please upload a CSV.
+                      No backlog data available.
                     </TableCell>
                   </TableRow>
                 )}
@@ -363,5 +317,3 @@ export default function BacklogPage() {
     </div>
   );
 }
-
-    
