@@ -187,7 +187,7 @@ export default function AdminReportsPage() {
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Add New Entry</DialogTitle>
+                    <DialogTitle>Add Data</DialogTitle>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                     <Input placeholder="Store Name" value={newEntry.storeName} onChange={e => setNewEntry({...newEntry, storeName: e.target.value})} />
@@ -209,7 +209,7 @@ export default function AdminReportsPage() {
                         <Button variant="outline" onClick={handleExport} className="ml-2"><Download className="mr-2 h-4 w-4"/> Export</Button>
                     </div>
                     <Button variant="outline" onClick={() => setAddDialogOpen(false)}>Close</Button>
-                    <Button onClick={handleAddEntry}>Add Entry</Button>
+                    <Button onClick={handleAddEntry}>Submit</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
