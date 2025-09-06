@@ -153,11 +153,16 @@ export default function BacklogPage() {
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
+    if (link.href) {
+        URL.revokeObjectURL(link.href);
+    }
+    const url = URL.createObjectURL(blob);
+    link.href = url;
     link.download = `backlog_data_${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
     toast({ title: "Success", description: "Backlog data exported as CSV." });
   };
 
@@ -358,3 +363,5 @@ export default function BacklogPage() {
     </div>
   );
 }
+
+    
