@@ -46,6 +46,7 @@ import {
   Legend,
   ResponsiveContainer,
   LabelList,
+  Cell,
 } from 'recharts';
 import { useToast } from '@/hooks/use-toast';
 import { initialStores } from '@/lib/data';
@@ -64,6 +65,12 @@ type GroupingKey = "storeName" | "marketplace" | "platform";
 type DetailStoreData = {
     platform: string;
     paymentAccepted: number;
+};
+
+const marketplaceColors: { [key: string]: string } = {
+  'Shopee': '#F97316', // Orange
+  'Lazada': '#2563EB', // Blue
+  'Tiktok': '#000000', // Black
 };
 
 export default function BacklogPage() {
@@ -208,19 +215,20 @@ export default function BacklogPage() {
 
 
   const chartData = useMemo(() => {
-    const groupedData: { [key: string]: number } = {};
-
+    const groupedData: { [key: string]: { value: number; platform: string } } = {};
+  
     backlogItems.forEach(item => {
       const key = item[chartGrouping];
       if (!groupedData[key]) {
-        groupedData[key] = 0;
+        groupedData[key] = { value: 0, platform: item.platform };
       }
-      groupedData[key] += item.paymentAccepted;
+      groupedData[key].value += item.paymentAccepted;
     });
-
-    return Object.entries(groupedData).map(([name, value]) => ({
+  
+    return Object.entries(groupedData).map(([name, data]) => ({
       name: name,
-      'Payment Accepted': value,
+      'Payment Accepted': data.value,
+      fill: marketplaceColors[data.platform] || '#6366f1',
     }));
   }, [backlogItems, chartGrouping]);
 
@@ -476,7 +484,10 @@ export default function BacklogPage() {
                             return null
                           }}
                         />
-                        <Bar dataKey="Payment Accepted" fill="#6366f1" radius={[4, 4, 0, 0]}>
+                        <Bar dataKey="Payment Accepted" radius={[4, 4, 0, 0]}>
+                            {chartData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.fill} />
+                            ))}
                             <LabelList dataKey="Payment Accepted" position="top" className="fill-foreground" fontSize={12} formatter={(value: number) => value.toLocaleString()} />
                         </Bar>
                     </BarChart>
