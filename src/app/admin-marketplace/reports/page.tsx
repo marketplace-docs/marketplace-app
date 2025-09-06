@@ -22,9 +22,8 @@ import {
   Download,
   ChevronLeft,
   ChevronRight,
-  X,
 } from 'lucide-react';
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -76,6 +75,11 @@ export default function AdminReportsPage() {
   const paginatedInstan = instanEntries.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
   const paginatedRegular = regularEntries.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const handleNextPage = () => {
     setCurrentPage((prev) => (prev < totalPages ? prev + 1 : prev));
@@ -179,40 +183,42 @@ export default function AdminReportsPage() {
     <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-7xl relative">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-xl font-bold">REPORT ADMIN PICKLIST</h1>
-        <Dialog open={isAddDialogOpen} onOpenChange={setAddDialogOpen}>
-            <DialogTrigger asChild>
-                <Button>
-                    <Plus className="mr-2 h-4 w-4" /> Add Entry
-                </Button>
-            </DialogTrigger>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Add Data</DialogTitle>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                    <Input placeholder="Store Name" value={newEntry.storeName} onChange={e => setNewEntry({...newEntry, storeName: e.target.value})} />
-                    <Select value={newEntryType} onValueChange={(value: 'Instan' | 'Reguler') => setNewEntryType(value)}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select Type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="Instan">Instan</SelectItem>
-                            <SelectItem value="Reguler">Reguler</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <Input type="number" placeholder="Value" value={newEntryValue || ''} onChange={e => setNewEntryValue(parseInt(e.target.value) || 0)} />
-                </div>
-                <DialogFooter>
-                    <div className="flex-1">
-                        <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
-                        <Button variant="outline" onClick={handleUploadClick}><Upload className="mr-2 h-4 w-4" /> Upload</Button>
-                        <Button variant="outline" onClick={handleExport} className="ml-2"><Download className="mr-2 h-4 w-4"/> Export</Button>
-                    </div>
-                    <Button variant="outline" onClick={() => setAddDialogOpen(false)}>Close</Button>
-                    <Button onClick={handleAddEntry}>Submit</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+        {isClient && (
+          <Dialog open={isAddDialogOpen} onOpenChange={setAddDialogOpen}>
+              <DialogTrigger asChild>
+                  <Button>
+                      <Plus className="mr-2 h-4 w-4" /> Add Entry
+                  </Button>
+              </DialogTrigger>
+              <DialogContent>
+                  <DialogHeader>
+                      <DialogTitle>Add Data</DialogTitle>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                      <Input placeholder="Store Name" value={newEntry.storeName} onChange={e => setNewEntry({...newEntry, storeName: e.target.value})} />
+                      <Select value={newEntryType} onValueChange={(value: 'Instan' | 'Reguler') => setNewEntryType(value)}>
+                          <SelectTrigger>
+                              <SelectValue placeholder="Select Type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                              <SelectItem value="Instan">Instan</SelectItem>
+                              <SelectItem value="Reguler">Reguler</SelectItem>
+                          </SelectContent>
+                      </Select>
+                      <Input type="number" placeholder="Value" value={newEntryValue || ''} onChange={e => setNewEntryValue(parseInt(e.target.value) || 0)} />
+                  </div>
+                  <DialogFooter>
+                      <div className="flex-1">
+                          <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
+                          <Button variant="outline" onClick={handleUploadClick}><Upload className="mr-2 h-4 w-4" /> Upload</Button>
+                          <Button variant="outline" onClick={handleExport} className="ml-2"><Download className="mr-2 h-4 w-4"/> Export</Button>
+                      </div>
+                      <Button variant="outline" onClick={() => setAddDialogOpen(false)}>Close</Button>
+                      <Button onClick={handleAddEntry}>Submit</Button>
+                  </DialogFooter>
+              </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <div className="grid grid-cols-3 gap-4 mb-4">
@@ -339,5 +345,3 @@ export default function AdminReportsPage() {
     </div>
   );
 }
-
-    
