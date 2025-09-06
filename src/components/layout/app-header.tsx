@@ -32,17 +32,27 @@ import Link from "next/link"
 import React from "react"
 import { useAuth } from "@/hooks/use-auth"
 import { useRouter } from "next/navigation"
+import { Avatar, AvatarFallback } from "../ui/avatar"
 
 export function AppHeader() {
   const pathname = usePathname()
   const segments = pathname.split("/").filter(Boolean)
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const router = useRouter();
 
   const handleLogout = () => {
     logout();
     router.push('/login');
   }
+  
+  const getInitials = (name: string = "") => {
+    return name
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase();
+  };
+
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
@@ -86,11 +96,19 @@ export function AppHeader() {
       </div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="icon" className="overflow-hidden rounded-full">
-            <CircleUser className="h-5 w-5" />
+          <Button variant="ghost" className="relative h-10 w-auto px-2 gap-2">
+            <div className="flex flex-col items-end">
+                <span className="font-semibold text-sm">{user?.name}</span>
+                <span className="text-xs text-muted-foreground">{user?.email}</span>
+            </div>
+            <Avatar className="h-8 w-8">
+                 <AvatarFallback className="bg-primary text-primary-foreground">
+                    {getInitials(user?.name)}
+                </AvatarFallback>
+            </Avatar>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel>My Account</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild>

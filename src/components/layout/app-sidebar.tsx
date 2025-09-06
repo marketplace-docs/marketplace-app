@@ -64,7 +64,7 @@ export function AppSidebar() {
             </Button>
         </div>
       </SidebarHeader>
-      <SidebarMenu className="p-4">
+      <SidebarMenu className="flex-1 p-4">
         {NAV_LINKS.map((link) => (
           <SidebarMenuItem key={link.href}>
             {link.children ? (
@@ -117,18 +117,6 @@ export function AppSidebar() {
           </SidebarMenuItem>
         ))}
       </SidebarMenu>
-      <SidebarFooter className="mt-auto p-4">
-        <div className="flex items-center justify-center gap-2 rounded-lg bg-muted p-3">
-          <div className="h-10 w-10 rounded-full bg-primary" />
-          <div className="flex-1 space-y-1 text-sm group-data-[collapsible=icon]:hidden">
-            <p className="font-semibold">Admin User</p>
-            <p className="text-muted-foreground">admin@market.place</p>
-          </div>
-          <Button variant="ghost" size="icon" className="h-6 w-6 group-data-[collapsible=icon]:hidden">
-            <MoreHorizontal className="h-4 w-4"/>
-          </Button>
-        </div>
-      </SidebarFooter>
     </Sidebar>
   );
 }
