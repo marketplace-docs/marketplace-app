@@ -11,7 +11,7 @@ import { Separator } from "@/components/ui/separator";
 
 export default function SettingsPage() {
     return (
-        <div className="w-full max-w-4xl space-y-8">
+        <div className="w-full max-w-7xl space-y-8">
             <h1 className="text-3xl font-bold">Settings</h1>
             
             <Card>
