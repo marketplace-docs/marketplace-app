@@ -136,7 +136,7 @@ export default function DatabaseUserPage() {
     };
 
     return (
-        <div className="w-full max-w-4xl">
+        <div className="w-full max-w-7xl">
             <h1 className="text-3xl font-bold mb-6">Database User</h1>
             <Card>
                 <CardHeader>
