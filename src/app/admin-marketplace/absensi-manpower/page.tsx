@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -162,22 +163,26 @@ export default function AbsensiManpowerPage() {
     }
   }, [newStaffMember.job, newStaffMember.shift]);
 
-  const checkScrollTop = () => {
-    if (!showScroll && window.pageYOffset > 400){
-      setShowScroll(true)
-    } else if (showScroll && window.pageYOffset <= 400){
-      setShowScroll(false)
+  const checkScroll = () => {
+    if (window.pageYOffset > 100) {
+      setShowScroll(true);
+    } else {
+      setShowScroll(false);
     }
   };
 
-  const scrollTop = () =>{
-    window.scrollTo({top: 0, behavior: 'smooth'});
+  const scrollTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const scrollBottom = () => {
+    window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
   };
 
   useEffect(() => {
-    window.addEventListener('scroll', checkScrollTop)
-    return () => window.removeEventListener('scroll', checkScrollTop)
-  }, [showScroll]);
+    window.addEventListener('scroll', checkScroll);
+    return () => window.removeEventListener('scroll', checkScroll);
+  }, []);
 
   const handleSort = () => {
     const newSortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
@@ -575,14 +580,24 @@ export default function AbsensiManpowerPage() {
         </div>
 
           {showScroll && (
+            <div className="fixed bottom-10 right-10 flex flex-col gap-2">
               <Button
-              onClick={scrollTop}
-              variant="ghost"
-              size="icon"
-              className="fixed bottom-10 right-10 h-12 w-12 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90"
+                onClick={scrollTop}
+                variant="ghost"
+                size="icon"
+                className="h-12 w-12 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90"
               >
-              <ArrowUp className="h-6 w-6" />
+                <ArrowUp className="h-6 w-6" />
               </Button>
+              <Button
+                onClick={scrollBottom}
+                variant="ghost"
+                size="icon"
+                className="h-12 w-12 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90"
+              >
+                <ArrowDown className="h-6 w-6" />
+              </Button>
+            </div>
           )}
       </div>
     </>
