@@ -139,7 +139,7 @@ export default function BacklogPage() {
     });
 
     return Object.entries(groupedData).map(([name, value]) => ({
-      name: name.slice(0, 25) + (name.length > 25 ? '...' : ''), // Shorten name for chart labels
+      name: name,
       'Payment Accepted': value,
     }));
   }, [backlogItems, chartGrouping]);
@@ -275,14 +275,22 @@ export default function BacklogPage() {
           </div>
         </CardHeader>
         <CardContent>
-            <div className="h-[300px] w-full">
+            <div className="h-[350px] w-full">
                  <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                         data={chartData}
-                        margin={{ top: 20, right: 20, left: -10, bottom: 5 }}
+                        margin={{ top: 20, right: 20, left: -10, bottom: 60 }}
                     >
                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                        <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
+                        <XAxis 
+                            dataKey="name" 
+                            tickLine={false} 
+                            axisLine={false} 
+                            tick={{ fontSize: 12 }} 
+                            angle={-45}
+                            textAnchor="end"
+                            interval={0}
+                        />
                         <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12 }} allowDecimals={false}/>
                         <Tooltip
                           content={({ active, payload, label }) => {
@@ -311,7 +319,7 @@ export default function BacklogPage() {
                           }}
                         />
                         <Bar dataKey="Payment Accepted" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]}>
-                            <LabelList dataKey="Payment Accepted" position="top" className="fill-foreground" fontSize={12} />
+                            <LabelList dataKey="Payment Accepted" position="top" className="fill-foreground" fontSize={12} formatter={(value: number) => value.toLocaleString()} />
                         </Bar>
                     </BarChart>
                 </ResponsiveContainer>
