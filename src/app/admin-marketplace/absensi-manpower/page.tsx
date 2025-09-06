@@ -126,10 +126,14 @@ export default function AbsensiManpowerPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  const [date, setDate] = React.useState<DateRange | undefined>({
-    from: new Date(),
-    to: new Date(),
-  });
+  const [date, setDate] = React.useState<DateRange | undefined>();
+
+  useEffect(() => {
+    setDate({
+      from: new Date(),
+      to: new Date(),
+    });
+  }, []);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -604,5 +608,3 @@ export default function AbsensiManpowerPage() {
     </MainLayout>
   );
 }
-
-    
