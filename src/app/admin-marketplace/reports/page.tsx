@@ -111,20 +111,17 @@ export default function AdminReportsPage() {
   };
 
   const handleExport = () => {
-    const headers = ["ID", "Store Name", "Type", "Value"];
-    const csvContent = [
-        headers.join(","),
-        ...entries.map(e => [e.id, e.storeName, e.type, e.value].join(","))
-    ].join("\n");
+    const headers = ["Store Name", "Type", "Value"];
+    const csvContent = headers.join(",");
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = "picklist_report.csv";
+    link.download = "picklist_report_template.csv";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast({ title: "Success", description: "Report exported as CSV." });
+    toast({ title: "Success", description: "Report template exported as CSV." });
   };
   
   const handleUploadClick = () => {
