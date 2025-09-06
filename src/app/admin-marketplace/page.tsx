@@ -16,7 +16,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Pencil, Printer, Plus, ArrowUp, ArrowDown, Upload, Download } from 'lucide-react';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -36,6 +36,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { PrintableSchedule } from './printable-schedule';
+import { useToast } from '@/hooks/use-toast';
+
 
 const initialLeaders = [
   { role: 'LEADER PAGI', name: 'Arlan Testing' },
@@ -137,6 +139,8 @@ export default function AdminMarketplacePage() {
     status: '',
   });
   const [showScroll, setShowScroll] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     const { job, shift } = newStaffMember;
@@ -199,14 +203,21 @@ export default function AdminMarketplacePage() {
 
   const handleAddStaff = () => {
     if (Object.values(newStaffMember).some(val => val.trim() === '')) {
-      // Basic validation
-      alert("Please fill all staff fields.");
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Please fill all staff fields.",
+      });
       return;
     }
     const newId = staff.length > 0 ? Math.max(...staff.map(s => s.id)) + 1 : 1;
     setStaff([...staff, { id: newId, ...newStaffMember }]);
     setNewStaffMember({ name: '', job: '', shift: '', time: '', status: '' });
     setAddStaffDialogOpen(false);
+    toast({
+        title: "Success",
+        description: "New staff member added.",
+    });
   };
 
   const getAvailableShifts = (job: string): string[] => {
@@ -218,6 +229,102 @@ export default function AdminMarketplacePage() {
     setPrintDialogOpen(false);
     setTimeout(() => window.print(), 100);
   };
+  
+  const handleExport = () => {
+    const headers = ["Role/Job", "Name", "Shift", "Time Work", "Status"];
+    
+    const leaderRows = leaders.map(l => [l.role, l.name, "", "", ""]);
+    const staffRows = staff.map(s => [s.job, s.name, s.shift, s.time, s.status]);
+    
+    const csvContent = [
+        "Leaders & Captains",
+        headers.slice(0, 2).join(","),
+        ...leaderRows.map(row => row.slice(0, 2).join(",")),
+        "",
+        "Staff",
+        headers.join(","),
+        ...staffRows.map(row => row.join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    if (link.href) {
+        URL.revokeObjectURL(link.href);
+    }
+    link.href = URL.createObjectURL(blob);
+    link.download = `schedule_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({
+      title: "Success",
+      description: "Schedule exported as CSV.",
+    });
+  };
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+  
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const text = e.target?.result as string;
+        try {
+            const lines = text.split('\n').filter(line => line.trim() !== '');
+            const newStaffList: Staff[] = [];
+            let maxId = staff.length > 0 ? Math.max(...staff.map(s => s.id)) : 0;
+            
+            lines.forEach((line, index) => {
+              if (index === 0 && line.toLowerCase().includes('name')) return; // Skip header
+
+              const [name, job, shift] = line.split(',').map(s => s.trim());
+
+              if (name && job && shift) {
+                const jobKey = job as Job;
+                const schedule = (jobSchedules[jobKey] as any)?.[shift];
+                if (schedule) {
+                    newStaffList.push({
+                        id: ++maxId,
+                        name,
+                        job: jobKey,
+                        shift,
+                        time: schedule.time,
+                        status: schedule.status
+                    });
+                } else {
+                    throw new Error(`Invalid job/shift combination on line ${index + 1}: ${line}`);
+                }
+              } else {
+                 throw new Error(`Invalid CSV format on line ${index + 1}: ${line}`);
+              }
+            });
+
+            setStaff(prevStaff => [...prevStaff, ...newStaffList]);
+            setAddStaffDialogOpen(false);
+            toast({
+                title: "Success",
+                description: `${newStaffList.length} staff members uploaded successfully.`,
+            });
+
+        } catch (error: any) {
+            toast({
+                variant: "destructive",
+                title: "Upload Failed",
+                description: error.message || "An error occurred while parsing the CSV file.",
+            });
+        }
+    };
+    reader.readAsText(file);
+    // Reset file input
+    if (event.target) {
+        event.target.value = '';
+    }
+  };
+
 
   return (
     <>
@@ -350,8 +457,9 @@ export default function AdminMarketplacePage() {
                                       <Input placeholder="Status" value={newStaffMember.status} readOnly disabled />
                                   </div>
                                   <DialogFooter>
-                                      <Button variant="outline"><Upload className="mr-2 h-4 w-4" /> Upload</Button>
-                                      <Button variant="outline"><Download className="mr-2 h-4 w-4" /> Export</Button>
+                                      <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
+                                      <Button variant="outline" onClick={handleUploadClick}><Upload className="mr-2 h-4 w-4" /> Upload</Button>
+                                      <Button variant="outline" onClick={handleExport}><Download className="mr-2 h-4 w-4" /> Export</Button>
                                       <Button onClick={handleAddStaff}>Add Staff</Button>
                                   </DialogFooter>
                                   </DialogContent>
@@ -389,3 +497,5 @@ export default function AdminMarketplacePage() {
     </>
   );
 }
+
+    
