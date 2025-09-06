@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -45,34 +45,35 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { useToast } from '@/hooks/use-toast';
-import { initialStores } from '@/lib/data'; // Mengimpor data dari sumber data terpusat
+import { initialStores } from '@/lib/data';
 
 type BacklogItem = {
   id: number;
   storeName: string;
-  paymentAccepted: number; // Ini akan kita buat datanya secara acak untuk contoh
+  paymentAccepted: number;
   marketplace: string;
-  platform: string; // Ini akan kita ambil dari marketplace
+  platform: string;
 };
 
 type GroupingKey = "storeName" | "marketplace" | "platform";
 
-// Mengubah data toko menjadi format backlog
-const backlogDataFromStores: BacklogItem[] = initialStores.map(store => ({
-    id: store.id,
-    storeName: store.storeName,
-    // Menambahkan data paymentAccepted secara acak untuk keperluan visualisasi
-    paymentAccepted: Math.floor(Math.random() * 500) + 50, 
-    marketplace: store.nameStore,
-    platform: store.marketplace,
-}));
-
 export default function BacklogPage() {
-  const [backlogItems, setBacklogItems] = useState<BacklogItem[]>(backlogDataFromStores);
+  const [backlogItems, setBacklogItems] = useState<BacklogItem[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [chartGrouping, setChartGrouping] = useState<GroupingKey>('storeName');
   const { toast } = useToast();
+
+  useEffect(() => {
+    const backlogDataFromStores: BacklogItem[] = initialStores.map(store => ({
+        id: store.id,
+        storeName: store.storeName,
+        paymentAccepted: Math.floor(Math.random() * 500) + 50, 
+        marketplace: store.nameStore,
+        platform: store.marketplace,
+    }));
+    setBacklogItems(backlogDataFromStores);
+  }, []);
 
 
   const totalPages = Math.ceil(backlogItems.length / rowsPerPage);
