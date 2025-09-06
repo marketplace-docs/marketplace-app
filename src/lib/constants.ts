@@ -1,4 +1,4 @@
-import { LayoutDashboard, ListTodo, Store, FileText, Settings, type LucideIcon, Briefcase } from 'lucide-react';
+import { LayoutDashboard, ListTodo, Store, FileText, Settings, type LucideIcon, Briefcase, Users } from 'lucide-react';
 
 export type NavLink = {
     href: string;
@@ -37,8 +37,8 @@ export const NAV_LINKS: NavLink[] = [
     },
     {
         href: '/reports',
-        label: 'Reports',
-        icon: FileText,
+        label: 'Database User',
+        icon: Users,
     },
     {
         href: '/settings',
