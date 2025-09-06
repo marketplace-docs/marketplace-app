@@ -206,7 +206,7 @@ export default function DatabaseUserPage() {
             if (paginatedUsers.length === 1 && currentPage > 1) {
                 setCurrentPage(currentPage - 1);
             }
-        } catch (err: any) => {
+        } catch (err: any) {
             toast({ variant: "destructive", title: "Delete Failed", description: err.message });
         }
     };
@@ -413,7 +413,7 @@ export default function DatabaseUserPage() {
                                  <Select value={selectedUser.role} onValueChange={(value) => setSelectedUser({ ...selectedUser, role: value })} disabled={!isSuperAdmin}>
                                     <SelectTrigger className="col-span-3">
                                         <SelectValue placeholder="Select Role" />
-                                    </SelectTrigger>
+                                    </Trigger>
                                     <SelectContent>
                                         <SelectItem value="Super Admin">Super Admin</SelectItem>
                                         <SelectItem value="Admin">Admin</SelectItem>
@@ -451,5 +451,6 @@ export default function DatabaseUserPage() {
         </div>
       </MainLayout>
     )
+}
 
     
