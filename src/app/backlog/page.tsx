@@ -43,6 +43,7 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  LabelList,
 } from 'recharts';
 import { useToast } from '@/hooks/use-toast';
 import { initialStores } from '@/lib/data';
@@ -278,7 +279,7 @@ export default function BacklogPage() {
                  <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                         data={chartData}
-                        margin={{ top: 5, right: 20, left: -10, bottom: 5 }}
+                        margin={{ top: 20, right: 20, left: -10, bottom: 5 }}
                     >
                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
                         <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
@@ -309,7 +310,9 @@ export default function BacklogPage() {
                             return null
                           }}
                         />
-                        <Bar dataKey="Payment Accepted" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="Payment Accepted" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]}>
+                            <LabelList dataKey="Payment Accepted" position="top" className="fill-foreground" fontSize={12} />
+                        </Bar>
                     </BarChart>
                 </ResponsiveContainer>
             </div>
