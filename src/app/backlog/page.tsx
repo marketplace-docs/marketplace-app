@@ -230,123 +230,7 @@ export default function BacklogPage() {
   return (
     <div className="w-full space-y-6">
        <div className="flex justify-between items-center">
-        <div>
-            <h1 className="text-2xl font-bold mb-2">Backlog Marketplace</h1>
-            <Tabs defaultValue="all-store">
-                <TabsList className="bg-gray-200">
-                    <TabsTrigger value="all-store" className="data-[state=active]:bg-indigo-600 data-[state=active]:text-white">MP All-Store</TabsTrigger>
-                    <TabsTrigger value="detail-store" className="data-[state=active]:bg-indigo-600 data-[state=active]:text-white">MP Detail Store</TabsTrigger>
-                </TabsList>
-                 <TabsContent value="all-store">
-                    <Card className="mt-4">
-                        <CardContent className="pt-6">
-                        <div className="border rounded-lg">
-                            <Table>
-                            <TableHeader>
-                                <TableRow>
-                                <TableHead>STORE NAME</TableHead>
-                                <TableHead>PAYMENT ACCEPTED</TableHead>
-                                <TableHead>MARKETPLACE</TableHead>
-                                <TableHead>PLATFORM</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {paginatedItems.length > 0 ? (
-                                paginatedItems.map((item) => (
-                                    <TableRow key={item.id}>
-                                    <TableCell className="font-medium">{item.storeName}</TableCell>
-                                    <TableCell>{item.paymentAccepted}</TableCell>
-                                    <TableCell>{item.marketplace}</TableCell>
-                                    <TableCell>{item.platform}</TableCell>
-                                    </TableRow>
-                                ))
-                                ) : (
-                                <TableRow>
-                                    <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                                    No backlog data available.
-                                    </TableCell>
-                                </TableRow>
-                                )}
-                            </TableBody>
-                            </Table>
-                        </div>
-                        <div className="flex items-center justify-between py-4">
-                            <div className="flex items-center space-x-2">
-                                <span className="text-sm text-muted-foreground">Rows per page:</span>
-                                <Select
-                                    value={`${rowsPerPage}`}
-                                    onValueChange={(value) => {
-                                        setRowsPerPage(Number(value));
-                                        setCurrentPage(1);
-                                    }}
-                                >
-                                    <SelectTrigger className="h-8 w-[70px]">
-                                        <SelectValue placeholder={rowsPerPage} />
-                                    </SelectTrigger>
-                                    <SelectContent side="top">
-                                        {[10, 20, 50].map((pageSize) => (
-                                        <SelectItem key={pageSize} value={`${pageSize}`}>
-                                            {pageSize}
-                                        </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                                <span>{(currentPage - 1) * rowsPerPage + 1}-{(currentPage - 1) * rowsPerPage + paginatedItems.length} of {backlogItems.length}</span>
-                                <div className="flex items-center space-x-1">
-                                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleFirstPage} disabled={currentPage === 1}>
-                                        <ChevronsLeft className="h-4 w-4" />
-                                    </Button>
-                                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={handlePrevPage} disabled={currentPage === 1}>
-                                        <ChevronLeft className="h-4 w-4" />
-                                    </Button>
-                                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleNextPage} disabled={currentPage === totalPages || totalPages === 0}>
-                                        <ChevronRight className="h-4 w-4" />
-                                    </Button>
-                                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleLastPage} disabled={currentPage === totalPages || totalPages === 0}>
-                                        <ChevronsRight className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            </div>
-                        </div>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-                <TabsContent value="detail-store">
-                    <Card className="mt-4">
-                        <CardContent className="pt-6">
-                            <div className="border rounded-lg">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>PLATFORM</TableHead>
-                                            <TableHead className="text-right">PAYMENT ACCEPTED</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {detailStoreData.length > 0 ? (
-                                            detailStoreData.map((item) => (
-                                                <TableRow key={item.platform}>
-                                                    <TableCell className="font-medium">{item.platform}</TableCell>
-                                                    <TableCell className="text-right">{item.paymentAccepted.toLocaleString()}</TableCell>
-                                                </TableRow>
-                                            ))
-                                        ) : (
-                                            <TableRow>
-                                                <TableCell colSpan={2} className="h-24 text-center text-muted-foreground">
-                                                    No data available.
-                                                </TableCell>
-                                            </TableRow>
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-            </Tabs>
-        </div>
+        <h1 className="text-2xl font-bold">Backlog Marketplace</h1>
         <div className="flex items-center gap-2">
             <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
             <Button variant="outline" onClick={handleUploadClick}>
@@ -357,6 +241,121 @@ export default function BacklogPage() {
             </Button>
         </div>
       </div>
+      
+      <Tabs defaultValue="all-store">
+          <TabsList className="bg-gray-200">
+              <TabsTrigger value="all-store" className="data-[state=active]:bg-indigo-600 data-[state=active]:text-white">MP All-Store</TabsTrigger>
+              <TabsTrigger value="detail-store" className="data-[state=active]:bg-indigo-600 data-[state=active]:text-white">MP Detail Store</TabsTrigger>
+          </TabsList>
+            <TabsContent value="all-store">
+              <Card className="mt-4">
+                  <CardContent className="pt-6">
+                  <div className="border rounded-lg">
+                      <Table>
+                      <TableHeader>
+                          <TableRow>
+                          <TableHead>STORE NAME</TableHead>
+                          <TableHead>PAYMENT ACCEPTED</TableHead>
+                          <TableHead>MARKETPLACE</TableHead>
+                          <TableHead>PLATFORM</TableHead>
+                          </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                          {paginatedItems.length > 0 ? (
+                          paginatedItems.map((item) => (
+                              <TableRow key={item.id}>
+                              <TableCell className="font-medium">{item.storeName}</TableCell>
+                              <TableCell>{item.paymentAccepted}</TableCell>
+                              <TableCell>{item.marketplace}</TableCell>
+                              <TableCell>{item.platform}</TableCell>
+                              </TableRow>
+                          ))
+                          ) : (
+                          <TableRow>
+                              <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                              No backlog data available.
+                              </TableCell>
+                          </TableRow>
+                          )}
+                      </TableBody>
+                      </Table>
+                  </div>
+                  <div className="flex items-center justify-between py-4">
+                      <div className="flex items-center space-x-2">
+                          <span className="text-sm text-muted-foreground">Rows per page:</span>
+                          <Select
+                              value={`${rowsPerPage}`}
+                              onValueChange={(value) => {
+                                  setRowsPerPage(Number(value));
+                                  setCurrentPage(1);
+                              }}
+                          >
+                              <SelectTrigger className="h-8 w-[70px]">
+                                  <SelectValue placeholder={rowsPerPage} />
+                              </SelectTrigger>
+                              <SelectContent side="top">
+                                  {[10, 20, 50].map((pageSize) => (
+                                  <SelectItem key={pageSize} value={`${pageSize}`}>
+                                      {pageSize}
+                                  </SelectItem>
+                                  ))}
+                              </SelectContent>
+                          </Select>
+                      </div>
+                      <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                          <span>{(currentPage - 1) * rowsPerPage + 1}-{(currentPage - 1) * rowsPerPage + paginatedItems.length} of {backlogItems.length}</span>
+                          <div className="flex items-center space-x-1">
+                              <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleFirstPage} disabled={currentPage === 1}>
+                                  <ChevronsLeft className="h-4 w-4" />
+                              </Button>
+                              <Button variant="outline" size="icon" className="h-8 w-8" onClick={handlePrevPage} disabled={currentPage === 1}>
+                                  <ChevronLeft className="h-4 w-4" />
+                              </Button>
+                              <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleNextPage} disabled={currentPage === totalPages || totalPages === 0}>
+                                  <ChevronRight className="h-4 w-4" />
+                              </Button>
+                              <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleLastPage} disabled={currentPage === totalPages || totalPages === 0}>
+                                  <ChevronsRight className="h-4 w-4" />
+                              </Button>
+                          </div>
+                      </div>
+                  </div>
+                  </CardContent>
+              </Card>
+          </TabsContent>
+          <TabsContent value="detail-store">
+              <Card className="mt-4">
+                  <CardContent className="pt-6">
+                      <div className="border rounded-lg">
+                          <Table>
+                              <TableHeader>
+                                  <TableRow>
+                                      <TableHead>PLATFORM</TableHead>
+                                      <TableHead className="text-right">PAYMENT ACCEPTED</TableHead>
+                                  </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                  {detailStoreData.length > 0 ? (
+                                      detailStoreData.map((item) => (
+                                          <TableRow key={item.platform}>
+                                              <TableCell className="font-medium">{item.platform}</TableCell>
+                                              <TableCell className="text-right">{item.paymentAccepted.toLocaleString()}</TableCell>
+                                          </TableRow>
+                                      ))
+                                  ) : (
+                                      <TableRow>
+                                          <TableCell colSpan={2} className="h-24 text-center text-muted-foreground">
+                                              No data available.
+                                          </TableCell>
+                                      </TableRow>
+                                  )}
+                              </TableBody>
+                          </Table>
+                      </div>
+                  </CardContent>
+              </Card>
+          </TabsContent>
+      </Tabs>
       
       <Card>
         <CardHeader>
