@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
 
 export default function DatabasePage() {
-  redirect('/database/user');
+  redirect('/database/user-management');
 }
