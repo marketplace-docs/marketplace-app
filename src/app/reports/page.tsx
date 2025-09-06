@@ -1,3 +1,5 @@
+'use client';
+
 import {
   Card,
   CardContent,
@@ -15,35 +17,63 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react";
+import React, { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { useToast } from "@/hooks/use-toast";
 
-const users = [
-    { name: 'Arlan Saputra', status: 'Leader', role: 'Super Admin' },
-    { name: 'Rudi Setiawan', status: 'Leader', role: 'Leader' },
-    { name: 'Diki Mauli', status: 'Reguler', role: 'Captain' },
-    { name: 'Virgiawan Juhri', status: 'Reguler', role: 'Captain' },
-    { name: 'Nurul Tanzilla', status: 'Reguler', role: 'Admin' },
-    { name: 'Nova Aurelia Herman', status: 'Reguler', role: 'Admin' },
-    { name: 'Regina Rahmi Rifana', status: 'Event', role: 'Admin' },
-    { name: 'Ishika Seherena', status: 'Event', role: 'Packer' },
-    { name: 'Elah Febriyanti', status: 'Event', role: 'Packer' },
-    { name: 'Erni Atriyanti', status: 'Event', role: 'Packer' },
-    { name: 'Yanti Monica', status: 'Event', role: 'Packer' },
-    { name: 'Tia Puspita', status: 'Event', role: 'Packer' },
-    { name: 'Mila Sari', status: 'Event', role: 'Packer' },
-    { name: 'Cindy Vika Lestari', status: 'Event', role: 'Packer' },
-    { name: 'Mirna', status: 'Event', role: 'Packer' },
-    { name: 'Nur Yasmin Sabrina', status: 'Event', role: 'Packer' },
-    { name: 'Rosnani', status: 'Event', role: 'Packer' },
-    { name: 'Ridwan', status: 'Event', role: 'Picker' },
-    { name: 'Rendi Tri Suyono', status: 'Event', role: 'Picker' },
-    { name: 'Wawi Sahalawi', status: 'Event', role: 'Picker' },
-    { name: 'Omar Dhani', status: 'Event', role: 'Picker' },
-    { name: 'Ditya Nuranjani', status: 'Event', role: 'Picker' },
-    { name: 'Riki Fajar', status: 'Event', role: 'Putaway' },
-    { name: 'Adi Mulya', status: 'Event', role: 'Putaway' },
-    { name: 'Noval Ardiansyah', status: 'Event', role: 'Putaway' },
-    { name: 'Hadi Nurjamil', status: 'Event', role: 'Putaway' },
+
+type User = {
+    id: number;
+    name: string;
+    status: 'Leader' | 'Reguler' | 'Event';
+    role: string;
+};
+
+const initialUsers: User[] = [
+    { id: 1, name: 'Arlan Saputra', status: 'Leader', role: 'Super Admin' },
+    { id: 2, name: 'Rudi Setiawan', status: 'Leader', role: 'Leader' },
+    { id: 3, name: 'Diki Mauli', status: 'Reguler', role: 'Captain' },
+    { id: 4, name: 'Virgiawan Juhri', status: 'Reguler', role: 'Captain' },
+    { id: 5, name: 'Nurul Tanzilla', status: 'Reguler', role: 'Admin' },
+    { id: 6, name: 'Nova Aurelia Herman', status: 'Reguler', role: 'Admin' },
+    { id: 7, name: 'Regina Rahmi Rifana', status: 'Event', role: 'Admin' },
+    { id: 8, name: 'Ishika Seherena', status: 'Event', role: 'Packer' },
+    { id: 9, name: 'Elah Febriyanti', status: 'Event', role: 'Packer' },
+    { id: 10, name: 'Erni Atriyanti', status: 'Event', role: 'Packer' },
+    { id: 11, name: 'Yanti Monica', status: 'Event', role: 'Packer' },
+    { id: 12, name: 'Tia Puspita', status: 'Event', role: 'Packer' },
+    { id: 13, name: 'Mila Sari', status: 'Event', role: 'Packer' },
+    { id: 14, name: 'Cindy Vika Lestari', status: 'Event', role: 'Packer' },
+    { id: 15, name: 'Mirna', status: 'Event', role: 'Packer' },
+    { id: 16, name: 'Nur Yasmin Sabrina', status: 'Event', role: 'Packer' },
+    { id: 17, name: 'Rosnani', status: 'Event', role: 'Packer' },
+    { id: 18, name: 'Ridwan', status: 'Event', role: 'Picker' },
+    { id: 19, name: 'Rendi Tri Suyono', status: 'Event', role: 'Picker' },
+    { id: 20, name: 'Wawi Sahalawi', status: 'Event', role: 'Picker' },
+    { id: 21, name: 'Omar Dhani', status: 'Event', role: 'Picker' },
+    { id: 22, name: 'Ditya Nuranjani', status: 'Event', role: 'Picker' },
+    { id: 23, name: 'Riki Fajar', status: 'Event', role: 'Putaway' },
+    { id: 24, name: 'Adi Mulya', status: 'Event', role: 'Putaway' },
+    { id: 25, name: 'Noval Ardiansyah', status: 'Event', role: 'Putaway' },
+    { id: 26, name: 'Hadi Nurjamil', status: 'Event', role: 'Putaway' },
 ];
 
 const statusVariantMap: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
@@ -53,6 +83,58 @@ const statusVariantMap: { [key: string]: "default" | "secondary" | "destructive"
 };
 
 export default function DatabaseUserPage() {
+    const [users, setUsers] = useState<User[]>(initialUsers);
+    const [isEditDialogOpen, setEditDialogOpen] = useState(false);
+    const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    const { toast } = useToast();
+
+    const [currentPage, setCurrentPage] = useState(1);
+    const [rowsPerPage, setRowsPerPage] = useState(5);
+
+    const totalPages = Math.ceil(users.length / rowsPerPage);
+    const paginatedUsers = users.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+
+    const handleNextPage = () => {
+        setCurrentPage((prev) => (prev < totalPages ? prev + 1 : prev));
+    };
+
+    const handlePrevPage = () => {
+        setCurrentPage((prev) => (prev > 1 ? prev - 1 : prev));
+    };
+
+    const handleOpenEditDialog = (user: User) => {
+        setSelectedUser(user);
+        setEditDialogOpen(true);
+    };
+
+    const handleOpenDeleteDialog = (user: User) => {
+        setSelectedUser(user);
+        setDeleteDialogOpen(true);
+    };
+
+    const handleSaveChanges = () => {
+        if (selectedUser) {
+            setUsers(users.map(u => u.id === selectedUser.id ? selectedUser : u));
+            setEditDialogOpen(false);
+            setSelectedUser(null);
+            toast({ title: "Success", description: "User has been updated." });
+        }
+    };
+
+    const handleDeleteUser = () => {
+        if (selectedUser) {
+            setUsers(users.filter(u => u.id !== selectedUser.id));
+            setDeleteDialogOpen(false);
+            setSelectedUser(null);
+            toast({ variant: "destructive", title: "Success", description: "User has been deleted." });
+             // Adjust currentPage if the last item on a page is deleted
+            if (paginatedUsers.length === 1 && currentPage > 1) {
+                setCurrentPage(currentPage - 1);
+            }
+        }
+    };
+
     return (
         <div className="w-full max-w-4xl">
             <h1 className="text-3xl font-bold mb-6">Database User</h1>
@@ -72,8 +154,8 @@ export default function DatabaseUserPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {users.map((user) => (
-                                <TableRow key={user.name}>
+                            {paginatedUsers.map((user) => (
+                                <TableRow key={user.id}>
                                     <TableCell className="font-medium">{user.name}</TableCell>
                                     <TableCell>
                                         <Badge variant={statusVariantMap[user.status] || 'default'}>{user.status}</Badge>
@@ -81,11 +163,11 @@ export default function DatabaseUserPage() {
                                     <TableCell>{user.role}</TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex items-center justify-end gap-2">
-                                            <Button variant="ghost" size="icon">
+                                            <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(user)}>
                                                 <Pencil className="h-4 w-4" />
                                                 <span className="sr-only">Edit</span>
                                             </Button>
-                                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90">
+                                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" onClick={() => handleOpenDeleteDialog(user)}>
                                                 <Trash2 className="h-4 w-4" />
                                                 <span className="sr-only">Delete</span>
                                             </Button>
@@ -97,6 +179,109 @@ export default function DatabaseUserPage() {
                     </Table>
                 </CardContent>
             </Card>
+
+            <div className="flex items-center justify-end space-x-2 py-4">
+                <div className="flex-1 text-sm text-muted-foreground">
+                    Page {users.length > 0 ? currentPage : 0} of {totalPages}
+                </div>
+                <div className="flex items-center space-x-2">
+                    <span className="text-sm text-muted-foreground">Rows per page:</span>
+                    <Select
+                        value={`${rowsPerPage}`}
+                        onValueChange={(value) => {
+                            setRowsPerPage(Number(value));
+                            setCurrentPage(1);
+                        }}
+                    >
+                        <SelectTrigger className="h-8 w-[70px]">
+                            <SelectValue placeholder={rowsPerPage} />
+                        </SelectTrigger>
+                        <SelectContent side="top">
+                            {[5, 10, 30].map((pageSize) => (
+                                <SelectItem key={pageSize} value={`${pageSize}`}>
+                                    {pageSize}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePrevPage}
+                    disabled={currentPage === 1}
+                >
+                    <ChevronLeft className="h-4 w-4" />
+                    <span className="sr-only">Previous</span>
+                </Button>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleNextPage}
+                    disabled={currentPage === totalPages || totalPages === 0}
+                >
+                    <span className="sr-only">Next</span>
+                    <ChevronRight className="h-4 w-4" />
+                </Button>
+            </div>
+
+            {/* Edit Dialog */}
+            <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Edit User</DialogTitle>
+                        <DialogDescription>
+                            Make changes to the user profile here. Click save when you're done.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {selectedUser && (
+                        <div className="grid gap-4 py-4">
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="name" className="text-right">Name</Label>
+                                <Input id="name" value={selectedUser.name} className="col-span-3" onChange={(e) => setSelectedUser({ ...selectedUser, name: e.target.value })} />
+                            </div>
+                             <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="status" className="text-right">Status</Label>
+                                <Select value={selectedUser.status} onValueChange={(value: User['status']) => setSelectedUser({ ...selectedUser, status: value })}>
+                                    <SelectTrigger className="col-span-3">
+                                        <SelectValue placeholder="Select Status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Leader">Leader</SelectItem>
+                                        <SelectItem value="Reguler">Reguler</SelectItem>
+                                        <SelectItem value="Event">Event</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="role" className="text-right">Role</Label>
+                                <Input id="role" value={selectedUser.role} className="col-span-3" onChange={(e) => setSelectedUser({ ...selectedUser, role: e.target.value })}/>
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+                        <Button onClick={handleSaveChanges}>Save Changes</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Are you sure?</DialogTitle>
+                        <DialogDescription>
+                            This action cannot be undone. This will permanently delete the user <span className="font-semibold">{selectedUser?.name}</span>.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+                        <Button variant="destructive" onClick={handleDeleteUser}>Delete</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
         </div>
     )
 }
