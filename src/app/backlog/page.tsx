@@ -63,8 +63,8 @@ const backlogDataFromStores: BacklogItem[] = initialStores.map(store => ({
     storeName: store.storeName,
     // Menambahkan data paymentAccepted secara acak untuk keperluan visualisasi
     paymentAccepted: Math.floor(Math.random() * 500) + 50, 
-    marketplace: store.marketplace,
-    platform: store.marketplace, // Menggunakan marketplace sebagai platform untuk contoh
+    marketplace: store.nameStore,
+    platform: store.marketplace,
 }));
 
 export default function BacklogPage() {
