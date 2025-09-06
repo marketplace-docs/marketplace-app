@@ -58,7 +58,8 @@ export default function AdminReportsPage() {
   const [nama, setNama] = useState('');
   const [shift, setShift] = useState('');
   const [isAddDialogOpen, setAddDialogOpen] = useState(false);
-  const [newEntry, setNewEntry] = useState<Omit<NewEntry, 'type'>>({ storeName: '', value: 0});
+  const [newEntry, setNewEntry] = useState<Omit<NewEntry, 'type' | 'value'>>({ storeName: ''});
+  const [newEntryValue, setNewEntryValue] = useState<number>(0);
   const [newEntryType, setNewEntryType] = useState<'Instan' | 'Reguler'>('Instan');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -94,8 +95,9 @@ export default function AdminReportsPage() {
         return;
     }
     const newId = entries.length > 0 ? Math.max(...entries.map(e => e.id)) + 1 : 1;
-    setEntries([...entries, { id: newId, ...newEntry, type: newEntryType }]);
-    setNewEntry({ storeName: '', value: 0 });
+    setEntries([...entries, { id: newId, ...newEntry, type: newEntryType, value: newEntryValue }]);
+    setNewEntry({ storeName: '' });
+    setNewEntryValue(0);
     setAddDialogOpen(false);
     toast({
         title: "Success",
@@ -177,9 +179,40 @@ export default function AdminReportsPage() {
     <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-7xl relative">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-xl font-bold">REPORT ADMIN PICKLIST</h1>
-        <Button variant="ghost" size="icon">
-          <X className="h-5 w-5" />
-        </Button>
+        <Dialog open={isAddDialogOpen} onOpenChange={setAddDialogOpen}>
+            <DialogTrigger asChild>
+                <Button>
+                    <Plus className="mr-2 h-4 w-4" /> Add Entry
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Add New Entry</DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <Input placeholder="Store Name" value={newEntry.storeName} onChange={e => setNewEntry({...newEntry, storeName: e.target.value})} />
+                    <Select value={newEntryType} onValueChange={(value: 'Instan' | 'Reguler') => setNewEntryType(value)}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select Type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="Instan">Instan</SelectItem>
+                            <SelectItem value="Reguler">Reguler</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Input type="number" placeholder="Value" value={newEntryValue || ''} onChange={e => setNewEntryValue(parseInt(e.target.value) || 0)} />
+                </div>
+                <DialogFooter>
+                    <div className="flex-1">
+                        <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
+                        <Button variant="outline" onClick={handleUploadClick}><Upload className="mr-2 h-4 w-4" /> Upload</Button>
+                        <Button variant="outline" onClick={handleExport} className="ml-2"><Download className="mr-2 h-4 w-4"/> Export</Button>
+                    </div>
+                    <Button variant="outline" onClick={() => setAddDialogOpen(false)}>Close</Button>
+                    <Button onClick={handleAddEntry}>Add Entry</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
       </div>
 
       <div className="grid grid-cols-3 gap-4 mb-4">
@@ -208,15 +241,6 @@ export default function AdminReportsPage() {
                 <TableRow className="bg-primary hover:bg-primary">
                   <TableHead className="text-primary-foreground">STORE NAME</TableHead>
                   <TableHead className="text-primary-foreground w-[120px]">INSTAN</TableHead>
-                  <TableHead className="text-right w-[60px] text-primary-foreground">
-                     <Dialog open={isAddDialogOpen} onOpenChange={setAddDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 text-primary-foreground hover:bg-primary/80" onClick={() => setNewEntryType('Instan')}>
-                          <Plus className="h-5 w-5" />
-                        </Button>
-                      </DialogTrigger>
-                    </Dialog>
-                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -225,12 +249,11 @@ export default function AdminReportsPage() {
                     <TableRow key={entry.id}>
                       <TableCell className="font-medium">{entry.storeName}</TableCell>
                       <TableCell>{entry.value}</TableCell>
-                      <TableCell></TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={2} className="h-24 text-center text-muted-foreground">
                       No data available.
                     </TableCell>
                   </TableRow>
@@ -246,33 +269,6 @@ export default function AdminReportsPage() {
                 <TableRow className="bg-primary hover:bg-primary">
                   <TableHead className="text-primary-foreground">STORE NAME</TableHead>
                   <TableHead className="text-primary-foreground w-[120px]">REGULAR</TableHead>
-                   <TableHead className="text-right w-[60px] text-primary-foreground">
-                    <Dialog open={isAddDialogOpen} onOpenChange={setAddDialogOpen}>
-                        <DialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-6 w-6 text-primary-foreground hover:bg-primary/80" onClick={() => setNewEntryType('Reguler')}>
-                                <Plus className="h-5 w-5" />
-                            </Button>
-                        </DialogTrigger>
-                         <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>Add New {newEntryType} Entry</DialogTitle>
-                            </DialogHeader>
-                            <div className="grid gap-4 py-4">
-                               <Input placeholder="Store Name" value={newEntry.storeName} onChange={e => setNewEntry({...newEntry, storeName: e.target.value})} />
-                               <Input type="number" placeholder="Value" value={newEntry.value || ''} onChange={e => setNewEntry({...newEntry, value: parseInt(e.target.value) || 0})} />
-                            </div>
-                            <DialogFooter>
-                                <div className="flex-1">
-                                    <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
-                                    <Button variant="outline" onClick={handleUploadClick}><Upload className="mr-2 h-4 w-4" /> Upload</Button>
-                                    <Button variant="outline" onClick={handleExport} className="ml-2"><Download className="mr-2 h-4 w-4"/> Export</Button>
-                                </div>
-                                <Button variant="outline" onClick={() => setAddDialogOpen(false)}>Close</Button>
-                                <Button onClick={handleAddEntry}>Add Entry</Button>
-                            </DialogFooter>
-                        </DialogContent>
-                    </Dialog>
-                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -281,12 +277,11 @@ export default function AdminReportsPage() {
                     <TableRow key={entry.id}>
                       <TableCell className="font-medium">{entry.storeName}</TableCell>
                       <TableCell>{entry.value}</TableCell>
-                      <TableCell></TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={2} className="h-24 text-center text-muted-foreground">
                        No data available.
                     </TableCell>
                   </TableRow>
