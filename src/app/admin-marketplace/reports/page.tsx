@@ -42,6 +42,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { MainLayout } from '@/components/layout/main-layout';
 
 type PicklistEntry = {
   id: number;
@@ -180,168 +181,170 @@ export default function AdminReportsPage() {
 
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-7xl relative">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-xl font-bold">REPORT ADMIN PICKLIST</h1>
-        {isClient && (
-          <Dialog open={isAddDialogOpen} onOpenChange={setAddDialogOpen}>
-              <DialogTrigger asChild>
-                  <Button>
-                      <Plus className="mr-2 h-4 w-4" /> Add Entry
-                  </Button>
-              </DialogTrigger>
-              <DialogContent>
-                  <DialogHeader>
-                      <DialogTitle>Add Data</DialogTitle>
-                  </DialogHeader>
-                  <div className="grid gap-4 py-4">
-                      <Input placeholder="Store Name" value={newEntry.storeName} onChange={e => setNewEntry({...newEntry, storeName: e.target.value})} />
-                      <Select value={newEntryType} onValueChange={(value: 'Instan' | 'Reguler') => setNewEntryType(value)}>
-                          <SelectTrigger>
-                              <SelectValue placeholder="Select Type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                              <SelectItem value="Instan">Instan</SelectItem>
-                              <SelectItem value="Reguler">Reguler</SelectItem>
-                          </SelectContent>
-                      </Select>
-                      <Input type="number" placeholder="Value" value={newEntryValue || ''} onChange={e => setNewEntryValue(parseInt(e.target.value) || 0)} />
-                  </div>
-                  <DialogFooter>
-                      <div className="flex-1">
-                          <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
-                          <Button variant="outline" onClick={handleUploadClick}><Upload className="mr-2 h-4 w-4" /> Upload</Button>
-                          <Button variant="outline" onClick={handleExport} className="ml-2"><Download className="mr-2 h-4 w-4"/> Export</Button>
-                      </div>
-                      <Button variant="outline" onClick={() => setAddDialogOpen(false)}>Close</Button>
-                      <Button onClick={handleAddEntry}>Submit</Button>
-                  </DialogFooter>
-              </DialogContent>
-          </Dialog>
-        )}
-      </div>
+    <MainLayout>
+      <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-7xl relative">
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-xl font-bold">REPORT ADMIN PICKLIST</h1>
+          {isClient && (
+            <Dialog open={isAddDialogOpen} onOpenChange={setAddDialogOpen}>
+                <DialogTrigger asChild>
+                    <Button>
+                        <Plus className="mr-2 h-4 w-4" /> Add Entry
+                    </Button>
+                </DialogTrigger>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Add Data</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <Input placeholder="Store Name" value={newEntry.storeName} onChange={e => setNewEntry({...newEntry, storeName: e.target.value})} />
+                        <Select value={newEntryType} onValueChange={(value: 'Instan' | 'Reguler') => setNewEntryType(value)}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select Type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Instan">Instan</SelectItem>
+                                <SelectItem value="Reguler">Reguler</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Input type="number" placeholder="Value" value={newEntryValue || ''} onChange={e => setNewEntryValue(parseInt(e.target.value) || 0)} />
+                    </div>
+                    <DialogFooter>
+                        <div className="flex-1">
+                            <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
+                            <Button variant="outline" onClick={handleUploadClick}><Upload className="mr-2 h-4 w-4" /> Upload</Button>
+                            <Button variant="outline" onClick={handleExport} className="ml-2"><Download className="mr-2 h-4 w-4"/> Export</Button>
+                        </div>
+                        <Button variant="outline" onClick={() => setAddDialogOpen(false)}>Close</Button>
+                        <Button onClick={handleAddEntry}>Submit</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+          )}
+        </div>
 
-      <div className="grid grid-cols-3 gap-4 mb-4">
-        <div className="col-span-2 bg-primary text-primary-foreground p-4 rounded-lg flex flex-col gap-2">
-            <div className="flex items-center">
-                <Label htmlFor="nama" className="w-16">NAMA</Label>
-                <Input id="nama" value={nama} onChange={e => setNama(e.target.value)} className="bg-white text-gray-900 h-8" />
-            </div>
-             <div className="flex items-center">
-                <Label htmlFor="shift" className="w-16">SHIFT</Label>
-                <Input id="shift" value={shift} onChange={e => setShift(e.target.value)} className="bg-white text-gray-900 h-8" />
-            </div>
-        </div>
-        <div className="bg-primary text-primary-foreground p-4 rounded-lg flex flex-col items-center justify-center">
-            <p className="font-bold text-sm">TOTAL PROGRESS SHIFT</p>
-            <p className="text-5xl font-bold">{entries.length}</p>
-        </div>
-      </div>
-      
-      <div className="border rounded-lg overflow-hidden">
-        <div className="grid grid-cols-2">
-          {/* Instan Table */}
-          <div className="border-r">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-primary hover:bg-primary">
-                  <TableHead className="text-primary-foreground">STORE NAME</TableHead>
-                  <TableHead className="text-primary-foreground w-[120px]">INSTAN</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedInstan.length > 0 ? (
-                  paginatedInstan.map(entry => (
-                    <TableRow key={entry.id}>
-                      <TableCell className="font-medium">{entry.storeName}</TableCell>
-                      <TableCell>{entry.value}</TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={2} className="h-24 text-center text-muted-foreground">
-                      No data available.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+        <div className="grid grid-cols-3 gap-4 mb-4">
+          <div className="col-span-2 bg-primary text-primary-foreground p-4 rounded-lg flex flex-col gap-2">
+              <div className="flex items-center">
+                  <Label htmlFor="nama" className="w-16">NAMA</Label>
+                  <Input id="nama" value={nama} onChange={e => setNama(e.target.value)} className="bg-white text-gray-900 h-8" />
+              </div>
+              <div className="flex items-center">
+                  <Label htmlFor="shift" className="w-16">SHIFT</Label>
+                  <Input id="shift" value={shift} onChange={e => setShift(e.target.value)} className="bg-white text-gray-900 h-8" />
+              </div>
           </div>
-
-          {/* Regular Table */}
-          <div>
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-primary hover:bg-primary">
-                  <TableHead className="text-primary-foreground">STORE NAME</TableHead>
-                  <TableHead className="text-primary-foreground w-[120px]">REGULAR</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                 {paginatedRegular.length > 0 ? (
-                  paginatedRegular.map(entry => (
-                    <TableRow key={entry.id}>
-                      <TableCell className="font-medium">{entry.storeName}</TableCell>
-                      <TableCell>{entry.value}</TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={2} className="h-24 text-center text-muted-foreground">
-                       No data available.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+          <div className="bg-primary text-primary-foreground p-4 rounded-lg flex flex-col items-center justify-center">
+              <p className="font-bold text-sm">TOTAL PROGRESS SHIFT</p>
+              <p className="text-5xl font-bold">{entries.length}</p>
           </div>
         </div>
-      </div>
-      
-      <div className="flex items-center justify-between py-4">
-        <div className="flex items-center space-x-2">
-            <span className="text-sm text-muted-foreground">Rows per page:</span>
-            <Select
-                value={`${rowsPerPage}`}
-                onValueChange={(value) => {
-                    setRowsPerPage(Number(value));
-                    setCurrentPage(1);
-                }}
-                >
-                <SelectTrigger className="h-8 w-[70px]">
-                    <SelectValue placeholder={rowsPerPage} />
-                </SelectTrigger>
-                <SelectContent side="top">
-                    {[10, 25, 50].map((pageSize) => (
-                    <SelectItem key={pageSize} value={`${pageSize}`}>
-                        {pageSize}
-                    </SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
+        
+        <div className="border rounded-lg overflow-hidden">
+          <div className="grid grid-cols-2">
+            {/* Instan Table */}
+            <div className="border-r">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-primary hover:bg-primary">
+                    <TableHead className="text-primary-foreground">STORE NAME</TableHead>
+                    <TableHead className="text-primary-foreground w-[120px]">INSTAN</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedInstan.length > 0 ? (
+                    paginatedInstan.map(entry => (
+                      <TableRow key={entry.id}>
+                        <TableCell className="font-medium">{entry.storeName}</TableCell>
+                        <TableCell>{entry.value}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={2} className="h-24 text-center text-muted-foreground">
+                        No data available.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Regular Table */}
+            <div>
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-primary hover:bg-primary">
+                    <TableHead className="text-primary-foreground">STORE NAME</TableHead>
+                    <TableHead className="text-primary-foreground w-[120px]">REGULAR</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedRegular.length > 0 ? (
+                    paginatedRegular.map(entry => (
+                      <TableRow key={entry.id}>
+                        <TableCell className="font-medium">{entry.storeName}</TableCell>
+                        <TableCell>{entry.value}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={2} className="h-24 text-center text-muted-foreground">
+                        No data available.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-            Page {totalPages > 0 ? currentPage : 0} of {totalPages}
-            <Button
-                variant="outline"
-                size="sm"
-                onClick={handlePrevPage}
-                disabled={currentPage === 1}
-            >
-                <ChevronLeft className="h-4 w-4" />
-                <span className="sr-only">Previous</span>
-            </Button>
-            <Button
-                variant="outline"
-                size="sm"
-                onClick={handleNextPage}
-                disabled={currentPage === totalPages || totalPages === 0}
-            >
-                <span className="sr-only">Next</span>
-                <ChevronRight className="h-4 w-4" />
-            </Button>
+        
+        <div className="flex items-center justify-between py-4">
+          <div className="flex items-center space-x-2">
+              <span className="text-sm text-muted-foreground">Rows per page:</span>
+              <Select
+                  value={`${rowsPerPage}`}
+                  onValueChange={(value) => {
+                      setRowsPerPage(Number(value));
+                      setCurrentPage(1);
+                  }}
+                  >
+                  <SelectTrigger className="h-8 w-[70px]">
+                      <SelectValue placeholder={rowsPerPage} />
+                  </SelectTrigger>
+                  <SelectContent side="top">
+                      {[10, 25, 50].map((pageSize) => (
+                      <SelectItem key={pageSize} value={`${pageSize}`}>
+                          {pageSize}
+                      </SelectItem>
+                      ))}
+                  </SelectContent>
+              </Select>
+          </div>
+          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+              Page {totalPages > 0 ? currentPage : 0} of {totalPages}
+              <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePrevPage}
+                  disabled={currentPage === 1}
+              >
+                  <ChevronLeft className="h-4 w-4" />
+                  <span className="sr-only">Previous</span>
+              </Button>
+              <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleNextPage}
+                  disabled={currentPage === totalPages || totalPages === 0}
+              >
+                  <span className="sr-only">Next</span>
+                  <ChevronRight className="h-4 w-4" />
+              </Button>
+          </div>
         </div>
       </div>
-    </div>
+    </MainLayout>
   );
 }

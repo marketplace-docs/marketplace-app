@@ -9,7 +9,7 @@ export type NavLink = {
 
 export const NAV_LINKS: NavLink[] = [
     {
-        href: '/',
+        href: '/dashboard',
         label: 'Dashboard',
         icon: LayoutDashboard,
     },
@@ -75,7 +75,7 @@ export const NAV_LINKS: NavLink[] = [
         icon: Settings,
         children: [
             {
-                href: '/settings',
+                href: '/settings/app',
                 label: 'APP',
                 icon: AppWindow,
             },

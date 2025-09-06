@@ -43,6 +43,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { MainLayout } from '@/components/layout/main-layout';
 
 
 const initialLeaders = [
@@ -338,7 +339,7 @@ export default function AbsensiManpowerPage() {
 
 
   return (
-    <>
+    <MainLayout>
       <div id="printable-schedule" className="hidden print:block">
         <PrintableSchedule leaders={leaders} staff={staff} />
       </div>
@@ -600,8 +601,6 @@ export default function AbsensiManpowerPage() {
             </div>
           )}
       </div>
-    </>
+    </MainLayout>
   );
 }
-
-    

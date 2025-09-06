@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -51,6 +50,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { initialStores } from '@/lib/data';
 import { Input } from '@/components/ui/input';
+import { MainLayout } from '@/components/layout/main-layout';
 
 type BacklogItem = {
   id: number;
@@ -269,233 +269,235 @@ export default function BacklogPage() {
   }
 
   return (
-    <div className="w-full space-y-6">
-       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Backlog Marketplace</h1>
-        <div className="flex items-center gap-2">
-            <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
-            <Button variant="outline" onClick={handleUploadClick}>
-                <Upload className="mr-2 h-4 w-4" /> Import
-            </Button>
-            <Button variant="outline" onClick={handleEditToggle}>
-              {isEditing ? <Save className="mr-2 h-4 w-4" /> : <Pencil className="mr-2 h-4 w-4" />}
-              {isEditing ? 'Save' : 'Edit'}
-            </Button>
-            <Button variant="default" onClick={handleExport}>
-                <Download className="mr-2 h-4 w-4" /> Export
-            </Button>
-        </div>
-      </div>
-      
-      <Tabs defaultValue="all-store">
-          <TabsList className="bg-gray-200">
-              <TabsTrigger value="all-store" className="data-[state=active]:bg-indigo-600 data-[state=active]:text-white">MP All-Store</TabsTrigger>
-              <TabsTrigger value="detail-store" className="data-[state=active]:bg-indigo-600 data-[state=active]:text-white">MP Detail Store</TabsTrigger>
-          </TabsList>
-            <TabsContent value="all-store">
-              <Card className="mt-4">
-                  <CardContent className="pt-6">
-                  <div className="border rounded-lg">
-                      <Table>
-                      <TableHeader>
-                          <TableRow>
-                          <TableHead>STORE NAME</TableHead>
-                          <TableHead>PAYMENT ACCEPTED</TableHead>
-                          <TableHead>MARKETPLACE</TableHead>
-                          <TableHead>PLATFORM</TableHead>
-                          </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                          {paginatedItems.length > 0 ? (
-                          paginatedItems.map((item) => (
-                              <TableRow key={item.id}>
-                               <TableCell className="font-medium">
-                                {item.storeName}
-                              </TableCell>
-                              <TableCell>
-                                {isEditing ? (
-                                  <Input 
-                                    type="number"
-                                    value={editedItems[item.id] ?? item.paymentAccepted} 
-                                    onChange={(e) => handleItemChange(item.id, e.target.value)} 
-                                    className="h-8"
-                                  />
-                                ) : (
-                                  item.paymentAccepted
-                                )}
-                              </TableCell>
-                              <TableCell>{item.marketplace}</TableCell>
-                              <TableCell>{item.platform}</TableCell>
-                              </TableRow>
-                          ))
-                          ) : (
-                          <TableRow>
-                              <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                              No backlog data available.
-                              </TableCell>
-                          </TableRow>
-                          )}
-                      </TableBody>
-                      </Table>
-                  </div>
-                  <div className="flex items-center justify-between py-4">
-                      <div className="flex items-center space-x-2">
-                          <span className="text-sm text-muted-foreground">Rows per page:</span>
-                          <Select
-                              value={`${rowsPerPage}`}
-                              onValueChange={(value) => {
-                                  setRowsPerPage(Number(value));
-                                  setCurrentPage(1);
-                              }}
-                          >
-                              <SelectTrigger className="h-8 w-[70px]">
-                                  <SelectValue placeholder={rowsPerPage} />
-                              </SelectTrigger>
-                              <SelectContent side="top">
-                                  {[3, 10, 20].map((pageSize) => (
-                                  <SelectItem key={pageSize} value={`${pageSize}`}>
-                                      {pageSize}
-                                  </SelectItem>
-                                  ))}
-                              </SelectContent>
-                          </Select>
-                      </div>
-                      <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                          <span>{(currentPage - 1) * rowsPerPage + 1}-{(currentPage - 1) * rowsPerPage + paginatedItems.length} of {backlogItems.length}</span>
-                          <div className="flex items-center space-x-1">
-                              <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleFirstPage} disabled={currentPage === 1}>
-                                  <ChevronsLeft className="h-4 w-4" />
-                              </Button>
-                              <Button variant="outline" size="icon" className="h-8 w-8" onClick={handlePrevPage} disabled={currentPage === 1}>
-                                  <ChevronLeft className="h-4 w-4" />
-                              </Button>
-                              <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleNextPage} disabled={currentPage === totalPages || totalPages === 0}>
-                                  <ChevronRight className="h-4 w-4" />
-                              </Button>
-                              <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleLastPage} disabled={currentPage === totalPages || totalPages === 0}>
-                                  <ChevronsRight className="h-4 w-4" />
-                              </Button>
-                          </div>
-                      </div>
-                  </div>
-                  </CardContent>
-              </Card>
-          </TabsContent>
-          <TabsContent value="detail-store">
-              <Card className="mt-4">
-                  <CardContent className="pt-6">
-                      <div className="border rounded-lg">
-                          <Table>
-                              <TableHeader>
-                                  <TableRow>
-                                      <TableHead>PLATFORM</TableHead>
-                                      <TableHead className="text-right">PAYMENT ACCEPTED</TableHead>
-                                  </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                  {detailStoreData.length > 0 ? (
-                                      detailStoreData.map((item) => (
-                                          <TableRow key={item.platform}>
-                                              <TableCell className="font-medium">{item.platform}</TableCell>
-                                              <TableCell className="text-right">{item.paymentAccepted.toLocaleString()}</TableCell>
-                                          </TableRow>
-                                      ))
-                                  ) : (
-                                      <TableRow>
-                                          <TableCell colSpan={2} className="h-24 text-center text-muted-foreground">
-                                              No data available.
-                                          </TableCell>
-                                      </TableRow>
-                                  )}
-                              </TableBody>
-                          </Table>
-                      </div>
-                  </CardContent>
-              </Card>
-          </TabsContent>
-      </Tabs>
-      
-      <Card>
-        <CardHeader>
-           <div className="flex justify-between items-start">
-            <div>
-              <CardTitle>Grafik Backlog</CardTitle>
-              <Tabs defaultValue="storeName" onValueChange={(value) => setChartGrouping(value as GroupingKey)} className="mt-2">
-                <TabsList className="bg-gray-200">
-                  <TabsTrigger value="storeName" className="data-[state=active]:bg-indigo-600 data-[state=active]:text-white">Store Name</TabsTrigger>
-                  <TabsTrigger value="marketplace" className="data-[state=active]:bg-indigo-600 data-[state=active]:text-white">Marketplace</TabsTrigger>
-                  <TabsTrigger value="platform" className="data-[state=active]:bg-indigo-600 data-[state=active]:text-white">Platform</TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
-            <div className="space-y-2 text-sm">
-                <div className="flex items-center justify-between p-2 border rounded-md">
-                    <span>Marketplace Store</span>
-                    <span className="font-bold ml-4">{totalMarketplaceStore}</span>
-                </div>
-                 <div className="flex items-center justify-between p-2 border rounded-md border-green-500 text-green-600">
-                    <span>Payment Accepted</span>
-                    <span className="font-bold ml-4">{totalPaymentAccepted.toLocaleString()}</span>
-                </div>
-            </div>
+    <MainLayout>
+      <div className="w-full space-y-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold">Backlog Marketplace</h1>
+          <div className="flex items-center gap-2">
+              <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
+              <Button variant="outline" onClick={handleUploadClick}>
+                  <Upload className="mr-2 h-4 w-4" /> Import
+              </Button>
+              <Button variant="outline" onClick={handleEditToggle}>
+                {isEditing ? <Save className="mr-2 h-4 w-4" /> : <Pencil className="mr-2 h-4 w-4" />}
+                {isEditing ? 'Save' : 'Edit'}
+              </Button>
+              <Button variant="default" onClick={handleExport}>
+                  <Download className="mr-2 h-4 w-4" /> Export
+              </Button>
           </div>
-        </CardHeader>
-        <CardContent>
-            <div className="h-[350px] w-full">
-                 <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                        data={chartData}
-                        margin={{ top: 20, right: 20, left: -10, bottom: 80 }}
-                    >
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                        <XAxis 
-                            dataKey="name" 
-                            tickLine={false} 
-                            axisLine={false} 
-                            tick={{ fontSize: 12 }} 
-                            angle={-45}
-                            textAnchor="end"
-                            interval={0}
-                            height={100}
-                        />
-                        <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12 }} allowDecimals={false}/>
-                        <Tooltip
-                          content={({ active, payload, label }) => {
-                            if (active && payload && payload.length) {
-                              return (
-                                <div className="rounded-lg border bg-background p-2 shadow-sm">
-                                  <div className="grid grid-cols-1 gap-2">
-                                     <div className="flex flex-col">
-                                       <span className="text-[0.8rem] font-bold">
-                                         {label}
-                                       </span>
-                                     </div>
-                                    <div className="flex flex-col">
-                                      <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                        Payment Accepted
-                                      </span>
-                                      <span className="font-bold text-foreground">
-                                        {payload[0].value?.toLocaleString()}
-                                      </span>
+        </div>
+        
+        <Tabs defaultValue="all-store">
+            <TabsList className="bg-gray-200">
+                <TabsTrigger value="all-store" className="data-[state=active]:bg-indigo-600 data-[state=active]:text-white">MP All-Store</TabsTrigger>
+                <TabsTrigger value="detail-store" className="data-[state=active]:bg-indigo-600 data-[state=active]:text-white">MP Detail Store</TabsTrigger>
+            </TabsList>
+              <TabsContent value="all-store">
+                <Card className="mt-4">
+                    <CardContent className="pt-6">
+                    <div className="border rounded-lg">
+                        <Table>
+                        <TableHeader>
+                            <TableRow>
+                            <TableHead>STORE NAME</TableHead>
+                            <TableHead>PAYMENT ACCEPTED</TableHead>
+                            <TableHead>MARKETPLACE</TableHead>
+                            <TableHead>PLATFORM</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {paginatedItems.length > 0 ? (
+                            paginatedItems.map((item) => (
+                                <TableRow key={item.id}>
+                                <TableCell className="font-medium">
+                                  {item.storeName}
+                                </TableCell>
+                                <TableCell>
+                                  {isEditing ? (
+                                    <Input 
+                                      type="number"
+                                      value={editedItems[item.id] ?? item.paymentAccepted} 
+                                      onChange={(e) => handleItemChange(item.id, e.target.value)} 
+                                      className="h-8"
+                                    />
+                                  ) : (
+                                    item.paymentAccepted
+                                  )}
+                                </TableCell>
+                                <TableCell>{item.marketplace}</TableCell>
+                                <TableCell>{item.platform}</TableCell>
+                                </TableRow>
+                            ))
+                            ) : (
+                            <TableRow>
+                                <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                                No backlog data available.
+                                </TableCell>
+                            </TableRow>
+                            )}
+                        </TableBody>
+                        </Table>
+                    </div>
+                    <div className="flex items-center justify-between py-4">
+                        <div className="flex items-center space-x-2">
+                            <span className="text-sm text-muted-foreground">Rows per page:</span>
+                            <Select
+                                value={`${rowsPerPage}`}
+                                onValueChange={(value) => {
+                                    setRowsPerPage(Number(value));
+                                    setCurrentPage(1);
+                                }}
+                            >
+                                <SelectTrigger className="h-8 w-[70px]">
+                                    <SelectValue placeholder={rowsPerPage} />
+                                </SelectTrigger>
+                                <SelectContent side="top">
+                                    {[3, 10, 20].map((pageSize) => (
+                                    <SelectItem key={pageSize} value={`${pageSize}`}>
+                                        {pageSize}
+                                    </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                            <span>{(currentPage - 1) * rowsPerPage + 1}-{(currentPage - 1) * rowsPerPage + paginatedItems.length} of {backlogItems.length}</span>
+                            <div className="flex items-center space-x-1">
+                                <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleFirstPage} disabled={currentPage === 1}>
+                                    <ChevronsLeft className="h-4 w-4" />
+                                </Button>
+                                <Button variant="outline" size="icon" className="h-8 w-8" onClick={handlePrevPage} disabled={currentPage === 1}>
+                                    <ChevronLeft className="h-4 w-4" />
+                                </Button>
+                                <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleNextPage} disabled={currentPage === totalPages || totalPages === 0}>
+                                    <ChevronRight className="h-4 w-4" />
+                                </Button>
+                                <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleLastPage} disabled={currentPage === totalPages || totalPages === 0}>
+                                    <ChevronsRight className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                    </CardContent>
+                </Card>
+            </TabsContent>
+            <TabsContent value="detail-store">
+                <Card className="mt-4">
+                    <CardContent className="pt-6">
+                        <div className="border rounded-lg">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>PLATFORM</TableHead>
+                                        <TableHead className="text-right">PAYMENT ACCEPTED</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {detailStoreData.length > 0 ? (
+                                        detailStoreData.map((item) => (
+                                            <TableRow key={item.platform}>
+                                                <TableCell className="font-medium">{item.platform}</TableCell>
+                                                <TableCell className="text-right">{item.paymentAccepted.toLocaleString()}</TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : (
+                                        <TableRow>
+                                            <TableCell colSpan={2} className="h-24 text-center text-muted-foreground">
+                                                No data available.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </CardContent>
+                </Card>
+            </TabsContent>
+        </Tabs>
+        
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-start">
+              <div>
+                <CardTitle>Grafik Backlog</CardTitle>
+                <Tabs defaultValue="storeName" onValueChange={(value) => setChartGrouping(value as GroupingKey)} className="mt-2">
+                  <TabsList className="bg-gray-200">
+                    <TabsTrigger value="storeName" className="data-[state=active]:bg-indigo-600 data-[state=active]:text-white">Store Name</TabsTrigger>
+                    <TabsTrigger value="marketplace" className="data-[state=active]:bg-indigo-600 data-[state=active]:text-white">Marketplace</TabsTrigger>
+                    <TabsTrigger value="platform" className="data-[state=active]:bg-indigo-600 data-[state=active]:text-white">Platform</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+              <div className="space-y-2 text-sm">
+                  <div className="flex items-center justify-between p-2 border rounded-md">
+                      <span>Marketplace Store</span>
+                      <span className="font-bold ml-4">{totalMarketplaceStore}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2 border rounded-md border-green-500 text-green-600">
+                      <span>Payment Accepted</span>
+                      <span className="font-bold ml-4">{totalPaymentAccepted.toLocaleString()}</span>
+                  </div>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+              <div className="h-[350px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                          data={chartData}
+                          margin={{ top: 20, right: 20, left: -10, bottom: 80 }}
+                      >
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                          <XAxis 
+                              dataKey="name" 
+                              tickLine={false} 
+                              axisLine={false} 
+                              tick={{ fontSize: 12 }} 
+                              angle={-45}
+                              textAnchor="end"
+                              interval={0}
+                              height={100}
+                          />
+                          <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12 }} allowDecimals={false}/>
+                          <Tooltip
+                            content={({ active, payload, label }) => {
+                              if (active && payload && payload.length) {
+                                return (
+                                  <div className="rounded-lg border bg-background p-2 shadow-sm">
+                                    <div className="grid grid-cols-1 gap-2">
+                                      <div className="flex flex-col">
+                                        <span className="text-[0.8rem] font-bold">
+                                          {label}
+                                        </span>
+                                      </div>
+                                      <div className="flex flex-col">
+                                        <span className="text-[0.70rem] uppercase text-muted-foreground">
+                                          Payment Accepted
+                                        </span>
+                                        <span className="font-bold text-foreground">
+                                          {payload[0].value?.toLocaleString()}
+                                        </span>
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
-                              )
-                            }
-                            return null
-                          }}
-                        />
-                        <Bar dataKey="Payment Accepted" radius={[4, 4, 0, 0]}>
-                            {chartData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.fill} />
-                            ))}
-                            <LabelList dataKey="Payment Accepted" position="top" className="fill-foreground" fontSize={12} formatter={(value: number) => value.toLocaleString()} />
-                        </Bar>
-                    </BarChart>
-                </ResponsiveContainer>
-            </div>
-        </CardContent>
-      </Card>
-    </div>
+                                )
+                              }
+                              return null
+                            }}
+                          />
+                          <Bar dataKey="Payment Accepted" radius={[4, 4, 0, 0]}>
+                              {chartData.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={entry.fill} />
+                              ))}
+                              <LabelList dataKey="Payment Accepted" position="top" className="fill-foreground" fontSize={12} formatter={(value: number) => value.toLocaleString()} />
+                          </Bar>
+                      </BarChart>
+                  </ResponsiveContainer>
+              </div>
+          </CardContent>
+        </Card>
+      </div>
+    </MainLayout>
   );
 }

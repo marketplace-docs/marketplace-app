@@ -2,9 +2,11 @@
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { MainLayout } from "@/components/layout/main-layout";
 
 export default function DocumentationPage() {
     return (
+      <MainLayout>
         <div className="w-full max-w-7xl space-y-8">
             <h1 className="text-3xl font-bold">Documentation</h1>
             
@@ -18,5 +20,6 @@ export default function DocumentationPage() {
                 </CardContent>
             </Card>
         </div>
+      </MainLayout>
     )
 }

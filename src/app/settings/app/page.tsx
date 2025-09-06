@@ -7,10 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
+import { MainLayout } from "@/components/layout/main-layout";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function AppSettingsPage() {
+    const { user } = useAuth();
     return (
+      <MainLayout>
         <div className="w-full max-w-7xl space-y-8">
             <h1 className="text-3xl font-bold">Settings</h1>
             
@@ -33,7 +36,7 @@ export default function AppSettingsPage() {
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="email">Email</Label>
-                            <Input id="email" type="email" defaultValue="admin@market.place" disabled />
+                            <Input id="email" type="email" value={user?.email || ''} disabled />
                         </div>
                     </div>
                 </CardContent>
@@ -96,5 +99,6 @@ export default function AppSettingsPage() {
                 </CardFooter>
             </Card>
         </div>
+      </MainLayout>
     )
 }
