@@ -259,9 +259,15 @@ export default function AdminReportsPage() {
                             </DialogHeader>
                             <div className="grid gap-4 py-4">
                                <Input placeholder="Store Name" value={newEntry.storeName} onChange={e => setNewEntry({...newEntry, storeName: e.target.value})} />
-                               <Input type="number" placeholder="Value" value={newEntry.value} onChange={e => setNewEntry({...newEntry, value: parseInt(e.target.value) || 0})} />
+                               <Input type="number" placeholder="Value" value={newEntry.value || ''} onChange={e => setNewEntry({...newEntry, value: parseInt(e.target.value) || 0})} />
                             </div>
                             <DialogFooter>
+                                <div className="flex-1">
+                                    <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
+                                    <Button variant="outline" onClick={handleUploadClick}><Upload className="mr-2 h-4 w-4" /> Upload</Button>
+                                    <Button variant="outline" onClick={handleExport} className="ml-2"><Download className="mr-2 h-4 w-4"/> Export</Button>
+                                </div>
+                                <Button variant="outline" onClick={() => setAddDialogOpen(false)}>Close</Button>
                                 <Button onClick={handleAddEntry}>Add Entry</Button>
                             </DialogFooter>
                         </DialogContent>
@@ -335,16 +341,6 @@ export default function AdminReportsPage() {
             </Button>
         </div>
       </div>
-
-      <div className="flex justify-end gap-2 mt-4">
-        <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
-        <Button variant="outline" onClick={handleUploadClick}><Upload className="mr-2 h-4 w-4" /> Upload CSV</Button>
-        <Button variant="outline" onClick={handleExport}><Download className="mr-2 h-4 w-4"/> Export CSV</Button>
-        <Button variant="outline">Close</Button>
-      </div>
-
     </div>
   );
 }
-
-    
