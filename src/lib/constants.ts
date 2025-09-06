@@ -58,7 +58,7 @@ export const NAV_LINKS: NavLink[] = [
         icon: Database,
         children: [
             {
-                href: '/reports',
+                href: '/database/user',
                 label: 'User',
                 icon: Users,
             },
