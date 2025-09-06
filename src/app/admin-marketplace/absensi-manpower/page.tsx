@@ -390,29 +390,72 @@ export default function AbsensiManpowerPage() {
             </Popover>
           </div>
         </div>
-
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="text-lg">Leader & Captain</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {leaders.map((leader) => (
-              <div
-                key={leader.role}
-                className="border p-4 rounded-lg bg-gray-50"
-              >
-                <div className="flex justify-between items-center mb-1">
-                  <p className="text-xs text-muted-foreground">{leader.role}</p>
-                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => openEditLeaderDialog(leader)}>
-                    <Pencil className="h-3 w-3" />
-                  </Button>
-                </div>
-                <p className="font-semibold">{leader.name || '-'}</p>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
         
+        <Dialog open={isAddStaffDialogOpen} onOpenChange={setAddStaffDialogOpen}>
+          <Card className="mb-6">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-lg">Leader & Captain</CardTitle>
+                <DialogTrigger asChild>
+                  <Button variant="outline">
+                    <Plus className="mr-2 h-4 w-4" /> Add Manpower
+                  </Button>
+                </DialogTrigger>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {leaders.map((leader) => (
+                <div
+                  key={leader.role}
+                  className="border p-4 rounded-lg bg-gray-50"
+                >
+                  <div className="flex justify-between items-center mb-1">
+                    <p className="text-xs text-muted-foreground">{leader.role}</p>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => openEditLeaderDialog(leader)}>
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                  </div>
+                  <p className="font-semibold">{leader.name || '-'}</p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+          <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Add New Staff</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+                <Input placeholder="Name" value={newStaffMember.name} onChange={e => setNewStaffMember({...newStaffMember, name: e.target.value})} />
+                <Select value={newStaffMember.job} onValueChange={value => setNewStaffMember({...newStaffMember, job: value, shift: ''})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Job" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {jobs.map(job => (
+                      <SelectItem key={job} value={job}>{job}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={newStaffMember.shift} onValueChange={value => setNewStaffMember({...newStaffMember, shift: value})} disabled={!newStaffMember.job}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Shift" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getAvailableShifts(newStaffMember.job).map(shift => (
+                      <SelectItem key={shift} value={shift}>{shift}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input placeholder="Time Work" value={newStaffMember.time} readOnly disabled />
+                <Input placeholder="Status" value={newStaffMember.status} readOnly disabled />
+            </div>
+            <DialogFooter>
+                <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
+                <Button variant="outline" onClick={handleUploadClick}><Upload className="mr-2 h-4 w-4" /> Upload</Button>
+                <Button variant="outline" onClick={handleExport}><Download className="mr-2 h-4 w-4" /> Export</Button>
+                <Button onClick={handleAddStaff}>Add Staff</Button>
+            </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
         <Dialog open={isEditLeaderDialogOpen} onOpenChange={setEditLeaderDialogOpen}>
           {editingLeader && (
               <DialogContent>
@@ -473,49 +516,9 @@ export default function AbsensiManpowerPage() {
                                       </DialogFooter>
                                   </DialogContent>
                               </Dialog>
-                              <Dialog open={isAddStaffDialogOpen} onOpenChange={setAddStaffDialogOpen}>
-                                  <DialogTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary/80">
-                                      <Plus className="h-5 w-5" />
-                                  </Button>
-                                  </DialogTrigger>
-                                  <DialogContent>
-                                  <DialogHeader>
-                                      <DialogTitle>Add New Staff</DialogTitle>
-                                  </DialogHeader>
-                                  <div className="grid gap-4 py-4">
-                                      <Input placeholder="Name" value={newStaffMember.name} onChange={e => setNewStaffMember({...newStaffMember, name: e.target.value})} />
-                                      <Select value={newStaffMember.job} onValueChange={value => setNewStaffMember({...newStaffMember, job: value, shift: ''})}>
-                                        <SelectTrigger>
-                                          <SelectValue placeholder="Select Job" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {jobs.map(job => (
-                                            <SelectItem key={job} value={job}>{job}</SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                      <Select value={newStaffMember.shift} onValueChange={value => setNewStaffMember({...newStaffMember, shift: value})} disabled={!newStaffMember.job}>
-                                        <SelectTrigger>
-                                          <SelectValue placeholder="Select Shift" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {getAvailableShifts(newStaffMember.job).map(shift => (
-                                            <SelectItem key={shift} value={shift}>{shift}</SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                      <Input placeholder="Time Work" value={newStaffMember.time} readOnly disabled />
-                                      <Input placeholder="Status" value={newStaffMember.status} readOnly disabled />
-                                  </div>
-                                  <DialogFooter>
-                                      <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
-                                      <Button variant="outline" onClick={handleUploadClick}><Upload className="mr-2 h-4 w-4" /> Upload</Button>
-                                      <Button variant="outline" onClick={handleExport}><Download className="mr-2 h-4 w-4" /> Export</Button>
-                                      <Button onClick={handleAddStaff}>Add Staff</Button>
-                                  </DialogFooter>
-                                  </DialogContent>
-                              </Dialog>
+                              <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary/80" onClick={() => setAddStaffDialogOpen(true)}>
+                                  <Plus className="h-5 w-5" />
+                              </Button>
                           </div>
                       </TableHead>
                   </TableRow>
