@@ -1,4 +1,4 @@
-import { LayoutDashboard, ListTodo, Store, FileText, Settings, type LucideIcon, Briefcase, Users, Archive, BarChart3, AppWindow, BookText, Database } from 'lucide-react';
+import { LayoutDashboard, ListTodo, Store, FileText, Settings, type LucideIcon, Briefcase, Users, Archive, BarChart3, AppWindow, BookText, Database, History } from 'lucide-react';
 
 export type NavLink = {
     href: string;
@@ -66,6 +66,11 @@ export const NAV_LINKS: NavLink[] = [
                 href: '/database/role',
                 label: 'Role',
                 icon: Briefcase,
+            },
+            {
+                href: '/database/log-activity',
+                label: 'Log Activity',
+                icon: History,
             }
         ]
     },
