@@ -3,7 +3,6 @@
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -132,7 +131,7 @@ export default function AdminMarketplacePage() {
   };
 
   return (
-    <div className="bg-white p-8 rounded-lg shadow-lg max-w-4xl mx-auto relative">
+    <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-7xl relative">
       <Button variant="ghost" size="icon" className="absolute top-4 right-4">
         <X className="h-5 w-5" />
       </Button>
@@ -191,61 +190,64 @@ export default function AdminMarketplacePage() {
       </Dialog>
 
 
-      <div>
-        <div className="bg-primary text-primary-foreground p-3 flex justify-between items-center rounded-t-lg">
-          <div className="flex items-center gap-6 font-bold text-sm">
-            <div className="flex items-center gap-1 cursor-pointer" onClick={handleSort}>
-              <span>Name</span>
-              {sortOrder === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
-            </div>
-            <span>Job</span>
-            <span>Shift</span>
-            <span>Time Work</span>
-            <span>Status</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary/80">
-              <Printer className="h-5 w-5" />
-            </Button>
-            <Dialog open={isAddStaffDialogOpen} onOpenChange={setAddStaffDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary/80">
-                  <Plus className="h-5 w-5" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add New Staff</DialogTitle>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <Input placeholder="Name" value={newStaffMember.name} onChange={e => setNewStaffMember({...newStaffMember, name: e.target.value})} />
-                  <Input placeholder="Job" value={newStaffMember.job} onChange={e => setNewStaffMember({...newStaffMember, job: e.target.value})} />
-                  <Input placeholder="Shift" value={newStaffMember.shift} onChange={e => setNewStaffMember({...newStaffMember, shift: e.target.value})} />
-                  <Input placeholder="Time Work" value={newStaffMember.time} onChange={e => setNewStaffMember({...newStaffMember, time: e.target.value})} />
-                  <Input placeholder="Status" value={newStaffMember.status} onChange={e => setNewStaffMember({...newStaffMember, status: e.target.value})} />
-                </div>
-                <DialogFooter>
-                  <Button onClick={handleAddStaff}>Add Staff</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </div>
-        <div className="border border-t-0 rounded-b-lg">
-          <Table>
+      <div className="border rounded-lg overflow-hidden">
+        <Table>
+            <TableHeader className="bg-primary text-primary-foreground">
+                <TableRow className="hover:bg-primary">
+                    <TableHead className="text-primary-foreground font-bold">
+                        <div className="flex items-center gap-1 cursor-pointer" onClick={handleSort}>
+                            <span>Name</span>
+                            {sortOrder === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
+                        </div>
+                    </TableHead>
+                    <TableHead className="text-primary-foreground font-bold">Job</TableHead>
+                    <TableHead className="text-primary-foreground font-bold">Shift</TableHead>
+                    <TableHead className="text-primary-foreground font-bold">Time Work</TableHead>
+                    <TableHead className="text-primary-foreground font-bold">Status</TableHead>
+                    <TableHead className="text-right text-primary-foreground">
+                        <div className="flex items-center justify-end gap-2">
+                            <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary/80">
+                                <Printer className="h-5 w-5" />
+                            </Button>
+                            <Dialog open={isAddStaffDialogOpen} onOpenChange={setAddStaffDialogOpen}>
+                                <DialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary/80">
+                                    <Plus className="h-5 w-5" />
+                                </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Add New Staff</DialogTitle>
+                                </DialogHeader>
+                                <div className="grid gap-4 py-4">
+                                    <Input placeholder="Name" value={newStaffMember.name} onChange={e => setNewStaffMember({...newStaffMember, name: e.target.value})} />
+                                    <Input placeholder="Job" value={newStaffMember.job} onChange={e => setNewStaffMember({...newStaffMember, job: e.target.value})} />
+                                    <Input placeholder="Shift" value={newStaffMember.shift} onChange={e => setNewStaffMember({...newStaffMember, shift: e.target.value})} />
+                                    <Input placeholder="Time Work" value={newStaffMember.time} onChange={e => setNewStaffMember({...newStaffMember, time: e.target.value})} />
+                                    <Input placeholder="Status" value={newStaffMember.status} onChange={e => setNewStaffMember({...newStaffMember, status: e.target.value})} />
+                                </div>
+                                <DialogFooter>
+                                    <Button onClick={handleAddStaff}>Add Staff</Button>
+                                </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
+                        </div>
+                    </TableHead>
+                </TableRow>
+            </TableHeader>
             <TableBody>
               {staff.map((person) => (
                 <TableRow key={person.id}>
-                  <TableCell className="font-medium w-[23%]">{person.name}</TableCell>
-                  <TableCell className="w-[15%]">{person.job}</TableCell>
-                  <TableCell className="w-[15%]">{person.shift}</TableCell>
-                  <TableCell className="w-[27%]">{person.time}</TableCell>
-                  <TableCell className="w-[20%]">{person.status}</TableCell>
+                  <TableCell className="font-medium">{person.name}</TableCell>
+                  <TableCell>{person.job}</TableCell>
+                  <TableCell>{person.shift}</TableCell>
+                  <TableCell>{person.time}</TableCell>
+                  <TableCell>{person.status}</TableCell>
+                  <TableCell></TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-        </div>
       </div>
 
       <div className="flex justify-end gap-4 mt-8">
