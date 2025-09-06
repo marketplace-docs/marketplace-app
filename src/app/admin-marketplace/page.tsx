@@ -40,55 +40,13 @@ import { useToast } from '@/hooks/use-toast';
 
 
 const initialLeaders = [
-  { role: 'LEADER PAGI', name: 'Arlan Testing' },
-  { role: 'LEADER SORE', name: 'Nama Leader Sore' },
-  { role: 'CAPTAIN PAGI', name: 'Nama Captain Pagi' },
-  { role: 'CAPTAIN SORE', name: 'Nama Captain Sore' },
+  { role: 'LEADER PAGI', name: '' },
+  { role: 'LEADER SORE', name: '' },
+  { role: 'CAPTAIN PAGI', name: '' },
+  { role: 'CAPTAIN SORE', name: '' },
 ];
 
-const initialStaff = [
-  {
-    id: 1,
-    name: 'Nova Aurelia Herman',
-    job: 'Admin',
-    shift: 'PAGI',
-    time: '08:00 - 17:00',
-    status: 'REGULER',
-  },
-  {
-    id: 2,
-    name: 'Arlan Testing 3',
-    job: 'Putaway',
-    shift: 'Siang',
-    time: '13:00 - 21:00',
-    status: 'EVENT',
-  },
-  {
-    id: 3,
-    name: 'Arlan Testing 2',
-    job: 'Picker',
-    shift: 'Pagi',
-    time: '08:00 - 16:00',
-    status: 'EVENT',
-  },
-  {
-    id: 4,
-    name: 'Arlan Testing 1',
-    job: 'Packer',
-    shift: 'Sore',
-    time: '16:00 - 00:00',
-    status: 'EVENT',
-  },
-  { id: 5, name: 'Staff 5', job: 'Admin', shift: 'PAGI', time: '08:00 - 17:00', status: 'REGULER' },
-  { id: 6, name: 'Staff 6', job: 'Picker', shift: 'Sore', time: '16:00 - 00:00', status: 'EVENT' },
-  { id: 7, name: 'Staff 7', job: 'Packer', shift: 'Pagi', time: '09:00 - 17:00', status: 'EVENT' },
-  { id: 8, name: 'Staff 8', job: 'Putaway', shift: 'Siang', time: '13:00 - 21:00', status: 'EVENT' },
-  { id: 9, name: 'Staff 9', job: 'Admin', shift: 'Sore', time: '15:00 - 00:00', status: 'Event' },
-  { id: 10, name: 'Staff 10', job: 'Captain', shift: 'Pagi', time: '09:00 - 18:00', status: 'Reguler' },
-  { id: 11, name: 'Staff 11', job: 'Leader', shift: 'Sore', time: '15:00 - 00:00', status: 'Staff' },
-  { id: 12, name: 'Staff 12', job: 'Parakerja', shift: 'Pagi', time: '08:00 - 17:00', status: 'Reguler' },
-
-];
+const initialStaff: Staff[] = [];
 
 const jobSchedules = {
   Admin: {
@@ -128,8 +86,18 @@ const jobSchedules = {
 type Job = keyof typeof jobSchedules;
 const jobs = Object.keys(jobSchedules) as Job[];
 
-export type Leader = (typeof initialLeaders)[0];
-export type Staff = (typeof initialStaff)[0];
+export type Leader = {
+    role: string;
+    name: string;
+}
+export type Staff = {
+    id: number;
+    name: string;
+    job: string;
+    shift: string;
+    time: string;
+    status: string;
+};
 type SortOrder = 'asc' | 'desc';
 
 export default function AdminMarketplacePage() {
@@ -383,7 +351,7 @@ export default function AdminMarketplacePage() {
                     <Pencil className="h-3 w-3" />
                   </Button>
                 </div>
-                <p className="font-semibold">{leader.name}</p>
+                <p className="font-semibold">{leader.name || '-'}</p>
               </div>
             ))}
           </CardContent>
@@ -497,7 +465,7 @@ export default function AdminMarketplacePage() {
                   </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedStaff.map((person) => (
+                {paginatedStaff.length > 0 ? paginatedStaff.map((person) => (
                   <TableRow key={person.id}>
                     <TableCell className="font-medium">{person.name}</TableCell>
                     <TableCell>{person.job}</TableCell>
@@ -506,13 +474,19 @@ export default function AdminMarketplacePage() {
                     <TableCell>{person.status}</TableCell>
                     <TableCell></TableCell>
                   </TableRow>
-                ))}
+                )) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                      No data available. Add staff to see the list.
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
         </div>
         <div className="flex items-center justify-end space-x-2 py-4">
             <div className="flex-1 text-sm text-muted-foreground">
-                Page {currentPage} of {totalPages}
+                Page {staff.length > 0 ? currentPage : 0} of {totalPages}
             </div>
             <div className="flex items-center space-x-2">
                 <span className="text-sm text-muted-foreground">Rows per page:</span>
@@ -547,7 +521,7 @@ export default function AdminMarketplacePage() {
                 variant="outline"
                 size="sm"
                 onClick={handleNextPage}
-                disabled={currentPage === totalPages}
+                disabled={currentPage === totalPages || totalPages === 0}
             >
                 <span className="sr-only">Next</span>
                 <ChevronRight className="h-4 w-4" />
@@ -568,3 +542,5 @@ export default function AdminMarketplacePage() {
     </>
   );
 }
+
+    
