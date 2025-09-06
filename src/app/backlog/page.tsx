@@ -36,18 +36,7 @@ type BacklogItem = {
   dueDate: string;
 };
 
-const initialBacklogItems: BacklogItem[] = [
-  { id: 'BK-001', task: 'Integrate new payment gateway', status: 'In Progress', priority: 'Urgent', dueDate: '2024-10-15' },
-  { id: 'BK-002', task: 'Develop user profile page', status: 'To Do', priority: 'High', dueDate: '2024-10-22' },
-  { id: 'BK-003', task: 'Fix login authentication bug', status: 'Done', priority: 'High', dueDate: '2024-09-28' },
-  { id: 'BK-004', task: 'Update homepage banner for Q4 promotion', status: 'To Do', priority: 'Medium', dueDate: '2024-10-05' },
-  { id: 'BK-005', task: 'Refactor legacy API endpoints', status: 'Cancelled', priority: 'Low', dueDate: '2024-11-01' },
-  { id: 'BK-006', task: 'Create weekly performance report template', status: 'Done', priority: 'Medium', dueDate: '2024-09-25' },
-  { id: 'BK-007', task: 'Onboard new marketing team members', status: 'In Progress', priority: 'High', dueDate: '2024-10-10' },
-  { id: 'BK-008', task: 'Optimize database query performance', status: 'To Do', priority: 'Urgent', dueDate: '2024-10-18' },
-  { id: 'BK-009', task: 'Research and implement push notifications', status: 'To Do', priority: 'Medium', dueDate: '2024-11-05' },
-  { id: 'BK-010', task: 'Design new email templates', status: 'To Do', priority: 'Low', dueDate: '2024-10-30' },
-];
+const initialBacklogItems: BacklogItem[] = [];
 
 const statusVariantMap: { [key: string]: 'default' | 'secondary' | 'destructive' | 'outline' } = {
   'To Do': 'secondary',
@@ -65,7 +54,7 @@ const priorityVariantMap: { [key: string]: 'default' | 'secondary' | 'destructiv
 
 
 export default function BacklogPage() {
-  const [backlogItems] = useState<BacklogItem[]>(initialBacklogItems);
+  const [backlogItems, setBacklogItems] = useState<BacklogItem[]>(initialBacklogItems);
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   
@@ -111,23 +100,31 @@ export default function BacklogPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedItems.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className="font-mono text-xs">{item.id}</TableCell>
-                  <TableCell className="font-medium">{item.task}</TableCell>
-                  <TableCell>
-                    <Badge variant={statusVariantMap[item.status]}>
-                      {item.status}
-                    </Badge>
+              {paginatedItems.length > 0 ? (
+                paginatedItems.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-mono text-xs">{item.id}</TableCell>
+                    <TableCell className="font-medium">{item.task}</TableCell>
+                    <TableCell>
+                      <Badge variant={statusVariantMap[item.status]}>
+                        {item.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={priorityVariantMap[item.priority]}>
+                        {item.priority}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{new Date(item.dueDate).toLocaleDateString()}</TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={5} className="h-24 text-center">
+                    No tasks found.
                   </TableCell>
-                   <TableCell>
-                    <Badge variant={priorityVariantMap[item.priority]}>
-                      {item.priority}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{new Date(item.dueDate).toLocaleDateString()}</TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </CardContent>
