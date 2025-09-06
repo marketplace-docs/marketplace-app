@@ -127,6 +127,7 @@ export default function AdminMarketplacePage() {
   const [editingLeader, setEditingLeader] = useState<Leader | null>(null);
   const [isEditLeaderDialogOpen, setEditLeaderDialogOpen] = useState(false);
   const [isAddStaffDialogOpen, setAddStaffDialogOpen] = useState(false);
+  const [isPrintDialogOpen, setPrintDialogOpen] = useState(false);
   const [newStaffMember, setNewStaffMember] = useState<Omit<Staff, 'id'>>({
     name: '',
     job: '',
@@ -212,6 +213,11 @@ export default function AdminMarketplacePage() {
     return Object.keys(jobSchedules[job as Job]);
   }
 
+  const handlePrint = () => {
+    setPrintDialogOpen(false);
+    window.print();
+  };
+
   return (
     <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-7xl relative">
       <div className="mb-6">
@@ -283,9 +289,25 @@ export default function AdminMarketplacePage() {
                     <TableHead className="text-primary-foreground font-bold">Status</TableHead>
                     <TableHead className="text-right text-primary-foreground">
                         <div className="flex items-center justify-end gap-2">
-                            <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary/80">
-                                <Printer className="h-5 w-5" />
-                            </Button>
+                            <Dialog open={isPrintDialogOpen} onOpenChange={setPrintDialogOpen}>
+                                <DialogTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary/80">
+                                        <Printer className="h-5 w-5" />
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Print Schedule</DialogTitle>
+                                        <DialogDescription>
+                                            This will open your browser's print dialog to print the current schedule view.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <DialogFooter>
+                                        <Button variant="outline" onClick={() => setPrintDialogOpen(false)}>Cancel</Button>
+                                        <Button onClick={handlePrint}>Print</Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
                             <Dialog open={isAddStaffDialogOpen} onOpenChange={setAddStaffDialogOpen}>
                                 <DialogTrigger asChild>
                                 <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary/80">
