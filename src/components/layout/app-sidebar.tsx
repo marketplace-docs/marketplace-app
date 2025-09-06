@@ -30,15 +30,15 @@ function AppLogo() {
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
-        className="h-6 w-6 text-primary"
+        className="h-6 w-6 text-red-500"
       >
         <path d="M21 10.9999C21 11.5522 20.5523 11.9999 20 11.9999L4 11.9999C3.44772 11.9999 3 11.5522 3 10.9999C3 10.4476 3.44772 9.99994 4 9.99994L20 9.99994C20.5523 9.99994 21 10.4476 21 10.9999Z" />
         <path d="M18 16L18 4" />
         <path d="M13 16L13 4" />
         <path d="M8 16L8 4" />
       </svg>
-      <span className="text-primary">Market</span>
-      <span className="text-foreground">Place</span>
+      <span className="text-red-500">Market</span>
+      <span className="text-red-500">Place</span>
     </Link>
   );
 }
