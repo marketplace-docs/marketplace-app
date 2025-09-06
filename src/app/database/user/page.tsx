@@ -18,8 +18,8 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react";
-import React, { useState } from "react";
+import { ChevronLeft, ChevronRight, Pencil, Trash2, Loader2, AlertCircle } from "lucide-react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -40,6 +40,7 @@ import {
 } from '@/components/ui/select';
 import { useToast } from "@/hooks/use-toast";
 import { MainLayout } from "@/components/layout/main-layout";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 
 type User = {
@@ -49,35 +50,6 @@ type User = {
     role: string;
 };
 
-const initialUsers: User[] = [
-    { id: 1, name: 'Arlan Saputra', status: 'Leader', role: 'Super Admin' },
-    { id: 2, name: 'Rudi Setiawan', status: 'Leader', role: 'Leader' },
-    { id: 3, name: 'Diki Mauli', status: 'Reguler', role: 'Captain' },
-    { id: 4, name: 'Virgiawan Juhri', status: 'Reguler', role: 'Captain' },
-    { id: 5, name: 'Nurul Tanzilla', status: 'Reguler', role: 'Admin' },
-    { id: 6, name: 'Nova Aurelia Herman', status: 'Reguler', role: 'Admin' },
-    { id: 7, name: 'Regina Rahmi Rifana', status: 'Event', role: 'Admin' },
-    { id: 8, name: 'Ishika Seherena', status: 'Event', role: 'Packer' },
-    { id: 9, name: 'Elah Febriyanti', status: 'Event', role: 'Packer' },
-    { id: 10, name: 'Erni Atriyanti', status: 'Event', role: 'Packer' },
-    { id: 11, name: 'Yanti Monica', status: 'Event', role: 'Packer' },
-    { id: 12, name: 'Tia Puspita', status: 'Event', role: 'Packer' },
-    { id: 13, name: 'Mila Sari', status: 'Event', role: 'Packer' },
-    { id: 14, name: 'Cindy Vika Lestari', status: 'Event', role: 'Packer' },
-    { id: 15, name: 'Mirna', status: 'Event', role: 'Packer' },
-    { id: 16, name: 'Nur Yasmin Sabrina', status: 'Event', role: 'Packer' },
-    { id: 17, name: 'Rosnani', status: 'Event', role: 'Packer' },
-    { id: 18, name: 'Ridwan', status: 'Event', role: 'Picker' },
-    { id: 19, name: 'Rendi Tri Suyono', status: 'Event', role: 'Picker' },
-    { id: 20, name: 'Wawi Sahalawi', status: 'Event', role: 'Picker' },
-    { id: 21, name: 'Omar Dhani', status: 'Event', role: 'Picker' },
-    { id: 22, name: 'Ditya Nuranjani', status: 'Event', role: 'Picker' },
-    { id: 23, name: 'Riki Fajar', status: 'Event', role: 'Putaway' },
-    { id: 24, name: 'Adi Mulya', status: 'Event', role: 'Putaway' },
-    { id: 25, name: 'Noval Ardiansyah', status: 'Event', role: 'Putaway' },
-    { id: 26, name: 'Hadi Nurjamil', status: 'Event', role: 'Putaway' },
-];
-
 const statusVariantMap: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
     'Leader': 'destructive',
     'Reguler': 'default',
@@ -85,14 +57,44 @@ const statusVariantMap: { [key: string]: "default" | "secondary" | "destructive"
 };
 
 export default function DatabaseUserPage() {
-    const [users, setUsers] = useState<User[]>(initialUsers);
+    const [users, setUsers] = useState<User[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [isEditDialogOpen, setEditDialogOpen] = useState(false);
     const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     const { toast } = useToast();
 
     const [currentPage, setCurrentPage] = useState(1);
-    const [rowsPerPage, setRowsPerPage] = useState(5);
+    const [rowsPerPage, setRowsPerPage] = useState(10); // Changed to 10 for better view
+
+    useEffect(() => {
+        const fetchUsers = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+                const response = await fetch('/api/users');
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.details || `Failed to fetch users: ${response.statusText}`);
+                }
+                const data = await response.json();
+                setUsers(data);
+            } catch (err: any) {
+                console.error("Fetch error:", err);
+                setError(err.message);
+                toast({
+                    variant: "destructive",
+                    title: "Failed to load data",
+                    description: err.message,
+                });
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchUsers();
+    }, [toast]);
 
     const totalPages = Math.ceil(users.length / rowsPerPage);
     const paginatedUsers = users.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
@@ -116,21 +118,22 @@ export default function DatabaseUserPage() {
     };
 
     const handleSaveChanges = () => {
+        // This functionality would require a PUT/PATCH API endpoint
         if (selectedUser) {
             setUsers(users.map(u => u.id === selectedUser.id ? selectedUser : u));
             setEditDialogOpen(false);
             setSelectedUser(null);
-            toast({ title: "Success", description: "User has been updated." });
+            toast({ title: "Success", description: "User has been updated locally. API integration needed to persist." });
         }
     };
 
     const handleDeleteUser = () => {
+        // This functionality would require a DELETE API endpoint
         if (selectedUser) {
             setUsers(users.filter(u => u.id !== selectedUser.id));
             setDeleteDialogOpen(false);
             setSelectedUser(null);
-            toast({ variant: "destructive", title: "Success", description: "User has been deleted." });
-             // Adjust currentPage if the last item on a page is deleted
+            toast({ variant: "destructive", title: "Success", description: "User has been deleted locally. API integration needed to persist." });
             if (paginatedUsers.length === 1 && currentPage > 1) {
                 setCurrentPage(currentPage - 1);
             }
@@ -141,10 +144,19 @@ export default function DatabaseUserPage() {
       <MainLayout>
         <div className="w-full">
             <h1 className="text-3xl font-bold mb-6">Database User</h1>
+             {error && (
+                <Alert variant="destructive" className="mb-4">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Error</AlertTitle>
+                    <AlertDescription>
+                        {error}. This might be because the 'users' table doesn't exist in the database. Please create it and add some data.
+                    </AlertDescription>
+                </Alert>
+            )}
             <Card>
                 <CardHeader>
                     <CardTitle>Marketplace Team Work</CardTitle>
-                    <CardDescription>A list of all the users in the system.</CardDescription>
+                    <CardDescription>A list of all the users in the system from the database.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Table>
@@ -157,27 +169,44 @@ export default function DatabaseUserPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {paginatedUsers.map((user) => (
-                                <TableRow key={user.id}>
-                                    <TableCell className="font-medium">{user.name}</TableCell>
-                                    <TableCell>
-                                        <Badge variant={statusVariantMap[user.status] || 'default'}>{user.status}</Badge>
-                                    </TableCell>
-                                    <TableCell>{user.role}</TableCell>
-                                    <TableCell className="text-right">
-                                        <div className="flex items-center justify-end gap-2">
-                                            <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(user)}>
-                                                <Pencil className="h-4 w-4" />
-                                                <span className="sr-only">Edit</span>
-                                            </Button>
-                                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" onClick={() => handleOpenDeleteDialog(user)}>
-                                                <Trash2 className="h-4 w-4" />
-                                                <span className="sr-only">Delete</span>
-                                            </Button>
+                            {loading ? (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="h-24 text-center">
+                                        <div className="flex justify-center items-center">
+                                            <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+                                            <span>Loading users...</span>
                                         </div>
                                     </TableCell>
                                 </TableRow>
-                            ))}
+                            ) : paginatedUsers.length > 0 ? (
+                                paginatedUsers.map((user) => (
+                                    <TableRow key={user.id}>
+                                        <TableCell className="font-medium">{user.name}</TableCell>
+                                        <TableCell>
+                                            <Badge variant={statusVariantMap[user.status] || 'default'}>{user.status}</Badge>
+                                        </TableCell>
+                                        <TableCell>{user.role}</TableCell>
+                                        <TableCell className="text-right">
+                                            <div className="flex items-center justify-end gap-2">
+                                                <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(user)}>
+                                                    <Pencil className="h-4 w-4" />
+                                                    <span className="sr-only">Edit</span>
+                                                </Button>
+                                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" onClick={() => handleOpenDeleteDialog(user)}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                    <span className="sr-only">Delete</span>
+                                                </Button>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                 <TableRow>
+                                    <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                                        No users found.
+                                    </TableCell>
+                                </TableRow>
+                            )}
                         </TableBody>
                     </Table>
                 </CardContent>
@@ -200,7 +229,7 @@ export default function DatabaseUserPage() {
                             <SelectValue placeholder={rowsPerPage} />
                         </SelectTrigger>
                         <SelectContent side="top">
-                            {[5, 10, 30].map((pageSize) => (
+                            {[10, 20, 30].map((pageSize) => (
                                 <SelectItem key={pageSize} value={`${pageSize}`}>
                                     {pageSize}
                                 </SelectItem>
@@ -276,7 +305,7 @@ export default function DatabaseUserPage() {
                         <DialogTitle>Are you sure?</DialogTitle>
                         <DialogDescription>
                             This action cannot be undone. This will permanently delete the user <span className="font-semibold">{selectedUser?.name}</span>.
-                        </DialogDescription>
+                        </Description>
                     </DialogHeader>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
@@ -289,5 +318,3 @@ export default function DatabaseUserPage() {
       </MainLayout>
     )
 }
-
-    
