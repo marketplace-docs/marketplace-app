@@ -362,10 +362,10 @@ export default function BacklogPage() {
             <div>
               <CardTitle>Grafik Backlog</CardTitle>
               <Tabs defaultValue="storeName" onValueChange={(value) => setChartGrouping(value as GroupingKey)} className="mt-2">
-                <TabsList>
-                  <TabsTrigger value="storeName">Store Name</TabsTrigger>
-                  <TabsTrigger value="marketplace">Marketplace</TabsTrigger>
-                  <TabsTrigger value="platform">Platform</TabsTrigger>
+                <TabsList className="bg-gray-200">
+                  <TabsTrigger value="storeName" className="data-[state=active]:bg-indigo-600 data-[state=active]:text-white">Store Name</TabsTrigger>
+                  <TabsTrigger value="marketplace" className="data-[state=active]:bg-indigo-600 data-[state=active]:text-white">Marketplace</TabsTrigger>
+                  <TabsTrigger value="platform" className="data-[state=active]:bg-indigo-600 data-[state=active]:text-white">Platform</TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>
