@@ -272,7 +272,7 @@ export default function AdminReportsPage() {
           </div>
           <div className="bg-primary text-primary-foreground p-4 rounded-lg flex flex-col items-center justify-center">
               <p className="font-bold text-sm">TOTAL PROGRESS SHIFT</p>
-              <p className="text-5xl font-bold">{entries.reduce((acc, entry) => acc + entry.value, 0)}</p>
+              <p className="text-5xl font-bold">{entries.reduce((acc, entry) => acc + entry.value, 0).toLocaleString()}</p>
           </div>
         </div>
         
@@ -384,5 +384,3 @@ export default function AdminReportsPage() {
     </MainLayout>
   );
 }
-
-    
