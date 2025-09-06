@@ -28,6 +28,13 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const initialLeaders = [
   { role: 'LEADER PAGI', name: 'Arlan Testing' },
@@ -71,6 +78,41 @@ const initialStaff = [
   },
 ];
 
+const jobSchedules = {
+  Admin: {
+    Pagi: { time: '08:00 - 17:00', status: 'Reguler' },
+    Sore: { time: '15:00 - 00:00', status: 'Event' },
+  },
+  Captain: {
+    Pagi: { time: '09:00 - 18:00', status: 'Reguler' },
+    Sore: { time: '15:00 - 00:00', status: 'Event' },
+  },
+  Picker: {
+    Pagi: { time: '08:00 - 16:00', status: 'Event' },
+    Sore: { time: '16:00 - 00:00', status: 'Event' },
+  },
+  Packer: {
+    Pagi: { time: '09:00 - 17:00', status: 'Event' },
+    Sore: { time: '16:00 - 00:00', status: 'Event' },
+  },
+  Putaway: {
+    Pagi: { time: '09:00 - 17:00', status: 'Event' },
+    Siang: { time: '13:00 - 21:00', status: 'Event' },
+    Sore: { time: '16:00 - 00:00', status: 'Event' },
+  },
+  Leader: {
+    Pagi: { time: '09:00 - 18:00', status: 'Staff' },
+    Sore: { time: '15:00 - 00:00', status: 'Staff' },
+  },
+  Parakerja: {
+    Pagi: { time: '08:00 - 17:00', status: 'Reguler' },
+    // Note: Two 'Pagi' shifts for Parakerja, using the first one.
+  },
+};
+
+type Job = keyof typeof jobSchedules;
+const jobs = Object.keys(jobSchedules) as Job[];
+
 type Leader = (typeof initialLeaders)[0];
 type Staff = (typeof initialStaff)[0];
 type SortOrder = 'asc' | 'desc';
@@ -90,6 +132,20 @@ export default function AdminMarketplacePage() {
     status: '',
   });
   const [showScroll, setShowScroll] = useState(false);
+
+  useEffect(() => {
+    const { job, shift } = newStaffMember;
+    if (job && shift) {
+      const schedule = (jobSchedules[job as Job] as any)?.[shift];
+      if (schedule) {
+        setNewStaffMember(prev => ({ ...prev, time: schedule.time, status: schedule.status }));
+      } else {
+        setNewStaffMember(prev => ({ ...prev, time: '', status: '' }));
+      }
+    } else {
+       setNewStaffMember(prev => ({ ...prev, time: '', status: '' }));
+    }
+  }, [newStaffMember.job, newStaffMember.shift]);
 
   const checkScrollTop = () => {
     if (!showScroll && window.pageYOffset > 400){
@@ -147,6 +203,11 @@ export default function AdminMarketplacePage() {
     setNewStaffMember({ name: '', job: '', shift: '', time: '', status: '' });
     setAddStaffDialogOpen(false);
   };
+
+  const getAvailableShifts = (job: string): string[] => {
+    if (!job || !jobSchedules[job as Job]) return [];
+    return Object.keys(jobSchedules[job as Job]);
+  }
 
   return (
     <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-7xl relative">
@@ -235,10 +296,28 @@ export default function AdminMarketplacePage() {
                                 </DialogHeader>
                                 <div className="grid gap-4 py-4">
                                     <Input placeholder="Name" value={newStaffMember.name} onChange={e => setNewStaffMember({...newStaffMember, name: e.target.value})} />
-                                    <Input placeholder="Job" value={newStaffMember.job} onChange={e => setNewStaffMember({...newStaffMember, job: e.target.value})} />
-                                    <Input placeholder="Shift" value={newStaffMember.shift} onChange={e => setNewStaffMember({...newStaffMember, shift: e.target.value})} />
-                                    <Input placeholder="Time Work" value={newStaffMember.time} onChange={e => setNewStaffMember({...newStaffMember, time: e.target.value})} />
-                                    <Input placeholder="Status" value={newStaffMember.status} onChange={e => setNewStaffMember({...newStaffMember, status: e.target.value})} />
+                                    <Select value={newStaffMember.job} onValueChange={value => setNewStaffMember({...newStaffMember, job: value, shift: ''})}>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select Job" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {jobs.map(job => (
+                                          <SelectItem key={job} value={job}>{job}</SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                    <Select value={newStaffMember.shift} onValueChange={value => setNewStaffMember({...newStaffMember, shift: value})} disabled={!newStaffMember.job}>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select Shift" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {getAvailableShifts(newStaffMember.job).map(shift => (
+                                          <SelectItem key={shift} value={shift}>{shift}</SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                    <Input placeholder="Time Work" value={newStaffMember.time} readOnly disabled />
+                                    <Input placeholder="Status" value={newStaffMember.status} readOnly disabled />
                                 </div>
                                 <DialogFooter>
                                     <Button onClick={handleAddStaff}>Add Staff</Button>
