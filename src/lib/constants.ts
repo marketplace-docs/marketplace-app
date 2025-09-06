@@ -1,4 +1,4 @@
-import { LayoutDashboard, ListTodo, Store, FileText, Settings, type LucideIcon, Briefcase, Users } from 'lucide-react';
+import { LayoutDashboard, ListTodo, Store, FileText, Settings, type LucideIcon, Briefcase, Users, Archive, BarChart3 } from 'lucide-react';
 
 export type NavLink = {
     href: string;
@@ -39,6 +39,16 @@ export const NAV_LINKS: NavLink[] = [
         href: '/marketplace-store',
         label: 'Marketplace Store',
         icon: Store,
+    },
+    {
+        href: '/backlog',
+        label: 'Backlog',
+        icon: Archive,
+    },
+    {
+        href: '/productivity',
+        label: 'Productivity',
+        icon: BarChart3,
     },
     {
         href: '/reports',
