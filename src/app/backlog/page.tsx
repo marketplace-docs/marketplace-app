@@ -156,23 +156,28 @@ export default function BacklogPage() {
 
   return (
     <div className="w-full max-w-7xl space-y-6">
+       <div className="flex justify-between items-center">
+        <div>
+            <h1 className="text-2xl font-bold mb-2">Backlog Marketplace</h1>
+            <Tabs defaultValue="all-store">
+                <TabsList className="bg-gray-200">
+                    <TabsTrigger value="all-store" className="data-[state=active]:bg-indigo-600 data-[state=active]:text-white">MP All-Store</TabsTrigger>
+                    <TabsTrigger value="detail-store">MP Detail Store</TabsTrigger>
+                </TabsList>
+            </Tabs>
+        </div>
+        <div className="flex items-center gap-2">
+            <Button variant="outline">
+                <Pencil className="mr-2 h-4 w-4" /> Edit
+            </Button>
+            <Button variant="default" onClick={handleExport}>
+                <Download className="mr-2 h-4 w-4" /> Export
+            </Button>
+        </div>
+      </div>
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
-            <Tabs defaultValue="all-store">
-              <TabsList>
-                <TabsTrigger value="all-store">MP All-Store</TabsTrigger>
-                <TabsTrigger value="detail-store">MP Detail Store</TabsTrigger>
-              </TabsList>
-            </Tabs>
-            <div className="flex items-center gap-2">
-              <Button variant="outline">
-                <Pencil className="mr-2 h-4 w-4" /> Edit
-              </Button>
-              <Button variant="default" onClick={handleExport}>
-                <Download className="mr-2 h-4 w-4" /> Export
-              </Button>
-            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -329,3 +334,5 @@ export default function BacklogPage() {
     </div>
   );
 }
+
+    
