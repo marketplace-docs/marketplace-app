@@ -111,7 +111,7 @@ export function AppHeader() {
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-               <Link href="/app-documentation">
+               <Link href="/master/menu">
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Settings</span>
               </Link>
