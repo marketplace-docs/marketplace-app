@@ -102,39 +102,58 @@ export default function CreatePutawayPage() {
             const newDocs: PutawayDocument[] = [];
             let maxId = documents.length > 0 ? Math.max(...documents.map(s => parseInt(s.id))) : 0;
             
-            const header = lines[0].toLowerCase().split(',').map(h => h.trim().replace(/"/g, ''));
+            const headerLine = lines[0] || '';
+            const header = headerLine.toLowerCase().split(',').map(h => h.trim().replace(/"/g, ''));
             const requiredHeaders = ['no. document', 'sku', 'barcode', 'brand', 'exp date', 'check by', 'qty', 'status'];
+            
             if (!requiredHeaders.every(h => header.includes(h))) {
-              throw new Error('CSV file is missing required headers.');
+              throw new Error('CSV file is missing required headers. Required headers are: ' + requiredHeaders.join(', '));
             }
 
             lines.slice(1).forEach((line, index) => {
+              if (!line.trim()) return; // Skip empty lines
+
               const values = line.split(',').map(s => s.trim());
-              if(values.length < header.length) return;
+              
+              if(values.length < header.length) {
+                console.warn(`Skipping incomplete line ${index + 2}: ${line}`);
+                return;
+              }
 
               const docData = header.reduce((obj, h, i) => {
-                const keyMap = { 'no. document': 'noDocument', 'exp date': 'expDate', 'check by': 'checkBy' };
+                const keyMap: { [key: string]: keyof PutawayDocument } = { 
+                    'no. document': 'noDocument', 
+                    'exp date': 'expDate', 
+                    'check by': 'checkBy',
+                    'sku': 'sku',
+                    'barcode': 'barcode',
+                    'brand': 'brand',
+                    'qty': 'qty',
+                    'status': 'status'
+                };
                 const key = keyMap[h as keyof typeof keyMap] || h;
-                obj[key] = values[i];
+                if (key) {
+                  (obj as any)[key] = values[i];
+                }
                 return obj;
-              }, {} as any);
-
-              if (Object.values(docData).some(v => !v)) {
-                if(line.trim()) throw new Error(`Incomplete data on line ${index + 2}: ${line}`);
-                return;
+              }, {} as Partial<PutawayDocument>);
+              
+              if (!docData.noDocument || !docData.sku || !docData.qty) {
+                 console.warn(`Skipping line with missing required fields ${index + 2}: ${line}`);
+                 return;
               }
 
               newDocs.push({
                   id: String(++maxId),
                   noDocument: docData.noDocument,
                   date: new Date().toISOString(),
-                  qty: parseInt(docData.qty, 10),
-                  status: docData.status as 'Done' | 'Pending',
+                  qty: parseInt(String(docData.qty), 10) || 0,
+                  status: (docData.status || 'Pending') as 'Done' | 'Pending',
                   sku: docData.sku,
-                  barcode: docData.barcode,
-                  brand: docData.brand,
-                  expDate: docData.expDate,
-                  checkBy: docData.checkBy,
+                  barcode: docData.barcode || '',
+                  brand: docData.brand || '',
+                  expDate: docData.expDate || '',
+                  checkBy: docData.checkBy || '',
               });
             });
 
@@ -160,8 +179,8 @@ export default function CreatePutawayPage() {
     const headers = ["No. Document", "SKU", "Barcode", "Brand", "EXP Date", "Check By", "QTY", "Status"];
     
     const rows = documents.length > 0
-      ? documents.map(d => [d.noDocument, d.sku, d.barcode, d.brand, d.expDate, d.checkBy, d.qty, d.status].join(","))
-      : [["", "", "", "", "", "", "", ""].join(",")];
+      ? documents.map(d => [d.noDocument, d.sku, d.barcode, d.brand, d.expDate, d.checkBy, d.qty, d.status].map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))
+      : [];
     
     const csvContent = [headers.join(","), ...rows].join("\n");
 
@@ -304,3 +323,5 @@ export default function CreatePutawayPage() {
     </MainLayout>
   );
 }
+
+    
