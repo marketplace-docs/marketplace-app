@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   Card,
   CardContent,
@@ -20,17 +20,10 @@ import {
 import { MainLayout } from '@/components/layout/main-layout';
 import type { AdminTask } from '@/types/admin-task';
 import { useLocalStorage } from '@/hooks/use-local-storage';
+import { format } from 'date-fns';
 
 export default function MonitoringManpowerPage() {
-  const [tasks, setTasks] = useLocalStorage<AdminTask[]>('adminTasks', []);
-  const [currentDate, setCurrentDate] = useState('');
-
-  useEffect(() => {
-    const today = new Date();
-    const options: Intl.DateTimeFormatOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    setCurrentDate(today.toLocaleDateString('id-ID', options));
-  }, []);
-
+  const [tasks] = useLocalStorage<AdminTask[]>('adminTasks', []);
 
   return (
     <MainLayout>
@@ -41,7 +34,7 @@ export default function MonitoringManpowerPage() {
             <div className="flex justify-between items-center">
                 <div>
                     <CardTitle>Update Manpower</CardTitle>
-                    <CardDescription>{currentDate}</CardDescription>
+                    <CardDescription>A list of tasks created by the admin.</CardDescription>
                 </div>
             </div>
           </CardHeader>
@@ -63,7 +56,7 @@ export default function MonitoringManpowerPage() {
                         <TableCell className="font-medium">{task.name}</TableCell>
                         <TableCell>{task.job}</TableCell>
                         <TableCell>{task.shift}</TableCell>
-                        <TableCell>{new Date(task.date).toLocaleString('id-ID')}</TableCell>
+                        <TableCell>{format(new Date(task.date), "eee, dd/MMM/yyyy HH:mm")}</TableCell>
                       </TableRow>
                     ))
                   ) : (
