@@ -62,9 +62,8 @@ export default function CreateTaskPage() {
       id: newId,
       name: newTask.name,
       job: newTask.job,
-      status: newTask.shift === 'Hadir' ? 'Hadir' : 'Absen', // Example logic
-      category: newTask.shift,
-      date: new Date().toISOString().split('T')[0],
+      shift: newTask.shift,
+      date: new Date().toISOString(),
     };
 
     setTasks([...tasks, taskToAdd]);

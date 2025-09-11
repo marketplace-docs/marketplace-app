@@ -52,7 +52,7 @@ export default function MonitoringManpowerPage() {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Job</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>Shift</TableHead>
                     <TableHead>Date</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -62,8 +62,8 @@ export default function MonitoringManpowerPage() {
                       <TableRow key={task.id}>
                         <TableCell className="font-medium">{task.name}</TableCell>
                         <TableCell>{task.job}</TableCell>
-                        <TableCell>{task.status}</TableCell>
-                        <TableCell>{task.date}</TableCell>
+                        <TableCell>{task.shift}</TableCell>
+                        <TableCell>{new Date(task.date).toLocaleString('id-ID')}</TableCell>
                       </TableRow>
                     ))
                   ) : (
