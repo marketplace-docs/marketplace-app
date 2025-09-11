@@ -4,6 +4,6 @@ export type AdminTask = {
   name: string;
   job: string;
   status: 'Hadir' | 'Absen';
-  category: 'Reguler' | 'Event' | 'Staff' | string;
+  category: string;
   date: string;
 };

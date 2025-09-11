@@ -30,7 +30,7 @@ export default function CreateTaskPage() {
   const [newTask, setNewTask] = React.useState({
     name: '',
     job: '',
-    status: '',
+    shift: '',
   });
   const { toast } = useToast();
 
@@ -48,7 +48,7 @@ export default function CreateTaskPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTask.name || !newTask.job || !newTask.status) {
+    if (!newTask.name || !newTask.job || !newTask.shift) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -62,8 +62,8 @@ export default function CreateTaskPage() {
       id: newId,
       name: newTask.name,
       job: newTask.job,
-      status: newTask.status as 'Hadir' | 'Absen',
-      category: newTask.status,
+      status: newTask.shift === 'Hadir' ? 'Hadir' : 'Absen', // Example logic
+      category: newTask.shift,
       date: new Date().toISOString().split('T')[0],
     };
 
@@ -73,7 +73,7 @@ export default function CreateTaskPage() {
       description: 'New task has been created.',
     });
     // Reset form
-    setNewTask({ name: '', job: '', status: '' });
+    setNewTask({ name: '', job: '', shift: '' });
   };
 
   return (
@@ -117,14 +117,15 @@ export default function CreateTaskPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="status">Status</Label>
-                  <Select name="status" value={newTask.status} onValueChange={(value) => handleSelectChange('status', value)}>
-                    <SelectTrigger id="status">
-                      <SelectValue placeholder="Select Status" />
+                  <Label htmlFor="shift">Shift</Label>
+                  <Select name="shift" value={newTask.shift} onValueChange={(value) => handleSelectChange('shift', value)}>
+                    <SelectTrigger id="shift">
+                      <SelectValue placeholder="Select Shift" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Hadir">Hadir</SelectItem>
-                      <SelectItem value="Absen">Absen</SelectItem>
+                      <SelectItem value="Pagi">Pagi</SelectItem>
+                      <SelectItem value="Siang">Siang</SelectItem>
+                      <SelectItem value="Sore">Sore</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
