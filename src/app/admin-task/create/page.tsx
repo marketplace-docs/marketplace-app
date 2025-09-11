@@ -30,7 +30,7 @@ export default function CreateTaskPage() {
   const [newTask, setNewTask] = React.useState({
     name: '',
     job: '',
-    category: '',
+    status: '',
   });
   const { toast } = useToast();
 
@@ -48,7 +48,7 @@ export default function CreateTaskPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTask.name || !newTask.job || !newTask.category) {
+    if (!newTask.name || !newTask.job || !newTask.status) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -60,8 +60,10 @@ export default function CreateTaskPage() {
     const newId = tasks.length > 0 ? String(Math.max(...tasks.map(t => parseInt(t.id))) + 1) : '1';
     const taskToAdd: AdminTask = {
       id: newId,
-      ...newTask,
-      status: 'Hadir',
+      name: newTask.name,
+      job: newTask.job,
+      status: newTask.status,
+      category: newTask.status,
       date: new Date().toISOString().split('T')[0],
     };
 
@@ -71,7 +73,7 @@ export default function CreateTaskPage() {
       description: 'New task has been created.',
     });
     // Reset form
-    setNewTask({ name: '', job: '', category: '' });
+    setNewTask({ name: '', job: '', status: '' });
   };
 
   return (
@@ -109,15 +111,14 @@ export default function CreateTaskPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="category">Category</Label>
-                  <Select name="category" value={newTask.category} onValueChange={(value) => handleSelectChange('category', value)}>
-                    <SelectTrigger id="category">
-                      <SelectValue placeholder="Select category" />
+                  <Label htmlFor="status">Status</Label>
+                  <Select name="status" value={newTask.status} onValueChange={(value) => handleSelectChange('status', value)}>
+                    <SelectTrigger id="status">
+                      <SelectValue placeholder="Select Status" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Reguler">Reguler</SelectItem>
-                      <SelectItem value="Event">Event</SelectItem>
-                      <SelectItem value="Staff">Staff</SelectItem>
+                      <SelectItem value="Hadir">Hadir</SelectItem>
+                      <SelectItem value="Absen">Absen</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

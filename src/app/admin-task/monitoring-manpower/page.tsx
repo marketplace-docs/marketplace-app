@@ -52,7 +52,6 @@ export default function MonitoringManpowerPage() {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Job</TableHead>
-                    <TableHead>Category</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Date</TableHead>
                   </TableRow>
@@ -63,7 +62,6 @@ export default function MonitoringManpowerPage() {
                       <TableRow key={task.id}>
                         <TableCell className="font-medium">{task.name}</TableCell>
                         <TableCell>{task.job}</TableCell>
-                        <TableCell>{task.category}</TableCell>
                         <TableCell>{task.status}</TableCell>
                         <TableCell>{task.date}</TableCell>
                       </TableRow>
@@ -71,7 +69,7 @@ export default function MonitoringManpowerPage() {
                   ) : (
                     <TableRow>
                       <TableCell
-                        colSpan={5}
+                        colSpan={4}
                         className="h-24 text-center text-muted-foreground"
                       >
                         No tasks created yet. Go to the Create Task page to add one.
