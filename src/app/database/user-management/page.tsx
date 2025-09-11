@@ -185,7 +185,7 @@ export default function DatabaseUserPage() {
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="Super Admin">Super Admin</SelectItem>
-                                        <SelectItem value="Admin">Admin</sbin>
+                                        <SelectItem value="Admin">Admin</SelectItem>
                                         <SelectItem value="Supervisor">Supervisor</SelectItem>
                                         <SelectItem value="Captain">Captain</SelectItem>
                                         <SelectItem value="Event Staff">Event Staff</SelectItem>
