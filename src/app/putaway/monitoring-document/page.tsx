@@ -115,6 +115,11 @@ export default function MonitoringPutawayPage() {
                   <TableRow>
                     <TableHead>No. Document</TableHead>
                     <TableHead>Date</TableHead>
+                    <TableHead>SKU</TableHead>
+                    <TableHead>Barcode</TableHead>
+                    <TableHead>Brand</TableHead>
+                    <TableHead>EXP Date</TableHead>
+                    <TableHead>Check By</TableHead>
                     <TableHead>QTY</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -126,6 +131,11 @@ export default function MonitoringPutawayPage() {
                       <TableRow key={doc.id}>
                         <TableCell className="font-medium">{doc.noDocument}</TableCell>
                         <TableCell>{format(new Date(doc.date), "eee, dd/MMM/yyyy HH:mm")}</TableCell>
+                        <TableCell>{doc.sku}</TableCell>
+                        <TableCell>{doc.barcode}</TableCell>
+                        <TableCell>{doc.brand}</TableCell>
+                        <TableCell>{doc.expDate}</TableCell>
+                        <TableCell>{doc.checkBy}</TableCell>
                         <TableCell>{doc.qty}</TableCell>
                         <TableCell>
                           <Badge variant={statusVariantMap[doc.status] || 'default'}>{doc.status}</Badge>
@@ -147,7 +157,7 @@ export default function MonitoringPutawayPage() {
                   ) : (
                     <TableRow>
                       <TableCell
-                        colSpan={5}
+                        colSpan={10}
                         className="h-24 text-center text-muted-foreground"
                       >
                         No documents created yet. Go to the Create page to add one.
@@ -218,6 +228,26 @@ export default function MonitoringPutawayPage() {
                       <div className="grid grid-cols-4 items-center gap-4">
                           <Label htmlFor="noDocument" className="text-right">No. Document</Label>
                           <Input id="noDocument" value={selectedDoc.noDocument} className="col-span-3" onChange={(e) => setSelectedDoc({ ...selectedDoc, noDocument: e.target.value })} />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="sku" className="text-right">SKU</Label>
+                          <Input id="sku" value={selectedDoc.sku} className="col-span-3" onChange={(e) => setSelectedDoc({ ...selectedDoc, sku: e.target.value })} />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="barcode" className="text-right">Barcode</Label>
+                          <Input id="barcode" value={selectedDoc.barcode} className="col-span-3" onChange={(e) => setSelectedDoc({ ...selectedDoc, barcode: e.target.value })} />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="brand" className="text-right">Brand</Label>
+                          <Input id="brand" value={selectedDoc.brand} className="col-span-3" onChange={(e) => setSelectedDoc({ ...selectedDoc, brand: e.target.value })} />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="expDate" className="text-right">EXP Date</Label>
+                          <Input id="expDate" type="date" value={selectedDoc.expDate} className="col-span-3" onChange={(e) => setSelectedDoc({ ...selectedDoc, expDate: e.target.value })} />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="checkBy" className="text-right">Check By</Label>
+                          <Input id="checkBy" value={selectedDoc.checkBy} className="col-span-3" onChange={(e) => setSelectedDoc({ ...selectedDoc, checkBy: e.target.value })} />
                       </div>
                       <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="qty" className="text-right">QTY</Label>

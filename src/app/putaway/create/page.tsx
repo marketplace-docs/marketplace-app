@@ -31,6 +31,11 @@ export default function CreatePutawayPage() {
     noDocument: '',
     qty: '',
     status: 'Pending',
+    sku: '',
+    barcode: '',
+    brand: '',
+    expDate: '',
+    checkBy: '',
   });
   const { toast } = useToast();
 
@@ -47,7 +52,7 @@ export default function CreatePutawayPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newDocument.noDocument || !newDocument.qty) {
+    if (!newDocument.noDocument || !newDocument.qty || !newDocument.sku || !newDocument.barcode || !newDocument.brand || !newDocument.expDate || !newDocument.checkBy) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -63,6 +68,11 @@ export default function CreatePutawayPage() {
       date: new Date().toISOString(),
       qty: parseInt(newDocument.qty, 10),
       status: newDocument.status as 'Done' | 'Pending',
+      sku: newDocument.sku,
+      barcode: newDocument.barcode,
+      brand: newDocument.brand,
+      expDate: newDocument.expDate,
+      checkBy: newDocument.checkBy,
     };
 
     setDocuments([...documents, docToAdd]);
@@ -71,7 +81,7 @@ export default function CreatePutawayPage() {
       description: 'New putaway document has been created.',
     });
     // Reset form
-    setNewDocument({ noDocument: '', qty: '', status: 'Pending' });
+    setNewDocument({ noDocument: '', qty: '', status: 'Pending', sku: '', barcode: '', brand: '', expDate: '', checkBy: '' });
   };
 
   return (
@@ -98,13 +108,63 @@ export default function CreatePutawayPage() {
                     onChange={handleInputChange}
                   />
                 </div>
-                <div className="space-y-2">
+                 <div className="space-y-2">
                   <Label htmlFor="date">Date</Label>
                   <Input
                     id="date"
                     name="date"
                     value={format(new Date(), "dd/MM/yyyy HH:mm")}
                     disabled
+                  />
+                </div>
+                 <div className="space-y-2">
+                  <Label htmlFor="sku">SKU</Label>
+                  <Input
+                    id="sku"
+                    name="sku"
+                    placeholder="Enter SKU"
+                    value={newDocument.sku}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                 <div className="space-y-2">
+                  <Label htmlFor="barcode">Barcode</Label>
+                  <Input
+                    id="barcode"
+                    name="barcode"
+                    placeholder="Enter barcode"
+                    value={newDocument.barcode}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                 <div className="space-y-2">
+                  <Label htmlFor="brand">Brand</Label>
+                  <Input
+                    id="brand"
+                    name="brand"
+                    placeholder="Enter brand"
+                    value={newDocument.brand}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                 <div className="space-y-2">
+                  <Label htmlFor="expDate">EXP Date</Label>
+                  <Input
+                    id="expDate"
+                    name="expDate"
+                    type="date"
+                    value={newDocument.expDate}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="checkBy">Check By</Label>
+                  <Input
+                    id="checkBy"
+                    name="checkBy"
+                    placeholder="Checked by name"
+                    value={newDocument.checkBy}
+                    onChange={handleInputChange}
                   />
                 </div>
                  <div className="space-y-2">
