@@ -29,7 +29,7 @@ export const NAV_LINKS: NavLink[] = [
                 icon: Eye,
             },
              {
-                href: '/tasks',
+                href: '/admin-task/task',
                 label: 'Task',
                 icon: ListTodo,
             },
