@@ -127,6 +127,11 @@ export const NAV_LINKS: NavLink[] = [
                 label: 'APP',
                 icon: Monitor,
             },
+             {
+                href: '/database/log-activity',
+                label: 'Log Activity',
+                icon: History,
+            },
         ]
     }
 ];
