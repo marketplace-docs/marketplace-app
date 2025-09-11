@@ -4,6 +4,6 @@ export type AdminTask = {
   name: string;
   job: string;
   shift: string;
+  status: string;
   date: string; // Will store ISO string
 };
-

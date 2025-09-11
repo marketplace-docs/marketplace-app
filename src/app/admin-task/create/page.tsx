@@ -31,6 +31,7 @@ export default function CreateTaskPage() {
     name: '',
     job: '',
     shift: '',
+    status: '',
   });
   const { toast } = useToast();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -49,7 +50,7 @@ export default function CreateTaskPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTask.name || !newTask.job || !newTask.shift) {
+    if (!newTask.name || !newTask.job || !newTask.shift || !newTask.status) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -64,6 +65,7 @@ export default function CreateTaskPage() {
       name: newTask.name,
       job: newTask.job,
       shift: newTask.shift,
+      status: newTask.status,
       date: new Date().toISOString(),
     };
 
@@ -73,7 +75,7 @@ export default function CreateTaskPage() {
       description: 'New task has been created.',
     });
     // Reset form
-    setNewTask({ name: '', job: '', shift: '' });
+    setNewTask({ name: '', job: '', shift: '', status: '' });
   };
 
   const handleUploadClick = () => {
@@ -93,16 +95,17 @@ export default function CreateTaskPage() {
             let maxId = tasks.length > 0 ? Math.max(...tasks.map(s => parseInt(s.id))) : 0;
             
             lines.forEach((line, index) => {
-              if (index === 0 && line.toLowerCase().includes('name,job,shift')) return; // Skip header
+              if (index === 0 && line.toLowerCase().includes('name,job,shift,status')) return; // Skip header
 
-              const [name, job, shift] = line.split(',').map(s => s.trim());
+              const [name, job, shift, status] = line.split(',').map(s => s.trim());
 
-              if (name && job && shift) {
+              if (name && job && shift && status) {
                   newTasks.push({
                       id: String(++maxId),
                       name,
                       job,
                       shift,
+                      status,
                       date: new Date().toISOString()
                   });
               } else if (line.trim()) { // Only throw error for non-empty invalid lines
@@ -132,11 +135,11 @@ export default function CreateTaskPage() {
   };
 
   const handleExport = () => {
-    const headers = ["Name", "Job", "Shift"];
+    const headers = ["Name", "Job", "Shift", "Status"];
     
     // For template, we can just export headers. If there is data, we export data.
     const rows = tasks.length > 0
-      ? tasks.map(t => [t.name, t.job, t.shift].join(","))
+      ? tasks.map(t => [t.name, t.job, t.shift, t.status].join(","))
       : [];
     
     const csvContent = [
@@ -172,7 +175,7 @@ export default function CreateTaskPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Name</Label>
                   <Input
@@ -209,6 +212,19 @@ export default function CreateTaskPage() {
                       <SelectItem value="Pagi">Pagi</SelectItem>
                       <SelectItem value="Siang">Siang</SelectItem>
                       <SelectItem value="Sore">Sore</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="status">Status</Label>
+                  <Select name="status" value={newTask.status} onValueChange={(value) => handleSelectChange('status', value)}>
+                    <SelectTrigger id="status">
+                      <SelectValue placeholder="Select Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Event">Event</SelectItem>
+                      <SelectItem value="Regular">Regular</SelectItem>
+                      <SelectItem value="Staff">Staff</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
