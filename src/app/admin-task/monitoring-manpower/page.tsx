@@ -30,7 +30,7 @@ export default function MonitoringManpowerPage() {
       <div className="w-full space-y-6">
         <h1 className="text-2xl font-bold">Monitoring Manpower</h1>
         <Card>
-          <CardHeader>
+          <CardHeader className="p-6">
             <CardTitle>Update Manpower</CardTitle>
             <CardDescription>A list of tasks created by the admin.</CardDescription>
           </CardHeader>
@@ -42,6 +42,7 @@ export default function MonitoringManpowerPage() {
                     <TableHead>Name</TableHead>
                     <TableHead>Job</TableHead>
                     <TableHead>Shift</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead>Date</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -52,13 +53,14 @@ export default function MonitoringManpowerPage() {
                         <TableCell className="font-medium">{task.name}</TableCell>
                         <TableCell>{task.job}</TableCell>
                         <TableCell>{task.shift}</TableCell>
+                        <TableCell>{task.status}</TableCell>
                         <TableCell>{format(new Date(task.date), "eee, dd/MMM/yyyy HH:mm")}</TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
                       <TableCell
-                        colSpan={4}
+                        colSpan={5}
                         className="h-24 text-center text-muted-foreground"
                       >
                         No tasks created yet. Go to the Create Task page to add one.
