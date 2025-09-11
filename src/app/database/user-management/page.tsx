@@ -84,7 +84,7 @@ export default function DatabaseUserPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10); 
 
-    const isSuperAdmin = currentUser?.role === 'Super Admin';
+    const isSuperAdmin = currentUser ? currentUser.role === 'Super Admin' : false;
 
     const totalPages = Math.ceil(users.length / rowsPerPage);
     const paginatedUsers = users.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
@@ -328,7 +328,7 @@ export default function DatabaseUserPage() {
                                  <Select value={selectedUser.role} onValueChange={(value) => setSelectedUser({ ...selectedUser, role: value })} disabled={!isSuperAdmin}>
                                     <SelectTrigger className="col-span-3">
                                         <SelectValue placeholder="Select Role" />
-                                    </Trigger>
+                                    </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="Super Admin">Super Admin</SelectItem>
                                         <SelectItem value="Admin">Admin</SelectItem>
@@ -366,4 +366,5 @@ export default function DatabaseUserPage() {
         </div>
       </MainLayout>
     );
-}
+
+    
