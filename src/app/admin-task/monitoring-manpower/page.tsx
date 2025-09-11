@@ -31,12 +31,8 @@ export default function MonitoringManpowerPage() {
         <h1 className="text-2xl font-bold">Monitoring Manpower</h1>
         <Card>
           <CardHeader>
-            <div className="flex justify-between items-center">
-                <div>
-                    <CardTitle>Update Manpower</CardTitle>
-                    <CardDescription>A list of tasks created by the admin.</CardDescription>
-                </div>
-            </div>
+            <CardTitle>Update Manpower</CardTitle>
+            <CardDescription>A list of tasks created by the admin.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="border rounded-lg">
