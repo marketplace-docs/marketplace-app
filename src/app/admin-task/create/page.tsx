@@ -62,7 +62,7 @@ export default function CreateTaskPage() {
       id: newId,
       name: newTask.name,
       job: newTask.job,
-      status: newTask.status,
+      status: newTask.status as 'Hadir' | 'Absen',
       category: newTask.status,
       date: new Date().toISOString().split('T')[0],
     };
@@ -102,13 +102,19 @@ export default function CreateTaskPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="job">Job</Label>
-                  <Input
-                    id="job"
-                    name="job"
-                    placeholder="Enter job"
-                    value={newTask.job}
-                    onChange={handleInputChange}
-                  />
+                  <Select name="job" value={newTask.job} onValueChange={(value) => handleSelectChange('job', value)}>
+                    <SelectTrigger id="job">
+                      <SelectValue placeholder="Select Job" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Leader">Leader</SelectItem>
+                      <SelectItem value="Putaway">Putaway</SelectItem>
+                      <SelectItem value="Picker">Picker</SelectItem>
+                      <SelectItem value="Packer">Packer</SelectItem>
+                      <SelectItem value="Interco Transferan">Interco Transferan</SelectItem>
+                      <SelectItem value="Admin">Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="status">Status</Label>
