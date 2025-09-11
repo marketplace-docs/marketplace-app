@@ -4,7 +4,7 @@
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ListTodo, CheckSquare, Palette, Users, Archive, BarChart3, Database } from "lucide-react";
+import { ListTodo, CheckSquare, Palette, Users, Archive, BarChart3, Database, Monitor } from "lucide-react";
 
 const techStack = ["Next.js", "React", "TypeScript", "Tailwind CSS", "ShadCN UI", "Genkit", "Firebase"];
 
