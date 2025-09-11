@@ -1,3 +1,4 @@
+
 import { LayoutDashboard, ListTodo, Store, FileText, Settings, type LucideIcon, Briefcase, Users, Archive, BarChart3, AppWindow, BookText, Database, History, FilePlus, Eye, File, PieChart, Users2, Shield, Menu, Monitor } from 'lucide-react';
 
 export type NavLink = {
@@ -51,7 +52,7 @@ export const NAV_LINKS: NavLink[] = [
                 icon: Eye,
             },
              {
-                href: '/tasks',
+                href: '/putaway/task',
                 label: 'Task',
                 icon: ListTodo,
             },
