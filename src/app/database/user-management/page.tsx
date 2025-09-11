@@ -54,6 +54,14 @@ type User = {
 
 type NewUser = Omit<User, 'id'>;
 
+const initialUsers: User[] = [
+    { id: 1, name: 'Arlan Saputra', status: 'Leader', role: 'Super Admin' },
+    { id: 2, name: 'Rudi Setiawan', status: 'Reguler', role: 'Admin' },
+    { id: 3, name: 'Nova Aurelia', status: 'Reguler', role: 'Admin' },
+    { id: 4, name: 'Nurul Tanzilla', status: 'Event', role: 'Event Staff' },
+    { id: 5, name: 'Regina Rifana', status: 'Leader', role: 'Captain' },
+];
+
 const statusVariantMap: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
     'Leader': 'destructive',
     'Reguler': 'default',
@@ -62,9 +70,7 @@ const statusVariantMap: { [key: string]: "default" | "secondary" | "destructive"
 
 export default function DatabaseUserPage() {
     const { user: currentUser } = useAuth();
-    const [users, setUsers] = useState<User[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const [users, setUsers] = useState<User[]>(initialUsers);
     
     const [isAddDialogOpen, setAddDialogOpen] = useState(false);
     const [isEditDialogOpen, setEditDialogOpen] = useState(false);
@@ -79,34 +85,6 @@ export default function DatabaseUserPage() {
     const [rowsPerPage, setRowsPerPage] = useState(10); 
 
     const isSuperAdmin = currentUser?.role === 'Super Admin';
-
-    const fetchUsers = useCallback(async () => {
-        try {
-            setLoading(true);
-            setError(null);
-            const response = await fetch('/api/users');
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.details || `Failed to fetch users: ${response.statusText}`);
-            }
-            const data = await response.json();
-            setUsers(data);
-        } catch (err: any) {
-            console.error("Fetch error:", err);
-            setError(err.message);
-            toast({
-                variant: "destructive",
-                title: "Failed to load data",
-                description: err.message,
-            });
-        } finally {
-            setLoading(false);
-        }
-    }, [toast]);
-
-    useEffect(() => {
-        fetchUsers();
-    }, [fetchUsers]);
 
     const totalPages = Math.ceil(users.length / rowsPerPage);
     const paginatedUsers = users.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
@@ -129,85 +107,40 @@ export default function DatabaseUserPage() {
         setDeleteDialogOpen(true);
     };
 
-    const handleSaveChanges = async () => {
+    const handleSaveChanges = () => {
         if (!selectedUser) return;
-
-        try {
-            const response = await fetch(`/api/users/${selectedUser.id}`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    name: selectedUser.name,
-                    status: selectedUser.status,
-                    role: selectedUser.role,
-                }),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.details || 'Failed to update user.');
-            }
-            
-            await fetchUsers();
-            setEditDialogOpen(false);
-            setSelectedUser(null);
-            toast({ title: "Success", description: "User has been updated successfully." });
-        } catch (err: any) {
-             toast({ variant: "destructive", title: "Update Failed", description: err.message });
-        }
+        setUsers(users.map(u => u.id === selectedUser.id ? selectedUser : u));
+        setEditDialogOpen(false);
+        setSelectedUser(null);
+        toast({ title: "Success", description: "User has been updated successfully." });
     };
     
-    const handleAddUser = async () => {
-        try {
-            const userToAdd = { ...newUser };
-            if (!isSuperAdmin) {
-                userToAdd.role = 'Admin'; // Force role to 'Admin' if not super admin
-            }
-
-            const response = await fetch('/api/users', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(userToAdd),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.details || 'Failed to add user.');
-            }
-            await fetchUsers();
-            setAddDialogOpen(false);
-            setNewUser({ name: '', status: 'Reguler', role: 'Admin' });
-            toast({ title: "Success", description: "New user added." });
-        } catch (err: any) {
-            toast({ variant: "destructive", title: "Add Failed", description: err.message });
+    const handleAddUser = () => {
+        const userToAdd = { ...newUser };
+        if (!userToAdd.name) {
+            toast({ variant: "destructive", title: "Add Failed", description: "Name cannot be empty." });
+            return;
         }
+
+        const newId = users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1;
+        setUsers([...users, { id: newId, ...userToAdd }]);
+        
+        setAddDialogOpen(false);
+        setNewUser({ name: '', status: 'Reguler', role: 'Admin' });
+        toast({ title: "Success", description: "New user added." });
     };
 
-    const handleDeleteUser = async () => {
+    const handleDeleteUser = () => {
         if (!selectedUser) return;
         
-        try {
-             const response = await fetch(`/api/users/${selectedUser.id}`, {
-                method: 'DELETE',
-            });
+        setUsers(users.filter(u => u.id !== selectedUser.id));
+        
+        setDeleteDialogOpen(false);
+        setSelectedUser(null);
+        toast({ title: "Success", description: "User has been deleted.", variant: "destructive" });
 
-            if (!response.ok) {
-                 const errorData = await response.json();
-                throw new Error(errorData.details || 'Failed to delete user.');
-            }
-            
-            await fetchUsers();
-            setDeleteDialogOpen(false);
-            setSelectedUser(null);
-            toast({ title: "Success", description: "User has been deleted.", variant: "destructive" });
-
-            if (paginatedUsers.length === 1 && currentPage > 1) {
-                setCurrentPage(currentPage - 1);
-            }
-        } catch (err: any) {
-            toast({ variant: "destructive", title: "Delete Failed", description: err.message });
+        if (paginatedUsers.length === 1 && currentPage > 1) {
+            setCurrentPage(currentPage - 1);
         }
     };
 
@@ -252,7 +185,7 @@ export default function DatabaseUserPage() {
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="Super Admin">Super Admin</SelectItem>
-                                        <SelectItem value="Admin">Admin</SelectItem>
+                                        <SelectItem value="Admin">Admin</sbin>
                                         <SelectItem value="Supervisor">Supervisor</SelectItem>
                                         <SelectItem value="Captain">Captain</SelectItem>
                                         <SelectItem value="Event Staff">Event Staff</SelectItem>
@@ -267,19 +200,10 @@ export default function DatabaseUserPage() {
                     </DialogContent>
                 </Dialog>
             </div>
-             {error && (
-                <Alert variant="destructive" className="mb-4">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Error</AlertTitle>
-                    <AlertDescription>
-                        {error}. This might be because the 'users' table doesn't exist in the database. Please create it and add some data.
-                    </AlertDescription>
-                </Alert>
-            )}
             <Card>
                 <CardHeader>
                     <CardTitle>Marketplace Team Work</CardTitle>
-                    <CardDescription>A list of all the users in the system from the database.</CardDescription>
+                    <CardDescription>A list of all the users in the system.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Table>
@@ -292,16 +216,7 @@ export default function DatabaseUserPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {loading ? (
-                                <TableRow>
-                                    <TableCell colSpan={4} className="h-24 text-center">
-                                        <div className="flex justify-center items-center">
-                                            <Loader2 className="mr-2 h-6 w-6 animate-spin" />
-                                            <span>Loading users...</span>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            ) : paginatedUsers.length > 0 ? (
+                            {paginatedUsers.length > 0 ? (
                                 paginatedUsers.map((user) => (
                                     <TableRow key={user.id}>
                                         <TableCell className="font-medium">{user.name}</TableCell>

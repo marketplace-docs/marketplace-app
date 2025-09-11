@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -27,7 +28,6 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -40,8 +40,6 @@ import {
 } from '@/components/ui/select';
 import { useToast } from "@/hooks/use-toast";
 import { MainLayout } from "@/components/layout/main-layout";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-
 
 type User = {
     id: number;
@@ -50,6 +48,14 @@ type User = {
     role: string;
 };
 
+const initialUsers: User[] = [
+    { id: 1, name: 'Arlan Saputra', status: 'Leader', role: 'Super Admin' },
+    { id: 2, name: 'Rudi Setiawan', status: 'Reguler', role: 'Admin' },
+    { id: 3, name: 'Nova Aurelia', status: 'Reguler', role: 'Admin' },
+    { id: 4, name: 'Nurul Tanzilla', status: 'Event', role: 'Event Staff' },
+    { id: 5, name: 'Regina Rifana', status: 'Leader', role: 'Captain' },
+];
+
 const statusVariantMap: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
     'Leader': 'destructive',
     'Reguler': 'default',
@@ -57,9 +63,7 @@ const statusVariantMap: { [key: string]: "default" | "secondary" | "destructive"
 };
 
 export default function DatabaseUserPage() {
-    const [users, setUsers] = useState<User[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const [users, setUsers] = useState<User[]>(initialUsers);
     const [isEditDialogOpen, setEditDialogOpen] = useState(false);
     const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -67,34 +71,6 @@ export default function DatabaseUserPage() {
 
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10); 
-
-    const fetchUsers = useCallback(async () => {
-        try {
-            setLoading(true);
-            setError(null);
-            const response = await fetch('/api/users');
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.details || `Failed to fetch users: ${response.statusText}`);
-            }
-            const data = await response.json();
-            setUsers(data);
-        } catch (err: any) {
-            console.error("Fetch error:", err);
-            setError(err.message);
-            toast({
-                variant: "destructive",
-                title: "Failed to load data",
-                description: err.message,
-            });
-        } finally {
-            setLoading(false);
-        }
-    }, [toast]);
-
-    useEffect(() => {
-        fetchUsers();
-    }, [fetchUsers]);
 
     const totalPages = Math.ceil(users.length / rowsPerPage);
     const paginatedUsers = users.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
@@ -117,60 +93,23 @@ export default function DatabaseUserPage() {
         setDeleteDialogOpen(true);
     };
 
-    const handleSaveChanges = async () => {
+    const handleSaveChanges = () => {
         if (!selectedUser) return;
-
-        try {
-            const response = await fetch(`/api/users/${selectedUser.id}`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    name: selectedUser.name,
-                    status: selectedUser.status,
-                    role: selectedUser.role,
-                }),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.details || 'Failed to update user.');
-            }
-            
-            await fetchUsers(); // Re-fetch all users to get updated data
-            setEditDialogOpen(false);
-            setSelectedUser(null);
-            toast({ title: "Success", description: "User has been updated successfully." });
-        } catch (err: any) {
-             toast({ variant: "destructive", title: "Update Failed", description: err.message });
-        }
+        setUsers(users.map(u => u.id === selectedUser.id ? selectedUser : u));
+        setEditDialogOpen(false);
+        setSelectedUser(null);
+        toast({ title: "Success", description: "User has been updated successfully." });
     };
 
-    const handleDeleteUser = async () => {
+    const handleDeleteUser = () => {
         if (!selectedUser) return;
-        
-        try {
-             const response = await fetch(`/api/users/${selectedUser.id}`, {
-                method: 'DELETE',
-            });
+        setUsers(users.filter(u => u.id !== selectedUser.id));
+        setDeleteDialogOpen(false);
+        setSelectedUser(null);
+        toast({ title: "Success", description: "User has been deleted.", variant: "destructive" });
 
-            if (!response.ok) {
-                 const errorData = await response.json();
-                throw new Error(errorData.details || 'Failed to delete user.');
-            }
-            
-            await fetchUsers();
-            setDeleteDialogOpen(false);
-            setSelectedUser(null);
-            toast({ title: "Success", description: "User has been deleted.", variant: "destructive" });
-
-            // Adjust current page if the last item on a page was deleted
-            if (paginatedUsers.length === 1 && currentPage > 1) {
-                setCurrentPage(currentPage - 1);
-            }
-        } catch (err: any) {
-            toast({ variant: "destructive", title: "Delete Failed", description: err.message });
+        if (paginatedUsers.length === 1 && currentPage > 1) {
+            setCurrentPage(currentPage - 1);
         }
     };
 
@@ -178,19 +117,10 @@ export default function DatabaseUserPage() {
       <MainLayout>
         <div className="w-full">
             <h1 className="text-3xl font-bold mb-6">Database User</h1>
-             {error && (
-                <Alert variant="destructive" className="mb-4">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Error</AlertTitle>
-                    <AlertDescription>
-                        {error}. This might be because the 'users' table doesn't exist in the database. Please create it and add some data.
-                    </AlertDescription>
-                </Alert>
-            )}
             <Card>
                 <CardHeader>
                     <CardTitle>Marketplace Team Work</CardTitle>
-                    <CardDescription>A list of all the users in the system from the database.</CardDescription>
+                    <CardDescription>A list of all the users in the system.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Table>
@@ -203,16 +133,7 @@ export default function DatabaseUserPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {loading ? (
-                                <TableRow>
-                                    <TableCell colSpan={4} className="h-24 text-center">
-                                        <div className="flex justify-center items-center">
-                                            <Loader2 className="mr-2 h-6 w-6 animate-spin" />
-                                            <span>Loading users...</span>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            ) : paginatedUsers.length > 0 ? (
+                            {paginatedUsers.length > 0 ? (
                                 paginatedUsers.map((user) => (
                                     <TableRow key={user.id}>
                                         <TableCell className="font-medium">{user.name}</TableCell>

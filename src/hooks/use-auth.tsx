@@ -18,23 +18,16 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const allowedEmails = [
-    'arlan.saputra@marketplace.com',
-    'rudi.setiawan@marketplace.com',
-    'nova.aurelia@marketplace.com',
-    'nurul.tanzilla@marketplace.com',
-    'regina.rifana@marketplace.com'
+const allowedUsers: User[] = [
+    { email: 'arlan.saputra@marketplace.com', name: 'Arlan Saputra', role: 'Super Admin' },
+    { email: 'rudi.setiawan@marketplace.com', name: 'Rudi Setiawan', role: 'Admin' },
+    { email: 'nova.aurelia@marketplace.com', name: 'Nova Aurelia', role: 'Admin' },
+    { email: 'nurul.tanzilla@marketplace.com', name: 'Nurul Tanzilla', role: 'Event Staff' },
+    { email: 'regina.rifana@marketplace.com', name: 'Regina Rifana', role: 'Captain' }
 ];
 
 const validPassword = 'Marketplace@123!!!';
 
-const formatUserName = (email: string) => {
-    const namePart = email.split('@')[0];
-    return namePart
-        .split('.')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ');
-};
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -55,43 +48,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (credentials: { email: string; password?: string }): Promise<boolean> => {
     const lowercasedEmail = credentials.email.toLowerCase();
-    if (allowedEmails.includes(lowercasedEmail) && credentials.password === validPassword) {
-        try {
-            // Fetch user role from the database
-            const response = await fetch(`/api/users?email=${encodeURIComponent(lowercasedEmail)}`);
-            if (!response.ok) {
-                console.error("Failed to fetch user role, proceeding without it.");
-                 const loggedInUser: User = { 
-                    email: lowercasedEmail,
-                    name: formatUserName(lowercasedEmail),
-                    role: 'Reguler' // Default role on failure
-                };
-                setUser(loggedInUser);
-                localStorage.setItem('user', JSON.stringify(loggedInUser));
-                return true;
-            }
-            const userData = await response.json();
-            
-            const loggedInUser: User = { 
-                email: lowercasedEmail,
-                name: userData.name || formatUserName(lowercasedEmail),
-                role: userData.role || 'Reguler' // Default role if not found
-            };
-            setUser(loggedInUser);
-            localStorage.setItem('user', JSON.stringify(loggedInUser));
-            return true;
+    const foundUser = allowedUsers.find(u => u.email === lowercasedEmail);
 
-        } catch (error) {
-            console.error("Error fetching user role:", error);
-             const loggedInUser: User = { 
-                email: lowercasedEmail,
-                name: formatUserName(lowercasedEmail),
-                role: 'Reguler' // Default role on fetch error
-            };
-            setUser(loggedInUser);
-            localStorage.setItem('user', JSON.stringify(loggedInUser));
-            return true;
-        }
+    if (foundUser && credentials.password === validPassword) {
+        const loggedInUser: User = { 
+            email: foundUser.email,
+            name: foundUser.name,
+            role: foundUser.role
+        };
+        setUser(loggedInUser);
+        localStorage.setItem('user', JSON.stringify(loggedInUser));
+        return true;
     }
     return false;
   };
