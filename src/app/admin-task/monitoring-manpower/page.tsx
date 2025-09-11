@@ -22,13 +22,22 @@ import type { AdminTask } from '@/types/admin-task';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pencil, Trash2, Printer } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
 
 export default function MonitoringManpowerPage() {
-  const [tasks] = useLocalStorage<AdminTask[]>('adminTasks', []);
+  const [tasks, setTasks] = useLocalStorage<AdminTask[]>('adminTasks', []);
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  
+  const [isEditDialogOpen, setEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<AdminTask | null>(null);
+  const { toast } = useToast();
 
   const totalPages = Math.ceil(tasks.length / rowsPerPage);
   const paginatedTasks = tasks.slice(
@@ -46,19 +55,55 @@ export default function MonitoringManpowerPage() {
   
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [rowsPerPage]);
+  }, [rowsPerPage, tasks]);
+
+  const handleOpenEditDialog = (task: AdminTask) => {
+    setSelectedTask({ ...task });
+    setEditDialogOpen(true);
+  };
+
+  const handleOpenDeleteDialog = (task: AdminTask) => {
+    setSelectedTask(task);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleSaveChanges = () => {
+    if (!selectedTask) return;
+    setTasks(tasks.map(t => t.id === selectedTask.id ? selectedTask : t));
+    setEditDialogOpen(false);
+    setSelectedTask(null);
+    toast({ title: "Success", description: "Task has been updated successfully." });
+  };
+
+  const handleDeleteTask = () => {
+    if (!selectedTask) return;
+    setTasks(tasks.filter(t => t.id !== selectedTask.id));
+    setDeleteDialogOpen(false);
+    setSelectedTask(null);
+    toast({ title: "Success", description: "Task has been deleted.", variant: "destructive" });
+  };
+  
+  const handlePrint = () => {
+      window.print();
+  }
 
   return (
     <MainLayout>
       <div className="w-full space-y-6">
         <h1 className="text-2xl font-bold">Monitoring Manpower</h1>
         <Card>
-          <CardHeader className="p-6">
-            <CardTitle>Update Manpower</CardTitle>
-            <CardDescription>A list of tasks created by the admin.</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between p-6">
+            <div>
+              <CardTitle>Update Manpower</CardTitle>
+              <CardDescription>A list of tasks created by the admin.</CardDescription>
+            </div>
+            <Button variant="outline" size="icon" onClick={handlePrint}>
+                <Printer className="h-4 w-4" />
+                <span className="sr-only">Print</span>
+            </Button>
           </CardHeader>
           <CardContent>
-            <div className="border rounded-lg">
+            <div className="border rounded-lg" id="printable-content">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -67,6 +112,7 @@ export default function MonitoringManpowerPage() {
                     <TableHead>Shift</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Date</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -78,12 +124,24 @@ export default function MonitoringManpowerPage() {
                         <TableCell>{task.shift}</TableCell>
                         <TableCell>{task.status}</TableCell>
                         <TableCell>{format(new Date(task.date), "eee, dd/MMM/yyyy HH:mm")}</TableCell>
+                        <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                                <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(task)}>
+                                    <Pencil className="h-4 w-4" />
+                                    <span className="sr-only">Edit</span>
+                                </Button>
+                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" onClick={() => handleOpenDeleteDialog(task)}>
+                                    <Trash2 className="h-4 w-4" />
+                                    <span className="sr-only">Delete</span>
+                                </Button>
+                            </div>
+                        </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
                       <TableCell
-                        colSpan={5}
+                        colSpan={6}
                         className="h-24 text-center text-muted-foreground"
                       >
                         No tasks created yet. Go to the Create Task page to add one.
@@ -139,6 +197,88 @@ export default function MonitoringManpowerPage() {
           </CardContent>
         </Card>
       </div>
+
+       {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent>
+              <DialogHeader>
+                  <DialogTitle>Edit Task</DialogTitle>
+                  <DialogDescription>
+                      Make changes to the task here. Click save when you're done.
+                  </DialogDescription>
+              </DialogHeader>
+              {selectedTask && (
+                  <div className="grid gap-4 py-4">
+                      <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="name" className="text-right">Name</Label>
+                          <Input id="name" value={selectedTask.name} className="col-span-3" onChange={(e) => setSelectedTask({ ...selectedTask, name: e.target.value })} />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="job" className="text-right">Job</Label>
+                            <Select value={selectedTask.job} onValueChange={(value) => setSelectedTask({ ...selectedTask, job: value })}>
+                                <SelectTrigger id="job" className="col-span-3">
+                                    <SelectValue placeholder="Select Job" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Leader">Leader</SelectItem>
+                                    <SelectItem value="Putaway">Putaway</SelectItem>
+                                    <SelectItem value="Picker">Picker</SelectItem>
+                                    <SelectItem value="Packer">Packer</SelectItem>
+                                    <SelectItem value="Interco Transferan">Interco Transferan</SelectItem>
+                                    <SelectItem value="Admin">Admin</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="shift" className="text-right">Shift</Label>
+                            <Select value={selectedTask.shift} onValueChange={(value) => setSelectedTask({ ...selectedTask, shift: value })}>
+                                <SelectTrigger id="shift" className="col-span-3">
+                                    <SelectValue placeholder="Select Shift" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Pagi">Pagi</SelectItem>
+                                    <SelectItem value="Siang">Siang</SelectItem>
+                                    <SelectItem value="Sore">Sore</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="status" className="text-right">Status</Label>
+                            <Select value={selectedTask.status} onValueChange={(value) => setSelectedTask({ ...selectedTask, status: value })}>
+                                <SelectTrigger id="status" className="col-span-3">
+                                    <SelectValue placeholder="Select Status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Event">Event</SelectItem>
+                                    <SelectItem value="Regular">Regular</SelectItem>
+                                    <SelectItem value="Staff">Staff</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                  </div>
+              )}
+              <DialogFooter>
+                  <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+                  <Button onClick={handleSaveChanges}>Save Changes</Button>
+              </DialogFooter>
+          </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent>
+              <DialogHeader>
+                  <DialogTitle>Are you sure?</DialogTitle>
+                  <DialogDescription>
+                      This action cannot be undone. This will permanently delete the task for <span className="font-semibold">{selectedTask?.name}</span>.
+                  </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                  <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+                  <Button variant="destructive" onClick={handleDeleteTask}>Delete</Button>
+              </DialogFooter>
+          </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }
