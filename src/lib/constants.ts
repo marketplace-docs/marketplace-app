@@ -123,7 +123,7 @@ export const NAV_LINKS: NavLink[] = [
                 icon: Menu,
             },
              {
-                href: '/settings/app',
+                href: '/app-documentation',
                 label: 'APP',
                 icon: Monitor,
             },
@@ -135,4 +135,3 @@ export const NAV_LINKS: NavLink[] = [
         ]
     }
 ];
-
