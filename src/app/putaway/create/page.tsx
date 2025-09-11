@@ -24,6 +24,7 @@ import { MainLayout } from '@/components/layout/main-layout';
 import type { PutawayDocument } from '@/types/putaway-document';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { format } from 'date-fns';
+import { Upload, Download } from 'lucide-react';
 
 export default function CreatePutawayPage() {
   const [documents, setDocuments] = useLocalStorage<PutawayDocument[]>('putawayDocuments', []);
@@ -38,6 +39,7 @@ export default function CreatePutawayPage() {
     checkBy: '',
   });
   const { toast } = useToast();
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement>
@@ -82,6 +84,100 @@ export default function CreatePutawayPage() {
     });
     // Reset form
     setNewDocument({ noDocument: '', qty: '', status: 'Pending', sku: '', barcode: '', brand: '', expDate: '', checkBy: '' });
+  };
+  
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const text = e.target?.result as string;
+        try {
+            const lines = text.split('\n').filter(line => line.trim() !== '');
+            const newDocs: PutawayDocument[] = [];
+            let maxId = documents.length > 0 ? Math.max(...documents.map(s => parseInt(s.id))) : 0;
+            
+            const header = lines[0].toLowerCase().split(',').map(h => h.trim().replace(/"/g, ''));
+            const requiredHeaders = ['no document', 'sku', 'barcode', 'brand', 'exp date', 'check by', 'qty', 'status'];
+            if (!requiredHeaders.every(h => header.includes(h))) {
+              throw new Error('CSV file is missing required headers.');
+            }
+
+            lines.slice(1).forEach((line, index) => {
+              const values = line.split(',').map(s => s.trim());
+              if(values.length < header.length) return;
+
+              const docData = header.reduce((obj, h, i) => {
+                const keyMap = { 'no document': 'noDocument', 'exp date': 'expDate', 'check by': 'checkBy' };
+                const key = keyMap[h as keyof typeof keyMap] || h;
+                obj[key] = values[i];
+                return obj;
+              }, {} as any);
+
+              if (Object.values(docData).some(v => !v)) {
+                if(line.trim()) throw new Error(`Incomplete data on line ${index + 2}: ${line}`);
+                return;
+              }
+
+              newDocs.push({
+                  id: String(++maxId),
+                  noDocument: docData.noDocument,
+                  date: new Date().toISOString(),
+                  qty: parseInt(docData.qty, 10),
+                  status: docData.status as 'Done' | 'Pending',
+                  sku: docData.sku,
+                  barcode: docData.barcode,
+                  brand: docData.brand,
+                  expDate: docData.expDate,
+                  checkBy: docData.checkBy,
+              });
+            });
+
+            setDocuments(prevDocs => [...prevDocs, ...newDocs]);
+            toast({
+                title: "Success",
+                description: `${newDocs.length} documents uploaded successfully.`,
+            });
+
+        } catch (error: any) {
+            toast({
+                variant: "destructive",
+                title: "Upload Failed",
+                description: error.message || "An error occurred while parsing the CSV file.",
+            });
+        }
+    };
+    reader.readAsText(file);
+    if (event.target) event.target.value = '';
+  };
+
+  const handleExport = () => {
+    const headers = ["No. Document", "Date", "SKU", "Barcode", "Brand", "EXP Date", "Check By", "QTY", "Status"];
+    
+    const rows = documents.length > 0
+      ? documents.map(d => [d.noDocument, format(new Date(d.date), "yyyy-MM-dd HH:mm:ss"), d.sku, d.barcode, d.brand, d.expDate, d.checkBy, d.qty, d.status].join(","))
+      : [["", "", "", "", "", "", "", "", ""].join(",")];
+    
+    const csvContent = [headers.join(","), ...rows].join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.setAttribute("download", `putaway_docs_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast({
+      title: "Success",
+      description: "Putaway documents exported as CSV.",
+    });
   };
 
   return (
@@ -192,6 +288,13 @@ export default function CreatePutawayPage() {
                 </div>
               </div>
               <div className="flex justify-end pt-4 space-x-2">
+                <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
+                <Button variant="outline" type="button" onClick={handleUploadClick}>
+                    <Upload className="mr-2 h-4 w-4" /> Upload
+                </Button>
+                <Button variant="outline" type="button" onClick={handleExport}>
+                    <Download className="mr-2 h-4 w-4" /> Export
+                </Button>
                 <Button type="submit">Submit</Button>
               </div>
             </form>
@@ -201,3 +304,5 @@ export default function CreatePutawayPage() {
     </MainLayout>
   );
 }
+
+    
