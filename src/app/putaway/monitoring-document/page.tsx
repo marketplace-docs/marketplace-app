@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -45,8 +45,19 @@ export default function MonitoringPutawayPage() {
   const [selectedDoc, setSelectedDoc] = useState<PutawayDocument | null>(null);
   const { toast } = useToast();
 
-  const totalPages = Math.ceil(documents.length / rowsPerPage);
-  const paginatedDocs = documents.slice(
+  const [searchDocument, setSearchDocument] = useState('');
+  const [searchBarcode, setSearchBarcode] = useState('');
+
+  const filteredDocuments = useMemo(() => {
+    return documents.filter(doc => 
+      doc.noDocument.toLowerCase().includes(searchDocument.toLowerCase()) &&
+      doc.barcode.toLowerCase().includes(searchBarcode.toLowerCase())
+    );
+  }, [documents, searchDocument, searchBarcode]);
+
+
+  const totalPages = Math.ceil(filteredDocuments.length / rowsPerPage);
+  const paginatedDocs = filteredDocuments.slice(
     (currentPage - 1) * rowsPerPage,
     currentPage * rowsPerPage
   );
@@ -61,7 +72,7 @@ export default function MonitoringPutawayPage() {
   
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [rowsPerPage, documents]);
+  }, [rowsPerPage, documents, searchDocument, searchBarcode]);
 
   const handleOpenEditDialog = (doc: PutawayDocument) => {
     setSelectedDoc({ ...doc });
@@ -103,10 +114,24 @@ export default function MonitoringPutawayPage() {
               <CardTitle>Putaway Documents</CardTitle>
               <CardDescription>A list of all putaway documents.</CardDescription>
             </div>
-            <Button variant="outline" size="icon" onClick={handlePrint}>
-                <Printer className="h-4 w-4" />
-                <span className="sr-only">Print</span>
-            </Button>
+            <div className="flex items-center gap-2">
+                <Input 
+                    placeholder="Search document..." 
+                    value={searchDocument}
+                    onChange={(e) => setSearchDocument(e.target.value)}
+                    className="w-auto"
+                />
+                <Input 
+                    placeholder="Search barcode..." 
+                    value={searchBarcode}
+                    onChange={(e) => setSearchBarcode(e.target.value)}
+                    className="w-auto"
+                />
+                <Button variant="outline" size="icon" onClick={handlePrint}>
+                    <Printer className="h-4 w-4" />
+                    <span className="sr-only">Print</span>
+                </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="border rounded-lg" id="printable-content">
@@ -160,7 +185,7 @@ export default function MonitoringPutawayPage() {
                         colSpan={10}
                         className="h-24 text-center text-muted-foreground"
                       >
-                        No documents created yet. Go to the Create page to add one.
+                        No documents found.
                       </TableCell>
                     </TableRow>
                   )}
@@ -169,7 +194,7 @@ export default function MonitoringPutawayPage() {
             </div>
              <div className="flex items-center justify-end space-x-2 py-4">
                 <div className="flex-1 text-sm text-muted-foreground">
-                    Page {documents.length > 0 ? currentPage : 0} of {totalPages}
+                    Page {filteredDocuments.length > 0 ? currentPage : 0} of {totalPages}
                 </div>
                 <div className="flex items-center space-x-2">
                     <span className="text-sm text-muted-foreground">Rows per page:</span>
