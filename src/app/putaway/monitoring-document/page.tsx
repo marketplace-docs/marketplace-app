@@ -22,7 +22,7 @@ import type { PutawayDocument } from '@/types/putaway-document';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Pencil, Trash2, Printer } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -99,10 +99,6 @@ export default function MonitoringPutawayPage() {
     setSelectedDoc(null);
     toast({ title: "Success", description: "Document has been deleted.", variant: "destructive" });
   };
-  
-  const handlePrint = () => {
-      window.print();
-  }
 
   return (
     <MainLayout>
@@ -127,10 +123,6 @@ export default function MonitoringPutawayPage() {
                     onChange={(e) => setSearchBarcode(e.target.value)}
                     className="w-auto"
                 />
-                <Button variant="outline" size="icon" onClick={handlePrint}>
-                    <Printer className="h-4 w-4" />
-                    <span className="sr-only">Print</span>
-                </Button>
             </div>
           </CardHeader>
           <CardContent>
