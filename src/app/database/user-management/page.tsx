@@ -450,5 +450,5 @@ export default function DatabaseUserPage() {
 
         </div>
       </MainLayout>
-    )
+    );
 }
