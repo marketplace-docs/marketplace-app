@@ -14,7 +14,7 @@ export const NAV_LINKS: NavLink[] = [
         icon: LayoutDashboard,
     },
     {
-        href: '/admin-task',
+        href: '#',
         label: 'Admin Task',
         icon: Briefcase,
         children: [
