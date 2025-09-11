@@ -48,6 +48,7 @@ import { useAuth } from "@/hooks/use-auth";
 type User = {
     id: number;
     name: string;
+    email: string;
     status: 'Leader' | 'Reguler' | 'Event';
     role: string;
 };
@@ -55,11 +56,11 @@ type User = {
 type NewUser = Omit<User, 'id'>;
 
 const initialUsers: User[] = [
-    { id: 1, name: 'Arlan Saputra', status: 'Leader', role: 'Super Admin' },
-    { id: 2, name: 'Rudi Setiawan', status: 'Reguler', role: 'Admin' },
-    { id: 3, name: 'Nova Aurelia', status: 'Reguler', role: 'Admin' },
-    { id: 4, name: 'Nurul Tanzilla', status: 'Event', role: 'Event Staff' },
-    { id: 5, name: 'Regina Rifana', status: 'Leader', role: 'Captain' },
+    { id: 1, name: 'Arlan Saputra', email: 'arlan.saputra@marketplace.com', status: 'Leader', role: 'Super Admin' },
+    { id: 2, name: 'Rudi Setiawan', email: 'rudi.setiawan@marketplace.com', status: 'Reguler', role: 'Admin' },
+    { id: 3, name: 'Nova Aurelia', email: 'nova.aurelia@marketplace.com', status: 'Reguler', role: 'Admin' },
+    { id: 4, name: 'Nurul Tanzilla', email: 'nurul.tanzilla@marketplace.com', status: 'Event', role: 'Event Staff' },
+    { id: 5, name: 'Regina Rifana', email: 'regina.rifana@marketplace.com', status: 'Leader', role: 'Captain' },
 ];
 
 const statusVariantMap: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
@@ -77,7 +78,7 @@ export default function DatabaseUserPage() {
     const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
     
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
-    const [newUser, setNewUser] = useState<NewUser>({ name: '', status: 'Reguler', role: 'Admin' });
+    const [newUser, setNewUser] = useState<NewUser>({ name: '', email: '', status: 'Reguler', role: 'Admin' });
 
     const { toast } = useToast();
 
@@ -117,8 +118,8 @@ export default function DatabaseUserPage() {
     
     const handleAddUser = () => {
         const userToAdd = { ...newUser };
-        if (!userToAdd.name) {
-            toast({ variant: "destructive", title: "Add Failed", description: "Name cannot be empty." });
+        if (!userToAdd.name || !userToAdd.email) {
+            toast({ variant: "destructive", title: "Add Failed", description: "Name and Email cannot be empty." });
             return;
         }
 
@@ -126,7 +127,7 @@ export default function DatabaseUserPage() {
         setUsers([...users, { id: newId, ...userToAdd }]);
         
         setAddDialogOpen(false);
-        setNewUser({ name: '', status: 'Reguler', role: 'Admin' });
+        setNewUser({ name: '', email: '', status: 'Reguler', role: 'Admin' });
         toast({ title: "Success", description: "New user added." });
     };
 
@@ -163,6 +164,10 @@ export default function DatabaseUserPage() {
                              <div className="grid grid-cols-4 items-center gap-4">
                                 <Label htmlFor="new-name" className="text-right">Name</Label>
                                 <Input id="new-name" value={newUser.name} className="col-span-3" onChange={(e) => setNewUser({ ...newUser, name: e.target.value })} />
+                            </div>
+                             <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="new-email" className="text-right">Email</Label>
+                                <Input id="new-email" value={newUser.email} className="col-span-3" onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} />
                             </div>
                              <div className="grid grid-cols-4 items-center gap-4">
                                 <Label htmlFor="new-status" className="text-right">Status</Label>
@@ -210,6 +215,7 @@ export default function DatabaseUserPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Name</TableHead>
+                                <TableHead>Email</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead>Role</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
@@ -220,6 +226,7 @@ export default function DatabaseUserPage() {
                                 paginatedUsers.map((user) => (
                                     <TableRow key={user.id}>
                                         <TableCell className="font-medium">{user.name}</TableCell>
+                                        <TableCell>{user.email}</TableCell>
                                         <TableCell>
                                             <Badge variant={statusVariantMap[user.status] || 'default'}>{user.status}</Badge>
                                         </TableCell>
@@ -240,7 +247,7 @@ export default function DatabaseUserPage() {
                                 ))
                             ) : (
                                  <TableRow>
-                                    <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                                    <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                                         No users found.
                                     </TableCell>
                                 </TableRow>
@@ -309,6 +316,10 @@ export default function DatabaseUserPage() {
                             <div className="grid grid-cols-4 items-center gap-4">
                                 <Label htmlFor="name" className="text-right">Name</Label>
                                 <Input id="name" value={selectedUser.name} className="col-span-3" onChange={(e) => setSelectedUser({ ...selectedUser, name: e.target.value })} />
+                            </div>
+                             <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="email" className="text-right">Email</Label>
+                                <Input id="email" value={selectedUser.email} className="col-span-3" onChange={(e) => setSelectedUser({ ...selectedUser, email: e.target.value })} />
                             </div>
                              <div className="grid grid-cols-4 items-center gap-4">
                                 <Label htmlFor="status" className="text-right">Status</Label>
