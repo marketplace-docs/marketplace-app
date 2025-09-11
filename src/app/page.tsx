@@ -6,15 +6,21 @@ import { useAuth } from '@/hooks/use-auth';
 import { useEffect } from 'react';
 
 export default function Home() {
-    const { user } = useAuth();
+    const { user, loading } = useAuth();
 
     useEffect(() => {
-        if(user) {
-            redirect('/dashboard');
-        } else {
-            redirect('/login');
+        if (!loading) {
+            if(user) {
+                redirect('/dashboard');
+            } else {
+                redirect('/login');
+            }
         }
-    }, [user]);
+    }, [user, loading]);
 
-    return null; 
+    return (
+        <div className="flex h-screen w-full items-center justify-center">
+            <div className="text-2xl font-semibold">Market Place..</div>
+        </div>
+    );
 }
