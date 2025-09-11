@@ -19,6 +19,56 @@ export default function AppDocumentationPage() {
                         <CardDescription>Platform terintegrasi untuk optimalisasi gudang dan manajemen tugas.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
+                         <div>
+                            <h3 className="font-semibold text-lg mb-2">Struktur Menu dalam Sistem</h3>
+                            <ul className="space-y-3 text-sm list-inside">
+                                <li>
+                                    <span className="font-semibold">Dashboard:</span> Menampilkan ringkasan data dan aktivitas utama secara real-time.
+                                </li>
+                                <li>
+                                    <span className="font-semibold">Admin Task</span>
+                                    <ul className="space-y-1 list-disc pl-8 mt-1">
+                                        <li><span className="font-semibold">Create:</span> Membuat tugas baru.</li>
+                                        <li><span className="font-semibold">Monitoring Manpower:</span> Memantau ketersediaan dan aktivitas manpower.</li>
+                                        <li><span className="font-semibold">Task:</span> Melihat dan mengelola daftar tugas yang sedang berjalan.</li>
+                                    </ul>
+                                </li>
+                                <li>
+                                    <span className="font-semibold">Putaway</span>
+                                    <ul className="space-y-1 list-disc pl-8 mt-1">
+                                        <li><span className="font-semibold">Create:</span> Membuat proses putaway (penyimpanan barang ke lokasi).</li>
+                                        <li><span className="font-semibold">Monitoring Document:</span> Memantau dokumen terkait putaway.</li>
+                                        <li><span className="font-semibold">Task:</span> Mengelola pekerjaan putaway yang sedang berlangsung.</li>
+                                    </ul>
+                                </li>
+                                 <li>
+                                    <span className="font-semibold">Marketplace</span>
+                                    <ul className="space-y-1 list-disc pl-8 mt-1">
+                                        <li><span className="font-semibold">Create:</span> Membuat data/aktivitas baru terkait marketplace.</li>
+                                        <li><span className="font-semibold">Monitoring Store:</span> Memantau aktivitas atau status toko.</li>
+                                        <li><span className="font-semibold">Task:</span> Mengelola pekerjaan yang berhubungan dengan marketplace.</li>
+                                    </ul>
+                                </li>
+                                <li>
+                                    <span className="font-semibold">Reports</span>
+                                     <ul className="space-y-1 list-disc pl-8 mt-1">
+                                        <li><span className="font-semibold">Backlog:</span> Laporan backlog (pekerjaan yang tertunda).</li>
+                                        <li><span className="font-semibold">Daily Performance:</span> Laporan performa harian.</li>
+                                        <li><span className="font-semibold">KPI Performance:</span> Laporan pencapaian KPI.</li>
+                                    </ul>
+                                </li>
+                                 <li>
+                                    <span className="font-semibold">Master</span>
+                                     <ul className="space-y-1 list-disc pl-8 mt-1">
+                                        <li><span className="font-semibold">User:</span> Manajemen user dalam sistem.</li>
+                                        <li><span className="font-semibold">Role:</span> Pengaturan role/hak akses.</li>
+                                        <li><span className="font-semibold">Menu:</span> Menentukan menu yang ditampilkan sesuai role/user.</li>
+                                        <li><span className="font-semibold">APP:</span> Pengaturan aplikasi terkait.</li>
+                                        <li><span className="font-semibold">Log Activity:</span> Riwayat aktivitas pengguna di sistem.</li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </div>
                         <div>
                             <h3 className="font-semibold text-lg mb-2">Fitur Utama</h3>
                             <ul className="space-y-3 text-sm">
