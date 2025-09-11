@@ -103,7 +103,7 @@ export default function CreatePutawayPage() {
             let maxId = documents.length > 0 ? Math.max(...documents.map(s => parseInt(s.id))) : 0;
             
             const header = lines[0].toLowerCase().split(',').map(h => h.trim().replace(/"/g, ''));
-            const requiredHeaders = ['no document', 'sku', 'barcode', 'brand', 'exp date', 'check by', 'qty', 'status'];
+            const requiredHeaders = ['no. document', 'sku', 'barcode', 'brand', 'exp date', 'check by', 'qty', 'status'];
             if (!requiredHeaders.every(h => header.includes(h))) {
               throw new Error('CSV file is missing required headers.');
             }
@@ -113,7 +113,7 @@ export default function CreatePutawayPage() {
               if(values.length < header.length) return;
 
               const docData = header.reduce((obj, h, i) => {
-                const keyMap = { 'no document': 'noDocument', 'exp date': 'expDate', 'check by': 'checkBy' };
+                const keyMap = { 'no. document': 'noDocument', 'exp date': 'expDate', 'check by': 'checkBy' };
                 const key = keyMap[h as keyof typeof keyMap] || h;
                 obj[key] = values[i];
                 return obj;
@@ -157,11 +157,11 @@ export default function CreatePutawayPage() {
   };
 
   const handleExport = () => {
-    const headers = ["No. Document", "Date", "SKU", "Barcode", "Brand", "EXP Date", "Check By", "QTY", "Status"];
+    const headers = ["No. Document", "SKU", "Barcode", "Brand", "EXP Date", "Check By", "QTY", "Status"];
     
     const rows = documents.length > 0
-      ? documents.map(d => [d.noDocument, format(new Date(d.date), "yyyy-MM-dd HH:mm:ss"), d.sku, d.barcode, d.brand, d.expDate, d.checkBy, d.qty, d.status].join(","))
-      : [["", "", "", "", "", "", "", "", ""].join(",")];
+      ? documents.map(d => [d.noDocument, d.sku, d.barcode, d.brand, d.expDate, d.checkBy, d.qty, d.status].join(","))
+      : [["", "", "", "", "", "", "", ""].join(",")];
     
     const csvContent = [headers.join(","), ...rows].join("\n");
 
@@ -304,5 +304,3 @@ export default function CreatePutawayPage() {
     </MainLayout>
   );
 }
-
-    
