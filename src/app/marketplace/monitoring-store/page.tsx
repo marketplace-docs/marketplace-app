@@ -105,10 +105,11 @@ export default function MonitoringStorePage() {
     if (!selectedStore) return;
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/marketplace-stores/${selectedStore.id}`, {
+      const { id, store_name, platform } = selectedStore;
+      const response = await fetch(`/api/marketplace-stores/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(selectedStore),
+        body: JSON.stringify({ store_name, platform }),
       });
 
       if (!response.ok) {
@@ -356,6 +357,7 @@ export default function MonitoringStorePage() {
     </MainLayout>
   );
 }
-
     
+    
+
     
