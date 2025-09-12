@@ -11,7 +11,7 @@ import { DateRange } from "react-day-picker";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Download, Smile, Frown, Pencil, Save } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
-import { format, addDays } from "date-fns";
+import { format, addDays, differenceInDays } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { performanceData as initialPerformanceData, PerformanceData } from '@/lib/daily-performance-data';
 import { cn } from '@/lib/utils';
@@ -73,6 +73,20 @@ export default function DailyPerformancePage() {
         setCurrentPage(1);
     }, [rowsPerPage, dateRange, jobFilter]);
 
+    const handleDateChange = (range: DateRange | undefined) => {
+        if (range?.from && range?.to) {
+            if (differenceInDays(range.to, range.from) > 6) {
+                 toast({
+                    variant: 'destructive',
+                    title: 'Date Range Too Large',
+                    description: 'Please select a date range of 7 days or less.',
+                });
+                return;
+            }
+        }
+        setDateRange(range);
+    }
+
 
     const handleNextPage = () => {
         setCurrentPage((prev) => (prev < totalPages ? prev + 1 : prev));
@@ -83,7 +97,7 @@ export default function DailyPerformancePage() {
     };
 
     const handleExport = () => {
-        const headers = ["Date", "Month", "Name", "Task Daily", "Total Items", "Job-Desc", "Shift", "Task Performance", "Items Performance", "Result"];
+        const headers = ["Date", "Month", "Name", "Task Daily", "Total Items", "Job-Desc", "Shift", "Task Perf.", "Items Perf.", "Result"];
         const csvContent = [
             headers.join(","),
             ...filteredData.map(item => [
@@ -166,7 +180,7 @@ export default function DailyPerformancePage() {
         <MainLayout>
              <div className="w-full space-y-6">
                 <div className="flex justify-between items-center">
-                    <h1 className="text-2xl font-bold">Daily Performance</h1>
+                    <h1 className="text-2xl font-bold">Performance Report</h1>
                     <Button onClick={handleExport}>
                         <Download className="mr-2 h-4 w-4" />
                         Export
@@ -217,7 +231,7 @@ export default function DailyPerformancePage() {
                                     mode="range"
                                     defaultMonth={dateRange?.from}
                                     selected={dateRange}
-                                    onSelect={setDateRange}
+                                    onSelect={handleDateChange}
                                     numberOfMonths={2}
                                 />
                                 </PopoverContent>
