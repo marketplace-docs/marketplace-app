@@ -8,9 +8,15 @@ export async function POST(request: Request) {
   if (!userId || !permissions) {
     return NextResponse.json({ error: 'userId and permissions are required' }, { status: 400 });
   }
+  
+  const userIdNumber = parseInt(userId, 10);
+  if (isNaN(userIdNumber)) {
+    return NextResponse.json({ error: 'Invalid User ID format' }, { status: 400 });
+  }
+
 
   const records = Object.entries(permissions).map(([menu_href, is_accessible]) => ({
-    user_id: userId,
+    user_id: userIdNumber,
     menu_href,
     is_accessible,
   }));
@@ -27,5 +33,3 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ message: 'Permissions updated successfully' }, { status: 200 });
 }
-
-    
