@@ -110,7 +110,7 @@ export const NAV_LINKS: NavLink[] = [
          children: [
             {
                 href: '/backlog',
-                label: 'Backlog',
+                label: 'Data Backlog',
                 icon: Archive,
             },
             {
