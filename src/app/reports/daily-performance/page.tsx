@@ -403,7 +403,7 @@ export default function DailyPerformancePage() {
                 
                 <Card>
                     <CardHeader>
-                        <div className="flex justify-between items-center">
+                        <div className="flex justify-between items-center pb-4">
                             <div>
                                 <CardTitle>Performance Report</CardTitle>
                                 <CardDescription>Detailed daily performance metrics of team members.</CardDescription>
