@@ -18,10 +18,11 @@ import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import type { MarketplaceStore } from '@/types/marketplace-store';
 
-type NewStore = Omit<MarketplaceStore, 'id' | 'created_at' | 'marketplace_name'>;
+type NewStore = Omit<MarketplaceStore, 'id' | 'created_at'>;
 
 export default function CreateMarketplacePage() {
   const [newStore, setNewStore] = React.useState<NewStore>({
+    marketplace_name: '',
     store_name: '',
     platform: '',
   });
@@ -36,7 +37,7 @@ export default function CreateMarketplacePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newStore.store_name || !newStore.platform) {
+    if (!newStore.store_name || !newStore.platform || !newStore.marketplace_name) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -64,7 +65,7 @@ export default function CreateMarketplacePage() {
         title: 'Success',
         description: 'New store has been created.',
       });
-      setNewStore({ store_name: '', platform: '' });
+      setNewStore({ marketplace_name: '', store_name: '', platform: '' });
       router.push('/marketplace/monitoring-store');
     } catch (error: any) {
       toast({
@@ -91,6 +92,16 @@ export default function CreateMarketplacePage() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
+                <Label htmlFor="marketplace_name">Marketplace Name</Label>
+                <Input
+                  id="marketplace_name"
+                  name="marketplace_name"
+                  placeholder="e.g., Shopee, Lazada, Tiktok"
+                  value={newStore.marketplace_name}
+                  onChange={handleInputChange}
+                />
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="store_name">Store Name</Label>
                 <Input
                   id="store_name"
@@ -105,7 +116,7 @@ export default function CreateMarketplacePage() {
                 <Input
                   id="platform"
                   name="platform"
-                  placeholder="e.g., Shopee, Lazada, Tiktok"
+                  placeholder="Enter platform"
                   value={newStore.platform}
                   onChange={handleInputChange}
                 />
