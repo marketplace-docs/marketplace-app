@@ -21,7 +21,7 @@ import { MainLayout } from '@/components/layout/main-layout';
 import type { MarketplaceStore } from '@/types/marketplace-store';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Pencil, Trash2, Loader2, AlertCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pencil, Trash2, Loader2, AlertCircle, Download } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -149,6 +149,38 @@ export default function MonitoringStorePage() {
     }
   };
 
+  const handleExport = () => {
+    if (filteredStores.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "No Data",
+        description: "There is no data to export.",
+      });
+      return;
+    }
+    const headers = ["Store Name", "Platform", "Created At"];
+    const csvContent = [
+        headers.join(","),
+        ...filteredStores.map(item => [
+            `"${item.store_name.replace(/"/g, '""')}"`,
+            `"${item.platform.replace(/"/g, '""')}"`,
+            `"${format(new Date(item.created_at), "yyyy-MM-dd HH:mm:ss")}"`
+        ].join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.setAttribute("download", `marketplace_stores_${format(new Date(), "yyyyMMdd")}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast({ title: "Success", description: "Data has been exported to CSV." });
+  };
+
+
   return (
     <MainLayout>
       <div className="w-full space-y-6">
@@ -173,6 +205,10 @@ export default function MonitoringStorePage() {
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="flex-1 md:flex-auto md:w-auto"
                 />
+                <Button variant="outline" onClick={handleExport}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Export
+                </Button>
             </div>
           </CardHeader>
           <CardContent>
@@ -321,4 +357,5 @@ export default function MonitoringStorePage() {
   );
 }
 
+    
     
