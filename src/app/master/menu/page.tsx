@@ -55,8 +55,9 @@ export default function MenuManagementPage() {
                 updated = true;
             }
             NAV_LINKS.forEach(link => {
-                if (newPermissions[user.id][link.href] === undefined) {
-                    newPermissions[user.id][link.href] = true; // Default to accessible
+                const effectiveHref = link.children ? `group-${link.label}` : link.href;
+                if (newPermissions[user.id][effectiveHref] === undefined) {
+                    newPermissions[user.id][effectiveHref] = true; // Default to accessible
                     updated = true;
                 }
                 link.children?.forEach(child => {
@@ -93,16 +94,17 @@ export default function MenuManagementPage() {
 
     const renderMenuRows = (links: NavLink[], isSubmenu = false) => {
         return links.flatMap(link => {
+            const effectiveHref = link.children ? `group-${link.label}` : link.href;
             const rows = [(
-                <TableRow key={link.href} className={isSubmenu ? 'bg-muted/50' : ''}>
+                <TableRow key={`${link.href}-${link.label}`} className={isSubmenu ? 'bg-muted/50' : ''}>
                     <TableCell className={`font-medium ${isSubmenu ? 'pl-10' : ''}`}>
                        {link.label}
                     </TableCell>
                     <TableCell className="text-right">
                         <Switch
                             disabled={!selectedUserId || !isSuperAdmin}
-                            checked={!!menuPermissions[selectedUserId]?.[link.href]}
-                            onCheckedChange={(checked) => handlePermissionChange(link.href, checked)}
+                            checked={!!menuPermissions[selectedUserId]?.[effectiveHref]}
+                            onCheckedChange={(checked) => handlePermissionChange(effectiveHref, checked)}
                         />
                     </TableCell>
                 </TableRow>
@@ -170,4 +172,3 @@ export default function MenuManagementPage() {
         </MainLayout>
     );
 }
-
