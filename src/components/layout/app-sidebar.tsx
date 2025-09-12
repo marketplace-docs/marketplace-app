@@ -66,7 +66,7 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarMenu className="flex-1 p-4">
         {NAV_LINKS.map((link) => (
-          <SidebarMenuItem key={link.href}>
+          <SidebarMenuItem key={`${link.href}-${link.label}`}>
             {link.children ? (
               <Collapsible open={openSubmenu === link.label} onOpenChange={() => handleSubmenuToggle(link.label)}>
                 <CollapsibleTrigger asChild>
