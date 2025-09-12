@@ -4,11 +4,11 @@ import { NextResponse } from 'next/server';
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const { id } = params;
-  const { marketplace_name, store_name, platform } = await request.json();
+  const { store_name, platform } = await request.json();
 
   const { data, error } = await supabase
     .from('marketplace_stores')
-    .update({ marketplace_name, store_name, platform })
+    .update({ store_name, platform })
     .eq('id', id)
     .select()
     .single();
