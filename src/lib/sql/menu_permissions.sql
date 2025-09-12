@@ -19,19 +19,18 @@ ALTER TABLE public.menu_permissions ENABLE ROW LEVEL SECURITY;
 -- Drop existing policies if they exist to prevent errors on re-running the script
 DROP POLICY IF EXISTS "Allow authenticated users to manage permissions" ON public.menu_permissions;
 DROP POLICY IF EXISTS "Allow authenticated users to read permissions" ON public.menu_permissions;
-
+DROP POLICY IF EXISTS "Allow authenticated users full access" ON public.menu_permissions;
 
 -- Create a single, comprehensive policy for all actions.
--- This policy allows any authenticated user to SELECT, INSERT, UPDATE, or DELETE permissions.
--- The 'USING' clause applies to SELECT, UPDATE, DELETE.
--- The 'WITH CHECK' clause applies to INSERT, UPDATE, ensuring new/updated rows also meet the condition.
-CREATE POLICY "Allow authenticated users to manage permissions"
+-- This policy allows any authenticated user to perform any action (SELECT, INSERT, UPDATE, DELETE).
+-- The 'USING' clause applies to SELECT, UPDATE, DELETE to check existing rows.
+-- The 'WITH CHECK' clause applies to INSERT and UPDATE to ensure new/updated rows also meet the condition.
+CREATE POLICY "Allow authenticated users full access"
     ON public.menu_permissions
     FOR ALL
     TO authenticated
-    USING (auth.role() = 'authenticated')
-    WITH CHECK (auth.role() = 'authenticated');
+    USING (true)
+    WITH CHECK (true);
 
-
--- Notify Supabase of the schema changes to ensure API is up-to-date
+-- Notify Supabase of the changes
 NOTIFY pgrst, 'reload schema';
