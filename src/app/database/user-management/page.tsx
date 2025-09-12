@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import {
@@ -43,6 +42,7 @@ import { useToast } from "@/hooks/use-toast";
 import { MainLayout } from "@/components/layout/main-layout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuth } from "@/hooks/use-auth";
+import { useLocalStorage } from "@/hooks/use-local-storage";
 
 type User = {
     id: number;
@@ -60,9 +60,17 @@ const statusVariantMap: { [key: string]: "default" | "secondary" | "destructive"
     'Event': 'secondary',
 };
 
+const initialUsers: User[] = [
+    { id: 1, name: 'Arlan Saputra', email: 'arlan.saputra@example.com', status: 'Leader', role: 'Super Admin' },
+    { id: 2, name: 'Rudi Setiawan', email: 'rudi.setiawan@example.com', status: 'Reguler', role: 'Admin' },
+    { id: 3, name: 'Nova Aurelia', email: 'nova.aurelia@example.com', status: 'Reguler', role: 'Admin' },
+    { id: 4, name: 'Nurul Tanzilla', email: 'nurul.tanzilla@example.com', status: 'Event', role: 'Event Staff' },
+    { id: 5, name: 'Regina Rifana', email: 'regina.rifana@example.com', status: 'Leader', role: 'Captain' },
+];
+
 export default function DatabaseUserPage() {
     const { user: currentUser } = useAuth();
-    const [users, setUsers] = useState<User[]>([]);
+    const [users, setUsers] = useLocalStorage<User[]>('db-users', initialUsers);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     
@@ -81,32 +89,9 @@ export default function DatabaseUserPage() {
 
     const isSuperAdmin = currentUser ? currentUser.role === 'Super Admin' : false;
 
-    const fetchUsers = useCallback(async () => {
-        try {
-            setLoading(true);
-            const response = await fetch('/api/users');
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to fetch users');
-            }
-            const data = await response.json();
-            setUsers(data);
-            setError(null);
-        } catch (e: any) {
-            setError(e.message);
-            toast({
-                variant: "destructive",
-                title: "Error fetching data",
-                description: e.message,
-            });
-        } finally {
-            setLoading(false);
-        }
-    }, [toast]);
-
     useEffect(() => {
-        fetchUsers();
-    }, [fetchUsers]);
+        setTimeout(() => setLoading(false), 500);
+    }, []);
 
     const totalPages = Math.ceil(users.length / rowsPerPage);
     const paginatedUsers = users.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
@@ -129,103 +114,41 @@ export default function DatabaseUserPage() {
         setDeleteDialogOpen(true);
     };
 
-    const handleSaveChanges = async () => {
+    const handleSaveChanges = () => {
         if (!selectedUser) return;
-        setIsSubmitting(true);
-        try {
-             const response = await fetch(`/api/users/${selectedUser.id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(selectedUser),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to update user');
-            }
-            
-            const updatedUser = await response.json();
-            setUsers(users.map(u => u.id === updatedUser.id ? updatedUser : u));
-            setEditDialogOpen(false);
-            setSelectedUser(null);
-            toast({ title: "Success", description: "User has been updated successfully." });
-
-        } catch (e: any) {
-             toast({
-                variant: "destructive",
-                title: "Update Failed",
-                description: e.message,
-            });
-        } finally {
-            setIsSubmitting(false);
-        }
+        setUsers(users.map(u => u.id === selectedUser.id ? selectedUser : u));
+        setEditDialogOpen(false);
+        setSelectedUser(null);
+        toast({ title: "Success", description: "User has been updated successfully." });
     };
     
-    const handleAddUser = async () => {
+    const handleAddUser = () => {
         if (!newUser.name || !newUser.email) {
             toast({ variant: "destructive", title: "Add Failed", description: "Name and Email cannot be empty." });
             return;
         }
-
-        setIsSubmitting(true);
-        try {
-            const response = await fetch('/api/users', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newUser),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to add user');
-            }
-            
-            const createdUser = await response.json();
-            setUsers(prevUsers => [...prevUsers, createdUser]);
-
-            setAddDialogOpen(false);
-            setNewUser({ name: '', email: '', status: 'Reguler', role: 'Admin' });
-            toast({ title: "Success", description: "New user added." });
-
-        } catch (e: any) {
-            toast({
-                variant: "destructive",
-                title: "Add Failed",
-                description: e.message,
-            });
-        } finally {
-            setIsSubmitting(false);
+        
+        const newUserWithId: User = {
+            id: Date.now(),
+            ...newUser
         }
+
+        setUsers([...users, newUserWithId]);
+
+        setAddDialogOpen(false);
+        setNewUser({ name: '', email: '', status: 'Reguler', role: 'Admin' });
+        toast({ title: "Success", description: "New user added." });
     };
 
-    const handleDeleteUser = async () => {
+    const handleDeleteUser = () => {
         if (!selectedUser) return;
-        setIsSubmitting(true);
-        try {
-            const response = await fetch(`/api/users/${selectedUser.id}`, {
-                method: 'DELETE',
-            });
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to delete user');
-            }
-            
-            setUsers(users.filter(u => u.id !== selectedUser.id));
-            setDeleteDialogOpen(false);
-            setSelectedUser(null);
-            toast({ title: "Success", description: "User has been deleted.", variant: "destructive" });
+        setUsers(users.filter(u => u.id !== selectedUser.id));
+        setDeleteDialogOpen(false);
+        setSelectedUser(null);
+        toast({ title: "Success", description: "User has been deleted.", variant: "destructive" });
 
-            if (paginatedUsers.length === 1 && currentPage > 1) {
-                setCurrentPage(currentPage - 1);
-            }
-        } catch (e: any) {
-            toast({
-                variant: "destructive",
-                title: "Delete Failed",
-                description: e.message,
-            });
-        } finally {
-            setIsSubmitting(false);
+        if (paginatedUsers.length === 1 && currentPage > 1) {
+            setCurrentPage(currentPage - 1);
         }
     };
 

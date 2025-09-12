@@ -25,6 +25,8 @@ import { useRouter } from 'next/navigation';
 import { Loader2, Upload, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { Textarea } from '@/components/ui/textarea';
+import { useLocalStorage } from '@/hooks/use-local-storage';
+import type { ReturnDocument } from '@/types/return-document';
 
 type NewReturnDocument = {
     noDocument: string;
@@ -51,6 +53,7 @@ export default function CreateReturnPage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const { toast } = useToast();
   const router = useRouter();
+  const [documents, setDocuments] = useLocalStorage<ReturnDocument[]>('return-documents', []);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -75,37 +78,24 @@ export default function CreateReturnPage() {
     }
     
     setIsSubmitting(true);
-    try {
-      const response = await fetch('/api/return-documents', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...newDocument,
-          qty: parseInt(newDocument.qty, 10),
-        }),
-      });
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    const newDoc: ReturnDocument = {
+      id: Date.now().toString(),
+      ...newDocument,
+      qty: parseInt(newDocument.qty, 10),
+      date: new Date().toISOString(),
+    };
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create document');
-      }
+    setDocuments([...documents, newDoc]);
 
-      toast({
+    setIsSubmitting(false);
+    toast({
         title: 'Success',
-        description: 'New return document has been created.',
-      });
-      // Reset form and navigate to monitoring page
-      setNewDocument({ noDocument: '', qty: '', status: 'Pending', sku: '', barcode: '', brand: '', reason: '', receivedBy: '' });
-      router.push('/return/monitoring-document');
-    } catch (error: any) {
-       toast({
-        variant: 'destructive',
-        title: 'Error creating document',
-        description: error.message,
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+        description: 'New return document has been created locally.',
+    });
+    setNewDocument({ noDocument: '', qty: '', status: 'Pending', sku: '', barcode: '', brand: '', reason: '', receivedBy: '' });
+    router.push('/return/monitoring-document');
   };
 
   return (

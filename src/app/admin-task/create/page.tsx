@@ -23,6 +23,8 @@ import { useToast } from '@/hooks/use-toast';
 import { MainLayout } from '@/components/layout/main-layout';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
+import { useLocalStorage } from '@/hooks/use-local-storage';
+import type { AdminTask } from '@/types/admin-task';
 
 type NewAdminTask = {
     name: string;
@@ -41,6 +43,7 @@ export default function CreateTaskPage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const { toast } = useToast();
   const router = useRouter();
+  const [tasks, setTasks] = useLocalStorage<AdminTask[]>('admin-tasks', []);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement>
@@ -66,34 +69,24 @@ export default function CreateTaskPage() {
     }
     
     setIsSubmitting(true);
-    try {
-      const response = await fetch('/api/admin-tasks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newTask),
-      });
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 500));
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create task');
-      }
-
-      toast({
-        title: 'Success',
-        description: 'New task has been created.',
-      });
-      // Reset form and navigate to monitoring page
-      setNewTask({ name: '', job: '', shift: '', status: '' });
-      router.push('/admin-task/monitoring-manpower');
-    } catch (error: any) {
-       toast({
-        variant: 'destructive',
-        title: 'Error creating task',
-        description: error.message,
-      });
-    } finally {
-      setIsSubmitting(false);
+    const newTaskWithId: AdminTask = {
+      id: Date.now(),
+      ...newTask,
+      date: new Date().toISOString(),
     }
+
+    setTasks([...tasks, newTaskWithId]);
+    
+    setIsSubmitting(false);
+    toast({
+        title: 'Success',
+        description: 'New task has been created locally.',
+    });
+    setNewTask({ name: '', job: '', shift: '', status: '' });
+    router.push('/admin-task/monitoring-manpower');
   };
 
   return (

@@ -30,6 +30,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useLocalStorage } from '@/hooks/use-local-storage';
 
 const statusVariantMap: { [key in ReturnDocument['status']]: "default" | "secondary" | "destructive" | "outline" } = {
     'Processed': 'default',
@@ -38,7 +39,7 @@ const statusVariantMap: { [key in ReturnDocument['status']]: "default" | "second
 };
 
 export default function MonitoringReturnPage() {
-  const [documents, setDocuments] = useState<ReturnDocument[]>([]);
+  const [documents, setDocuments] = useLocalStorage<ReturnDocument[]>('return-documents', []);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,32 +55,12 @@ export default function MonitoringReturnPage() {
   const [searchDocument, setSearchDocument] = useState('');
   const [searchBarcode, setSearchBarcode] = useState('');
 
-  const fetchDocuments = useCallback(async () => {
-    try {
-        setLoading(true);
-        const response = await fetch('/api/return-documents');
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to fetch documents');
-        }
-        const data = await response.json();
-        setDocuments(data);
-        setError(null);
-    } catch (e: any) {
-        setError(e.message);
-        toast({
-            variant: "destructive",
-            title: "Error fetching data",
-            description: e.message,
-        });
-    } finally {
-        setLoading(false);
-    }
-  }, [toast]);
-
   useEffect(() => {
-    fetchDocuments();
-  }, [fetchDocuments]);
+    // Simulate loading
+    setTimeout(() => {
+      setLoading(false);
+    }, 500);
+  }, []);
 
   const filteredDocuments = useMemo(() => {
     return documents.filter(doc => 
@@ -117,62 +98,20 @@ export default function MonitoringReturnPage() {
     setDeleteDialogOpen(true);
   };
 
-  const handleSaveChanges = async () => {
+  const handleSaveChanges = () => {
     if (!selectedDoc) return;
-    setIsSubmitting(true);
-    try {
-      const response = await fetch(`/api/return-documents/${selectedDoc.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(selectedDoc),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update document');
-      }
-
-      await fetchDocuments(); 
-      setEditDialogOpen(false);
-      setSelectedDoc(null);
-      toast({ title: "Success", description: "Document has been updated successfully." });
-    } catch (e: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Update Failed',
-        description: e.message,
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    setDocuments(documents.map(d => d.id === selectedDoc.id ? selectedDoc : d));
+    setEditDialogOpen(false);
+    setSelectedDoc(null);
+    toast({ title: "Success", description: "Document has been updated successfully." });
   };
 
-  const handleDeleteDoc = async () => {
+  const handleDeleteDoc = () => {
     if (!selectedDoc) return;
-    setIsSubmitting(true);
-    try {
-        const response = await fetch(`/api/return-documents/${selectedDoc.id}`, {
-            method: 'DELETE',
-        });
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to delete document');
-        }
-        
-        await fetchDocuments();
-        setDeleteDialogOpen(false);
-        setSelectedDoc(null);
-        toast({ title: "Success", description: "Document has been deleted.", variant: "destructive" });
-
-    } catch (e: any) {
-        toast({
-            variant: "destructive",
-            title: "Delete Failed",
-            description: e.message,
-        });
-    } finally {
-        setIsSubmitting(false);
-    }
+    setDocuments(documents.filter(d => d.id !== selectedDoc.id));
+    setDeleteDialogOpen(false);
+    setSelectedDoc(null);
+    toast({ title: "Success", description: "Document has been deleted.", variant: "destructive" });
   };
 
   return (

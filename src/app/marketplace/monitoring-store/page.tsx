@@ -28,9 +28,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useLocalStorage } from '@/hooks/use-local-storage';
 
 export default function MonitoringStorePage() {
-  const [stores, setStores] = useState<MarketplaceStore[]>([]);
+  const [stores, setStores] = useLocalStorage<MarketplaceStore[]>('marketplace-stores', []);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,32 +46,9 @@ export default function MonitoringStorePage() {
 
   const [searchTerm, setSearchTerm] = useState('');
 
-  const fetchStores = useCallback(async () => {
-    try {
-        setLoading(true);
-        const response = await fetch('/api/marketplace-stores');
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to fetch stores');
-        }
-        const data = await response.json();
-        setStores(data);
-        setError(null);
-    } catch (e: any) {
-        setError(e.message);
-        toast({
-            variant: "destructive",
-            title: "Error fetching data",
-            description: e.message,
-        });
-    } finally {
-        setLoading(false);
-    }
-  }, [toast]);
-
   useEffect(() => {
-    fetchStores();
-  }, [fetchStores]);
+    setTimeout(() => setLoading(false), 500);
+  }, []);
 
   const filteredStores = useMemo(() => {
     return stores.filter(store => 
@@ -107,62 +85,21 @@ export default function MonitoringStorePage() {
     setDeleteDialogOpen(true);
   };
 
-  const handleSaveChanges = async () => {
+  const handleSaveChanges = () => {
     if (!selectedStore) return;
-    setIsSubmitting(true);
-    try {
-      const response = await fetch(`/api/marketplace-stores/${selectedStore.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(selectedStore),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update store');
-      }
-
-      await fetchStores(); 
-      setEditDialogOpen(false);
-      setSelectedStore(null);
-      toast({ title: "Success", description: "Store has been updated successfully." });
-    } catch (e: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Update Failed',
-        description: e.message,
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    setStores(stores.map(s => s.id === selectedStore.id ? selectedStore : s));
+    setEditDialogOpen(false);
+    setSelectedStore(null);
+    toast({ title: "Success", description: "Store has been updated successfully." });
   };
 
-  const handleDeleteStore = async () => {
+  const handleDeleteStore = () => {
     if (!selectedStore) return;
-    setIsSubmitting(true);
-    try {
-        const response = await fetch(`/api/marketplace-stores/${selectedStore.id}`, {
-            method: 'DELETE',
-        });
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to delete store');
-        }
-        
-        await fetchStores();
-        setDeleteDialogOpen(false);
-        setSelectedStore(null);
-        toast({ title: "Success", description: "Store has been deleted.", variant: "destructive" });
+    setStores(stores.filter(s => s.id !== selectedStore.id));
+    setDeleteDialogOpen(false);
+    setSelectedStore(null);
+    toast({ title: "Success", description: "Store has been deleted.", variant: "destructive" });
 
-    } catch (e: any) {
-        toast({
-            variant: "destructive",
-            title: "Delete Failed",
-            description: e.message,
-        });
-    } finally {
-        setIsSubmitting(false);
-    }
   };
 
   return (

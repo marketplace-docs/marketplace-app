@@ -28,9 +28,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useLocalStorage } from '@/hooks/use-local-storage';
 
 export default function MonitoringManpowerPage() {
-  const [tasks, setTasks] = useState<AdminTask[]>([]);
+  const [tasks, setTasks] = useLocalStorage<AdminTask[]>('admin-tasks', []);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,32 +44,12 @@ export default function MonitoringManpowerPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   
-  const fetchTasks = useCallback(async () => {
-    try {
-        setLoading(true);
-        const response = await fetch('/api/admin-tasks');
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to fetch tasks');
-        }
-        const data = await response.json();
-        setTasks(data);
-        setError(null);
-    } catch (e: any) {
-        setError(e.message);
-        toast({
-            variant: "destructive",
-            title: "Error fetching data",
-            description: e.message,
-        });
-    } finally {
-        setLoading(false);
-    }
-  }, [toast]);
-
   useEffect(() => {
-    fetchTasks();
-  }, [fetchTasks]);
+    // Simulate loading
+    setTimeout(() => {
+        setLoading(false);
+    }, 500);
+  }, []);
 
   const totalPages = Math.ceil(tasks.length / rowsPerPage);
   const paginatedTasks = tasks.slice(
@@ -98,64 +79,23 @@ export default function MonitoringManpowerPage() {
     setDeleteDialogOpen(true);
   };
 
-  const handleSaveChanges = async () => {
+  const handleSaveChanges = () => {
     if (!selectedTask) return;
-    setIsSubmitting(true);
-    try {
-      const response = await fetch(`/api/admin-tasks/${selectedTask.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(selectedTask),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update task');
-      }
-
-      await fetchTasks(); // Refetch all tasks to get the latest data
-      setEditDialogOpen(false);
-      setSelectedTask(null);
-      toast({ title: "Success", description: "Task has been updated successfully." });
-    } catch (e: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Update Failed',
-        description: e.message,
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    setTasks(tasks.map(t => t.id === selectedTask.id ? selectedTask : t));
+    setEditDialogOpen(false);
+    setSelectedTask(null);
+    toast({ title: "Success", description: "Task has been updated successfully." });
   };
 
-  const handleDeleteTask = async () => {
+  const handleDeleteTask = () => {
     if (!selectedTask) return;
-    setIsSubmitting(true);
-    try {
-        const response = await fetch(`/api/admin-tasks/${selectedTask.id}`, {
-            method: 'DELETE',
-        });
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to delete task');
-        }
-        
-        await fetchTasks(); // Refetch tasks
-        setDeleteDialogOpen(false);
-        setSelectedTask(null);
-        toast({ title: "Success", description: "Task has been deleted.", variant: "destructive" });
+    setTasks(tasks.filter(t => t.id !== selectedTask.id));
+    setDeleteDialogOpen(false);
+    setSelectedTask(null);
+    toast({ title: "Success", description: "Task has been deleted.", variant: "destructive" });
 
-        if (paginatedTasks.length === 1 && currentPage > 1) {
-            setCurrentPage(currentPage - 1);
-        }
-    } catch (e: any) {
-        toast({
-            variant: "destructive",
-            title: "Delete Failed",
-            description: e.message,
-        });
-    } finally {
-        setIsSubmitting(false);
+    if (paginatedTasks.length === 1 && currentPage > 1) {
+        setCurrentPage(currentPage - 1);
     }
   };
   

@@ -16,6 +16,8 @@ import { useToast } from '@/hooks/use-toast';
 import { MainLayout } from '@/components/layout/main-layout';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
+import { useLocalStorage } from '@/hooks/use-local-storage';
+import type { MarketplaceStore } from '@/types/marketplace-store';
 
 type NewStore = {
   marketplace_name: string;
@@ -30,6 +32,7 @@ export default function CreateMarketplacePage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const { toast } = useToast();
   const router = useRouter();
+  const [stores, setStores] = useLocalStorage<MarketplaceStore[]>('marketplace-stores', []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -48,33 +51,23 @@ export default function CreateMarketplacePage() {
     }
 
     setIsSubmitting(true);
-    try {
-      const response = await fetch('/api/marketplace-stores', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newStore),
-      });
+    await new Promise(resolve => setTimeout(resolve, 500));
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create store');
-      }
-
-      toast({
-        title: 'Success',
-        description: 'New store has been created.',
-      });
-      setNewStore({ marketplace_name: '', store_name: '' });
-      router.push('/marketplace/monitoring-store');
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Error creating store',
-        description: error.message,
-      });
-    } finally {
-      setIsSubmitting(false);
+    const newStoreWithId: MarketplaceStore = {
+      id: Date.now().toString(),
+      ...newStore,
+      created_at: new Date().toISOString(),
     }
+
+    setStores([...stores, newStoreWithId]);
+    
+    setIsSubmitting(false);
+    toast({
+      title: 'Success',
+      description: 'New store has been created locally.',
+    });
+    setNewStore({ marketplace_name: '', store_name: '' });
+    router.push('/marketplace/monitoring-store');
   };
 
   return (
