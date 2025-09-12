@@ -13,7 +13,11 @@ CREATE TABLE IF NOT EXISTS public.menu_permissions (
 -- Enable Row Level Security
 ALTER TABLE public.menu_permissions ENABLE ROW LEVEL SECURITY;
 
--- Allow authenticated users to read and manage permissions
+-- Drop existing policies to avoid conflicts
+DROP POLICY IF EXISTS "Allow authenticated users to read permissions" ON public.menu_permissions;
+DROP POLICY IF EXISTS "Allow authenticated users to manage permissions" ON public.menu_permissions;
+
+-- Create new, correct policies
 CREATE POLICY "Allow authenticated users to read permissions"
     ON public.menu_permissions
     FOR SELECT
@@ -22,7 +26,8 @@ CREATE POLICY "Allow authenticated users to read permissions"
 CREATE POLICY "Allow authenticated users to manage permissions"
     ON public.menu_permissions
     FOR ALL
-    USING (auth.role() = 'authenticated');
+    USING (auth.role() = 'authenticated')
+    WITH CHECK (auth.role() = 'authenticated');
 
--- Notify Supabase of the new table
+-- Notify Supabase of the changes
 NOTIFY pgrst, 'reload schema';
