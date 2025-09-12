@@ -1,127 +1,271 @@
 
 'use client';
 
+import React, { useState, useMemo } from 'react';
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { taskCompletionData, resourceUtilizationData, recentActivities } from '@/lib/data';
+import { Button } from "@/components/ui/button";
+import { DateRange } from "react-day-picker";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Download, Smile, Frown } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { format, addDays } from "date-fns";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { performanceData, PerformanceData } from '@/lib/daily-performance-data';
+import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
-const statusVariantMap: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
-    'Completed': 'default',
-    'In Progress': 'secondary',
-    'Assigned': 'outline',
-    'On Hold': 'destructive',
+const jobDescriptions = ["All", "Picker Marketplace", "Admin Wave", "Packer Marketplace"];
+
+const ResultBadge = ({ result }: { result: 'BERHASIL' | 'GAGAL' }) => {
+  const isSuccess = result === 'BERHASIL';
+  return (
+    <Badge
+      className={cn(
+        'flex items-center justify-center text-white',
+        isSuccess ? 'bg-green-500' : 'bg-red-500'
+      )}
+    >
+      <span>{result}</span>
+      {isSuccess ? <Smile className="ml-2 h-4 w-4" /> : <Frown className="ml-2 h-4 w-4" />}
+    </Badge>
+  );
 };
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28'];
 
 export default function DailyPerformancePage() {
+    const [data] = useState<PerformanceData[]>(performanceData);
+    const [dateRange, setDateRange] = useState<DateRange | undefined>({
+        from: new Date(2025, 0, 2),
+        to: new Date(2025, 0, 2),
+    });
+    const [jobFilter, setJobFilter] = useState<string>("All");
+    const [currentPage, setCurrentPage] = useState(1);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
+    const { toast } = useToast();
+
+    const filteredData = useMemo(() => {
+        let filtered = data;
+        if (dateRange?.from && dateRange?.to) {
+            filtered = filtered.filter(item => {
+                const itemDate = new Date(item.date);
+                return itemDate >= dateRange.from! && itemDate <= dateRange.to!;
+            });
+        }
+        if (jobFilter !== "All") {
+            filtered = filtered.filter(item => item.jobDesc === jobFilter);
+        }
+        return filtered;
+    }, [data, dateRange, jobFilter]);
+
+    const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+    const paginatedData = filteredData.slice(
+        (currentPage - 1) * rowsPerPage,
+        currentPage * rowsPerPage
+    );
+    
+    React.useEffect(() => {
+        setCurrentPage(1);
+    }, [rowsPerPage, dateRange, jobFilter]);
+
+
+    const handleNextPage = () => {
+        setCurrentPage((prev) => (prev < totalPages ? prev + 1 : prev));
+    };
+
+    const handlePrevPage = () => {
+        setCurrentPage((prev) => (prev > 1 ? prev - 1 : prev));
+    };
+
+    const handleExport = () => {
+        const headers = ["Date", "Month", "Name", "Task Daily", "Total Items", "Job-Desc", "Shift", "Target", "Target Item", "Task Performance", "Items Performance", "Result"];
+        const csvContent = [
+            headers.join(","),
+            ...filteredData.map(item => [
+                format(new Date(item.date), "dd MMMM yyyy"),
+                item.month,
+                item.name,
+                item.taskDaily,
+                item.totalItems,
+                item.jobDesc,
+                item.shift,
+                item.target,
+                item.targetItem,
+                `${item.taskPerformance}%`,
+                `${item.itemsPerformance}%`,
+                item.result
+            ].join(","))
+        ].join("\n");
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.href = url;
+        link.setAttribute("download", `daily_performance_${format(new Date(), "yyyyMMdd")}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        toast({ title: "Success", description: "Data has been exported to CSV." });
+    };
+
     return (
         <MainLayout>
              <div className="w-full space-y-6">
-                <h1 className="text-2xl font-bold">Daily Performance</h1>
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Task Completion</CardTitle>
-                            <CardDescription>Weekly overview of completed vs. pending tasks.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="h-[250px]">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={taskCompletionData}>
-                                        <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis dataKey="date" fontSize={12} tickLine={false} axisLine={false} />
-                                        <YAxis fontSize={12} tickLine={false} axisLine={false} />
-                                        <Tooltip />
-                                        <Legend wrapperStyle={{ fontSize: '14px' }} />
-                                        <Bar dataKey="completed" fill="#16a34a" name="Completed" radius={[4, 4, 0, 0]} />
-                                        <Bar dataKey="pending" fill="#dc2626" name="Pending" radius={[4, 4, 0, 0]} />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Resource Utilization</CardTitle>
-                            <CardDescription>Current utilization of key resources.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="h-[250px]">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie data={resourceUtilizationData} dataKey="utilization" nameKey="resource" cx="50%" cy="50%" outerRadius={80} label>
-                                             {resourceUtilizationData.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip />
-                                        <Legend wrapperStyle={{ fontSize: '14px' }} />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </CardContent>
-                    </Card>
-                    <Card className="lg:col-span-1">
-                         <CardHeader>
-                            <CardTitle>Summary</CardTitle>
-                            <CardDescription>Quick performance numbers.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="grid gap-4 text-sm">
-                            <div className="flex items-center justify-between p-2 border rounded-md">
-                                <span>Total Tasks</span>
-                                <span className="font-bold">1059</span>
-                            </div>
-                            <div className="flex items-center justify-between p-2 border rounded-md border-green-500 text-green-600">
-                                <span>Total Completed</span>
-                                <span className="font-bold">1028</span>
-                            </div>
-                            <div className="flex items-center justify-between p-2 border rounded-md border-red-500 text-red-600">
-                                <span>Total Pending</span>
-                                <span className="font-bold">31</span>
-                            </div>
-                            <div className="flex items-center justify-between p-2 border rounded-md">
-                                <span>Avg. Completion Time</span>
-                                <span className="font-bold">2.5 hours</span>
-                            </div>
-                        </CardContent>
-                    </Card>
+                <div className="flex justify-between items-center">
+                    <h1 className="text-2xl font-bold">Daily Performance</h1>
+                    <Button onClick={handleExport}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Export
+                    </Button>
                 </div>
+                
                 <Card>
                     <CardHeader>
-                        <CardTitle>Recent Activities</CardTitle>
-                        <CardDescription>A log of recent task updates and activities.</CardDescription>
+                        <CardTitle>Performance Report</CardTitle>
+                        <CardDescription>Detailed daily performance metrics of team members.</CardDescription>
+                         <div className="flex items-center gap-4 pt-4">
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                <Button
+                                    id="date"
+                                    variant={"outline"}
+                                    className={cn(
+                                    "w-[300px] justify-start text-left font-normal",
+                                    !dateRange && "text-muted-foreground"
+                                    )}
+                                >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {dateRange?.from ? (
+                                    dateRange.to ? (
+                                        <>
+                                        {format(dateRange.from, "LLL dd, y")} -{" "}
+                                        {format(dateRange.to, "LLL dd, y")}
+                                        </>
+                                    ) : (
+                                        format(dateRange.from, "LLL dd, y")
+                                    )
+                                    ) : (
+                                    <span>Pick a date</span>
+                                    )}
+                                </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                    initialFocus
+                                    mode="range"
+                                    defaultMonth={dateRange?.from}
+                                    selected={dateRange}
+                                    onSelect={setDateRange}
+                                    numberOfMonths={2}
+                                />
+                                </PopoverContent>
+                            </Popover>
+                            <Select value={jobFilter} onValueChange={setJobFilter}>
+                                <SelectTrigger className="w-[220px]">
+                                    <SelectValue placeholder="Filter by Job Desc..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {jobDescriptions.map(job => (
+                                        <SelectItem key={job} value={job}>{job}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </CardHeader>
                     <CardContent>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>User</TableHead>
-                                    <TableHead>Task ID</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead className="text-right">Timestamp</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {recentActivities.map(activity => (
-                                    <TableRow key={activity.id}>
-                                        <TableCell className="font-medium">{activity.user}</TableCell>
-                                        <TableCell>{activity.taskId}</TableCell>
-                                        <TableCell>
-                                            <Badge variant={statusVariantMap[activity.status] || 'default'}>{activity.status}</Badge>
-                                        </TableCell>
-                                        <TableCell className="text-right">{activity.timestamp}</TableCell>
+                        <div className="border rounded-lg">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Date</TableHead>
+                                        <TableHead>Month</TableHead>
+                                        <TableHead>Name</TableHead>
+                                        <TableHead>Task Daily</TableHead>
+                                        <TableHead>Total Items</TableHead>
+                                        <TableHead>Job-Desc</TableHead>
+                                        <TableHead>Shift</TableHead>
+                                        <TableHead>Target</TableHead>
+                                        <TableHead>Target Item</TableHead>
+                                        <TableHead>Task Perf.</TableHead>
+                                        <TableHead>Items Perf.</TableHead>
+                                        <TableHead className='text-center'>Result</TableHead>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                                </TableHeader>
+                                <TableBody>
+                                    {paginatedData.length > 0 ? (
+                                        paginatedData.map((item) => (
+                                            <TableRow key={item.id}>
+                                                <TableCell>{format(new Date(item.date), "d MMM yyyy")}</TableCell>
+                                                <TableCell>{item.month}</TableCell>
+                                                <TableCell className="font-medium">{item.name}</TableCell>
+                                                <TableCell>{item.taskDaily.toLocaleString()}</TableCell>
+                                                <TableCell>{item.totalItems.toLocaleString()}</TableCell>
+                                                <TableCell><Badge variant="secondary">{item.jobDesc}</Badge></TableCell>
+                                                <TableCell>{item.shift}</TableCell>
+                                                <TableCell>{item.target.toLocaleString()}</TableCell>
+                                                <TableCell>{item.targetItem.toLocaleString()}</TableCell>
+                                                <TableCell>{item.taskPerformance}%</TableCell>
+                                                <TableCell>{item.itemsPerformance}%</TableCell>
+                                                <TableCell className="text-center">
+                                                    <ResultBadge result={item.result} />
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : (
+                                        <TableRow>
+                                            <TableCell colSpan={12} className="h-24 text-center text-muted-foreground">
+                                                No data found for the selected filters.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
+                        <div className="flex items-center justify-end space-x-2 py-4">
+                            <div className="flex-1 text-sm text-muted-foreground">
+                                Page {filteredData.length > 0 ? currentPage : 0} of {totalPages}
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <span className="text-sm text-muted-foreground">Rows per page:</span>
+                                <Select
+                                    value={`${rowsPerPage}`}
+                                    onValueChange={(value) => setRowsPerPage(Number(value))}
+                                >
+                                    <SelectTrigger className="h-8 w-[70px]">
+                                        <SelectValue placeholder={`${rowsPerPage}`} />
+                                    </SelectTrigger>
+                                    <SelectContent side="top">
+                                        {[10, 20, 50, 100].map((pageSize) => (
+                                            <SelectItem key={pageSize} value={`${pageSize}`}>
+                                                {pageSize}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handlePrevPage}
+                                disabled={currentPage === 1}
+                            >
+                                <ChevronLeft className="h-4 w-4" />
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleNextPage}
+                                disabled={currentPage === totalPages || totalPages === 0}
+                            >
+                                <ChevronRight className="h-4 w-4" />
+                            </Button>
+                        </div>
                     </CardContent>
                 </Card>
             </div>
         </MainLayout>
     );
 }
-

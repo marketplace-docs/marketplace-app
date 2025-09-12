@@ -1,4 +1,5 @@
 
+
 export type ChartConfig = {
     [k in string]: {
       label?: React.ReactNode;
