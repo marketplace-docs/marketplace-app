@@ -36,7 +36,12 @@ const PerformanceRoleCard = ({ role }: { role: 'Picker' | 'Packer' | 'Putaway' |
     const [activeShift, setActiveShift] = useState<'ALL' | '1' | '2' | '3'>('ALL');
 
     const filteredData = useMemo(() => {
-        let filtered = performanceData.filter(p => p.jobDesc === role);
+        let jobDescRole: string = role;
+        if (role === 'Picker') jobDescRole = 'Picker Marketplace';
+        if (role === 'Packer') jobDescRole = 'Packer Marketplace';
+        if (role === 'Admin') jobDescRole = 'Admin Wave';
+        
+        let filtered = performanceData.filter(p => p.jobDesc === jobDescRole);
         // Add filtering logic for date and shift when data structure supports it
         return filtered;
     }, [role]);
@@ -52,7 +57,7 @@ const PerformanceRoleCard = ({ role }: { role: 'Picker' | 'Packer' | 'Putaway' |
         }
     }, [filteredData]);
     
-    const isDispatcher = role === 'Admin';
+    const isDispatcher = role === 'Admin' || role === 'Putaway' || role === 'Interco';
 
 
     const StatDisplay = ({ label, value }: { label: string, value: string | number }) => (
@@ -137,14 +142,26 @@ const PerformanceRoleCard = ({ role }: { role: 'Picker' | 'Packer' | 'Putaway' |
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        <TableRow>
-                            <TableCell colSpan={isDispatcher ? 2 : 5} className="h-24 text-center">
-                                <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                                    <AlertTriangle className="h-4 w-4" />
-                                    No data available
-                                </div>
-                            </TableCell>
-                        </TableRow>
+                         {filteredData.length > 0 ? (
+                            filteredData.map(item => (
+                                <TableRow key={item.id}>
+                                    <TableCell>{item.name}</TableCell>
+                                    <TableCell>{item.taskDaily.toLocaleString()}</TableCell>
+                                    {!isDispatcher && <TableCell>{item.totalItems.toLocaleString()}</TableCell>}
+                                    {!isDispatcher && <TableCell>{item.totalItems.toLocaleString()}</TableCell>}
+                                    {!isDispatcher && <TableCell>{((item.taskDaily / (filteredData.length || 1))).toFixed(0)}</TableCell>}
+                                </TableRow>
+                            ))
+                         ) : (
+                            <TableRow>
+                                <TableCell colSpan={isDispatcher ? 2 : 5} className="h-24 text-center">
+                                    <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                                        <AlertTriangle className="h-4 w-4" />
+                                        No data available
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                         )}
                     </TableBody>
                 </Table>
             </CardContent>
@@ -205,6 +222,7 @@ export default function KpiPerformancePage() {
                 <div className="grid grid-cols-1 gap-6">
                     <PerformanceRoleCard role="Picker" />
                     <PerformanceRoleCard role="Packer" />
+                    <PerformanceRoleCard role="Putaway" />
                     <PerformanceRoleCard role="Admin" />
                 </div>
                  
@@ -273,5 +291,3 @@ export default function KpiPerformancePage() {
         </MainLayout>
     );
 }
-
-    
