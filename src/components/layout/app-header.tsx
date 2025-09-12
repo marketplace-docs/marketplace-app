@@ -25,6 +25,7 @@ import {
   Search,
   Settings,
   User,
+  BookText,
 } from "lucide-react"
 import { SidebarTrigger } from "../ui/sidebar"
 import { usePathname } from "next/navigation"
@@ -105,9 +106,15 @@ export function AppHeader() {
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href="/app-documentation">
+              <Link href="/database/user-management">
                 <User className="mr-2 h-4 w-4" />
                 <span>Profile</span>
+              </Link>
+            </DropdownMenuItem>
+             <DropdownMenuItem asChild>
+               <Link href="/app-documentation">
+                  <BookText className="mr-2 h-4 w-4" />
+                  <span>Documentation</span>
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
