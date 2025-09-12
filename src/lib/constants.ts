@@ -92,7 +92,7 @@ export const NAV_LINKS: NavLink[] = [
                 icon: FilePlus,
             },
             {
-                href: '/marketplace-store',
+                href: '/marketplace/monitoring-store',
                 label: 'Monitoring Store',
                 icon: Eye,
             },
@@ -158,4 +158,3 @@ export const NAV_LINKS: NavLink[] = [
         ]
     }
 ];
-
