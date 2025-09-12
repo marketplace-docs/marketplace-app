@@ -62,11 +62,6 @@ type BacklogItem = {
 
 type GroupingKey = "storeName" | "marketplace";
 
-type DetailStoreData = {
-    platform: string;
-    paymentAccepted: number;
-};
-
 const marketplaceColors: { [key: string]: string } = {
   'Shopee': '#F97316', // Orange
   'Lazada': '#2563EB', // Blue
@@ -100,8 +95,8 @@ export default function BacklogPage() {
         }
         grouped[item.marketplace] += item.paymentAccepted;
     });
-    return Object.entries(grouped).map(([platform, paymentAccepted]) => ({
-        platform,
+    return Object.entries(grouped).map(([marketplace, paymentAccepted]) => ({
+        marketplace,
         paymentAccepted
     })).sort((a, b) => b.paymentAccepted - a.paymentAccepted);
   }, [backlogItems]);
@@ -376,8 +371,8 @@ export default function BacklogPage() {
                                 <TableBody>
                                     {detailStoreData.length > 0 ? (
                                         detailStoreData.map((item) => (
-                                            <TableRow key={item.platform}>
-                                                <TableCell className="font-medium">{item.platform}</TableCell>
+                                            <TableRow key={item.marketplace}>
+                                                <TableCell className="font-medium">{item.marketplace}</TableCell>
                                                 <TableCell className="text-right">{item.paymentAccepted.toLocaleString()}</TableCell>
                                             </TableRow>
                                         ))
@@ -480,3 +475,5 @@ export default function BacklogPage() {
     </MainLayout>
   );
 }
+
+    
