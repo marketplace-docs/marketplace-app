@@ -97,7 +97,6 @@ const PerformanceRoleCard = ({ role }: { role: 'Picker' | 'Packer' | 'Putaway' |
                     <div className="grid grid-cols-5 gap-4 w-full text-center">
                        <StatDisplay label={role} value={stats.totalManpower} />
                        <StatDisplay label="Order" value={stats.totalOrders} />
-                       {!isDispatcher && <StatDisplay label="SKU" value={stats.totalSku} />}
                        {!isDispatcher && <StatDisplay label="AVG" value={stats.avg.toFixed(0)} />}
                        {!isDispatcher && <StatDisplay label="ITEM" value={stats.totalItems} />}
                     </div>
@@ -159,7 +158,6 @@ const PerformanceRoleCard = ({ role }: { role: 'Picker' | 'Packer' | 'Putaway' |
                         <TableRow>
                             <TableHead>Name</TableHead>
                             <TableHead>Orders</TableHead>
-                            {!isDispatcher && <TableHead>SKU</TableHead>}
                             {!isDispatcher && <TableHead>Item</TableHead>}
                             {!isDispatcher && <TableHead>Avg</TableHead>}
                         </TableRow>
@@ -171,13 +169,12 @@ const PerformanceRoleCard = ({ role }: { role: 'Picker' | 'Packer' | 'Putaway' |
                                     <TableCell>{item.name}</TableCell>
                                     <TableCell>{item.taskDaily.toLocaleString()}</TableCell>
                                     {!isDispatcher && <TableCell>{item.totalItems.toLocaleString()}</TableCell>}
-                                    {!isDispatcher && <TableCell>{item.totalItems.toLocaleString()}</TableCell>}
                                     {!isDispatcher && <TableCell>{((item.taskDaily / (filteredData.length || 1))).toFixed(0)}</TableCell>}
                                 </TableRow>
                             ))
                          ) : (
                             <TableRow>
-                                <TableCell colSpan={isDispatcher ? 2 : 5} className="h-24 text-center">
+                                <TableCell colSpan={isDispatcher ? 2 : 4} className="h-24 text-center">
                                     <div className="flex items-center justify-center gap-2 text-muted-foreground">
                                         <AlertTriangle className="h-4 w-4" />
                                         No data available
@@ -357,4 +354,3 @@ export default function KpiPerformancePage() {
         </MainLayout>
     );
 }
-
