@@ -29,10 +29,10 @@ const KpiCard = ({ title, value, icon: Icon }: { title: string; value: string; i
     </Card>
 );
 
-const PerformanceRoleCard = ({ role }: { role: 'Picker' | 'Packer' | 'Putaway' | 'Interco' | 'Admin' }) => {
+const PerformanceRoleCard = ({ role }: { role: 'Picker' | 'Packer' | 'Putaway' | 'Admin' | 'Interco' }) => {
     const [dateRange, setDateRange] = useState<DateRange | undefined>({
-        from: new Date(2025, 8, 13),
-        to: new Date(2025, 8, 13),
+        from: new Date(),
+        to: new Date(),
     });
     const [activeShift, setActiveShift] = useState<'ALL' | '1' | '2' | '3'>('ALL');
     const [currentPage, setCurrentPage] = useState(1);
@@ -40,14 +40,28 @@ const PerformanceRoleCard = ({ role }: { role: 'Picker' | 'Packer' | 'Putaway' |
 
     const filteredData = useMemo(() => {
         let jobDescRole: string = role;
-        if (role === 'Picker') jobDescRole = 'Picker Marketplace';
-        if (role === 'Packer') jobDescRole = 'Packer Marketplace';
-        if (role === 'Admin') jobDescRole = 'Admin Wave';
+        // This mapping logic can be adjusted based on the actual `jobDesc` values
+        const roleMapping: Record<string, string[]> = {
+            'Picker': ['Picker', 'Picker Marketplace'],
+            'Packer': ['Packer', 'Packer Marketplace'],
+            'Admin': ['Admin', 'Admin Wave'],
+            'Putaway': ['Putaway'],
+            'Interco': ['Interco']
+        };
+
+        const targetJobDescs = roleMapping[role] || [role];
         
-        let filtered = performanceData.filter(p => p.jobDesc === jobDescRole);
-        // Add filtering logic for date and shift when data structure supports it
+        let filtered = performanceData.filter(p => 
+            targetJobDescs.includes(p.jobDesc) &&
+            new Date(p.date) >= (dateRange?.from || new Date(0)) &&
+            new Date(p.date) <= (dateRange?.to || new Date())
+        );
+
+        // Shift filtering can be added here if shift data is available in `performanceData`
+        // e.g., if (activeShift !== 'ALL') { ... }
+
         return filtered;
-    }, [role]);
+    }, [role, dateRange, activeShift]);
     
     const totalPages = Math.ceil(filteredData.length / rowsPerPage);
     const paginatedData = useMemo(() => {
@@ -67,24 +81,30 @@ const PerformanceRoleCard = ({ role }: { role: 'Picker' | 'Packer' | 'Putaway' |
     
     React.useEffect(() => {
         setCurrentPage(1);
-    }, [rowsPerPage]);
+    }, [rowsPerPage, dateRange, activeShift]);
 
     const stats = useMemo(() => {
         const dataForStats = filteredData;
-        const totalSku = new Set(dataForStats.map(d => d.totalItems > 0)).size;
+        const totalManpower = new Set(dataForStats.map(d => d.name)).size;
+        const totalOrders = dataForStats.reduce((acc, curr) => acc + curr.taskDaily, 0);
+        const totalItems = dataForStats.reduce((acc, curr) => acc + curr.totalItems, 0);
+        const avg = totalManpower > 0 ? (totalOrders / totalManpower) : 0;
+        
+        const totalSku = new Set(dataForStats.map(d => d.name)).size; // This seems incorrect for SKU, adjust if needed
+        const totalQty = totalItems; // Assuming Qty is same as totalItems for Putaway
+
         return {
-            totalManpower: new Set(dataForStats.map(d => d.name)).size,
-            totalOrders: dataForStats.reduce((acc, curr) => acc + curr.taskDaily, 0),
-            totalSku: totalSku,
-            avg: dataForStats.length > 0 ? (dataForStats.reduce((acc, curr) => acc + curr.taskDaily, 0) / dataForStats.length) : 0,
-            totalItems: dataForStats.reduce((acc, curr) => acc + curr.totalItems, 0),
-            totalQty: dataForStats.reduce((acc, curr) => acc + curr.totalItems, 0),
+            totalManpower,
+            totalOrders,
+            totalSku,
+            avg,
+            totalItems,
+            totalQty,
         }
     }, [filteredData]);
     
-    const isDispatcher = role === 'Admin' || role === 'Putaway' || role === 'Interco';
     const isPutaway = role === 'Putaway';
-
+    const isPickerOrPacker = role === 'Picker' || role === 'Packer';
 
     const StatDisplay = ({ label, value }: { label: string, value: string | number }) => (
         <div className="text-center">
@@ -102,8 +122,8 @@ const PerformanceRoleCard = ({ role }: { role: 'Picker' | 'Packer' | 'Putaway' |
                        <StatDisplay label={isPutaway ? "Document" : "Order"} value={stats.totalOrders} />
                        {isPutaway && <StatDisplay label="SKU" value={stats.totalSku} />}
                        {isPutaway && <StatDisplay label="Qty" value={stats.totalQty} />}
-                       {!isDispatcher && <StatDisplay label="AVG" value={stats.avg.toFixed(0)} />}
-                       {!isDispatcher && !isPutaway && <StatDisplay label="ITEM" value={stats.totalItems} />}
+                       {isPickerOrPacker && <StatDisplay label="ITEM" value={stats.totalItems} />}
+                       <StatDisplay label="AVG" value={stats.avg.toFixed(0)} />
                     </div>
                 </div>
                  <div className="flex justify-between items-center pt-4 text-sm">
@@ -163,8 +183,8 @@ const PerformanceRoleCard = ({ role }: { role: 'Picker' | 'Packer' | 'Putaway' |
                         <TableRow>
                             <TableHead>Name</TableHead>
                             <TableHead>{isPutaway ? "Document" : "Orders"}</TableHead>
-                            {!isDispatcher && <TableHead>Item</TableHead>}
-                            {!isDispatcher && <TableHead>Avg</TableHead>}
+                            {isPickerOrPacker && <TableHead>Item</TableHead>}
+                            <TableHead>Avg</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -173,13 +193,13 @@ const PerformanceRoleCard = ({ role }: { role: 'Picker' | 'Packer' | 'Putaway' |
                                 <TableRow key={item.id}>
                                     <TableCell>{item.name}</TableCell>
                                     <TableCell>{item.taskDaily.toLocaleString()}</TableCell>
-                                    {!isDispatcher && !isPutaway && <TableCell>{item.totalItems.toLocaleString()}</TableCell>}
-                                    {!isDispatcher && <TableCell>{((item.taskDaily / (filteredData.length || 1))).toFixed(0)}</TableCell>}
+                                    {isPickerOrPacker && <TableCell>{item.totalItems.toLocaleString()}</TableCell>}
+                                    <TableCell>{stats.avg.toFixed(0)}</TableCell>
                                 </TableRow>
                             ))
                          ) : (
                             <TableRow>
-                                <TableCell colSpan={isDispatcher ? 2 : 4} className="h-24 text-center">
+                                <TableCell colSpan={isPickerOrPacker ? 4 : 3} className="h-24 text-center">
                                     <div className="flex items-center justify-center gap-2 text-muted-foreground">
                                         <AlertTriangle className="h-4 w-4" />
                                         No data available

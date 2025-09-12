@@ -51,6 +51,7 @@ import { useToast } from '@/hooks/use-toast';
 import { initialStores } from '@/lib/data';
 import { Input } from '@/components/ui/input';
 import { MainLayout } from '@/components/layout/main-layout';
+import { useLocalStorage } from '@/hooks/use-local-storage';
 
 type BacklogItem = {
   id: number;
@@ -74,7 +75,7 @@ const marketplaceColors: { [key: string]: string } = {
 };
 
 export default function BacklogPage() {
-  const [backlogItems, setBacklogItems] = useState<BacklogItem[]>([]);
+  const [backlogItems, setBacklogItems] = useLocalStorage<BacklogItem[]>('backlogItems', []);
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [chartGrouping, setChartGrouping] = useState<GroupingKey>('storeName');
@@ -82,17 +83,6 @@ export default function BacklogPage() {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedItems, setEditedItems] = useState<Record<number, string>>({});
-
-  useEffect(() => {
-    const backlogDataFromStores: BacklogItem[] = initialStores.map(store => ({
-        id: store.id,
-        storeName: store.storeName,
-        paymentAccepted: Math.floor(Math.random() * 500) + 50, 
-        marketplace: store.nameStore,
-        platform: store.marketplace,
-    }));
-    setBacklogItems(backlogDataFromStores);
-  }, []);
 
 
   const totalPages = Math.ceil(backlogItems.length / rowsPerPage);
@@ -231,9 +221,9 @@ export default function BacklogPage() {
   }, [backlogItems, chartGrouping]);
 
   const totalMarketplaceStore = useMemo(() => {
-    const uniqueStores = new Set(initialStores.map(s => s.id));
+    const uniqueStores = new Set(backlogItems.map(s => s.storeName));
     return uniqueStores.size;
-  }, []);
+  }, [backlogItems]);
 
   const totalPaymentAccepted = useMemo(() => {
     return backlogItems.reduce((acc, item) => acc + item.paymentAccepted, 0);

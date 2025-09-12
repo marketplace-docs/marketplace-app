@@ -43,6 +43,7 @@ import { useToast } from "@/hooks/use-toast";
 import { MainLayout } from "@/components/layout/main-layout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuth } from "@/hooks/use-auth";
+import { useLocalStorage } from "@/hooks/use-local-storage";
 
 
 type User = {
@@ -71,7 +72,7 @@ const statusVariantMap: { [key: string]: "default" | "secondary" | "destructive"
 
 export default function DatabaseUserPage() {
     const { user: currentUser } = useAuth();
-    const [users, setUsers] = useState<User[]>(initialUsers);
+    const [users, setUsers] = useLocalStorage<User[]>('users', initialUsers);
     
     const [isAddDialogOpen, setAddDialogOpen] = useState(false);
     const [isEditDialogOpen, setEditDialogOpen] = useState(false);
