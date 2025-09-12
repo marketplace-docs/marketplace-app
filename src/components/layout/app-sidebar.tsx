@@ -19,6 +19,7 @@ import { Button } from '../ui/button';
 import { MoreHorizontal, ChevronsLeft, ChevronDown, Store } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import { useState } from 'react';
+import { SheetHeader, SheetTitle } from '../ui/sheet';
 
 function AppLogo() {
   return (
@@ -54,7 +55,16 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="border-b">
+       <SheetHeader className="p-2 border-b md:hidden">
+          <SheetTitle className="sr-only">Sidebar Menu</SheetTitle>
+          <div className="flex items-center justify-between">
+            <AppLogo />
+             <Button variant="ghost" size="icon" onClick={toggleSidebar}>
+                <ChevronsLeft />
+            </Button>
+          </div>
+        </SheetHeader>
+      <SidebarHeader className="border-b hidden md:flex">
         <div className="flex w-full items-center justify-between p-2">
             <div className="group-data-[collapsible=icon]:hidden">
               <AppLogo />
