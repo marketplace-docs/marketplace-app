@@ -3,11 +3,11 @@
 
 import React, { useMemo, useState } from 'react';
 import { MainLayout } from "@/components/layout/main-layout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
 import { performanceData, PerformanceData } from '@/lib/daily-performance-data';
-import { Users, ClipboardList, TrendingUp, Briefcase, Calendar as CalendarIcon, Clock, AlertTriangle } from 'lucide-react';
+import { Users, ClipboardList, TrendingUp, Briefcase, Calendar as CalendarIcon, Clock, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { DateRange } from "react-day-picker";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from '@/lib/utils';
 import { format } from "date-fns";
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const KpiCard = ({ title, value, icon: Icon }: { title: string; value: string; icon: React.ElementType }) => (
     <Card>
@@ -34,6 +35,8 @@ const PerformanceRoleCard = ({ role }: { role: 'Picker' | 'Packer' | 'Putaway' |
         to: new Date(2025, 8, 13),
     });
     const [activeShift, setActiveShift] = useState<'ALL' | '1' | '2' | '3'>('ALL');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
 
     const filteredData = useMemo(() => {
         let jobDescRole: string = role;
@@ -45,13 +48,33 @@ const PerformanceRoleCard = ({ role }: { role: 'Picker' | 'Packer' | 'Putaway' |
         // Add filtering logic for date and shift when data structure supports it
         return filtered;
     }, [role]);
+    
+    const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+    const paginatedData = useMemo(() => {
+        return filteredData.slice(
+            (currentPage - 1) * rowsPerPage,
+            currentPage * rowsPerPage
+        );
+    }, [filteredData, currentPage, rowsPerPage]);
+
+    const handleNextPage = () => {
+        setCurrentPage((prev) => (prev < totalPages ? prev + 1 : prev));
+    };
+
+    const handlePrevPage = () => {
+        setCurrentPage((prev) => (prev > 1 ? prev - 1 : prev));
+    };
+    
+    React.useEffect(() => {
+        setCurrentPage(1);
+    }, [rowsPerPage]);
 
     const stats = useMemo(() => {
         const dataForStats = filteredData;
         return {
             totalManpower: new Set(dataForStats.map(d => d.name)).size,
             totalOrders: dataForStats.reduce((acc, curr) => acc + curr.taskDaily, 0),
-            totalSku: dataForStats.reduce((acc, curr) => acc + curr.totalItems, 0), // Assuming totalItems is SKU
+            totalSku: dataForStats.reduce((acc, curr) => acc + curr.totalItems, 0),
             avg: dataForStats.length > 0 ? (dataForStats.reduce((acc, curr) => acc + curr.taskDaily, 0) / dataForStats.length) : 0,
             totalItems: dataForStats.reduce((acc, curr) => acc + curr.totalItems, 0),
         }
@@ -142,8 +165,8 @@ const PerformanceRoleCard = ({ role }: { role: 'Picker' | 'Packer' | 'Putaway' |
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                         {filteredData.length > 0 ? (
-                            filteredData.map(item => (
+                         {paginatedData.length > 0 ? (
+                            paginatedData.map(item => (
                                 <TableRow key={item.id}>
                                     <TableCell>{item.name}</TableCell>
                                     <TableCell>{item.taskDaily.toLocaleString()}</TableCell>
@@ -165,6 +188,49 @@ const PerformanceRoleCard = ({ role }: { role: 'Picker' | 'Packer' | 'Putaway' |
                     </TableBody>
                 </Table>
             </CardContent>
+             <CardFooter className="flex items-center justify-end space-x-2 py-4">
+                <div className="flex-1 text-sm text-muted-foreground">
+                    Page {filteredData.length > 0 ? currentPage : 0} of {totalPages}
+                </div>
+                <div className="flex items-center space-x-2">
+                    <span className="text-sm text-muted-foreground">Rows per page:</span>
+                    <Select
+                        value={`${rowsPerPage}`}
+                        onValueChange={(value) => {
+                            setRowsPerPage(Number(value));
+                        }}
+                        >
+                        <SelectTrigger className="h-8 w-[70px]">
+                            <SelectValue placeholder={rowsPerPage} />
+                        </SelectTrigger>
+                        <SelectContent side="top">
+                            {[5, 10, 25, 50, 100].map((pageSize) => (
+                            <SelectItem key={pageSize} value={`${pageSize}`}>
+                                {pageSize}
+                            </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePrevPage}
+                    disabled={currentPage === 1}
+                >
+                    <ChevronLeft className="h-4 w-4" />
+                    <span className="sr-only">Previous</span>
+                </Button>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleNextPage}
+                    disabled={currentPage === totalPages || totalPages === 0}
+                >
+                    <span className="sr-only">Next</span>
+                    <ChevronRight className="h-4 w-4" />
+                </Button>
+            </CardFooter>
         </Card>
     );
 }
@@ -291,3 +357,4 @@ export default function KpiPerformancePage() {
         </MainLayout>
     );
 }
+
