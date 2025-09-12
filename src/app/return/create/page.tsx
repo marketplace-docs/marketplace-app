@@ -21,15 +21,24 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { MainLayout } from '@/components/layout/main-layout';
-import type { ReturnDocument } from '@/types/return-document';
-import { useLocalStorage } from '@/hooks/use-local-storage';
+import { useRouter } from 'next/navigation';
+import { Loader2, Upload, Download } from 'lucide-react';
 import { format } from 'date-fns';
-import { Upload, Download } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 
+type NewReturnDocument = {
+    noDocument: string;
+    qty: string;
+    status: 'Processed' | 'Pending' | 'Canceled';
+    sku: string;
+    barcode: string;
+    brand: string;
+    reason: string;
+    receivedBy: string;
+};
+
 export default function CreateReturnPage() {
-  const [documents, setDocuments] = useLocalStorage<ReturnDocument[]>('returnDocuments', []);
-  const [newDocument, setNewDocument] = React.useState({
+  const [newDocument, setNewDocument] = React.useState<NewReturnDocument>({
     noDocument: '',
     qty: '',
     status: 'Pending',
@@ -39,8 +48,9 @@ export default function CreateReturnPage() {
     reason: '',
     receivedBy: '',
   });
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const { toast } = useToast();
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const router = useRouter();
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -53,7 +63,7 @@ export default function CreateReturnPage() {
     setNewDocument(prev => ({ ...prev, [name]: value as 'Processed' | 'Pending' | 'Canceled' }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newDocument.noDocument || !newDocument.qty || !newDocument.sku || !newDocument.barcode || !newDocument.brand || !newDocument.receivedBy) {
       toast({
@@ -63,141 +73,39 @@ export default function CreateReturnPage() {
       });
       return;
     }
-
-    const newId = documents.length > 0 ? String(Math.max(...documents.map(t => parseInt(t.id))) + 1) : '1';
-    const docToAdd: ReturnDocument = {
-      id: newId,
-      noDocument: newDocument.noDocument,
-      date: new Date().toISOString(),
-      qty: parseInt(newDocument.qty, 10),
-      status: newDocument.status as 'Processed' | 'Pending' | 'Canceled',
-      sku: newDocument.sku,
-      barcode: newDocument.barcode,
-      brand: newDocument.brand,
-      reason: newDocument.reason,
-      receivedBy: newDocument.receivedBy,
-    };
-
-    setDocuments([...documents, docToAdd]);
-    toast({
-      title: 'Success',
-      description: 'New return document has been created.',
-    });
-    // Reset form
-    setNewDocument({ noDocument: '', qty: '', status: 'Pending', sku: '', barcode: '', brand: '', reason: '', receivedBy: '' });
-  };
-  
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const text = e.target?.result as string;
-        try {
-            const lines = text.split('\n').filter(line => line.trim() !== '');
-            const newDocs: ReturnDocument[] = [];
-            let maxId = documents.length > 0 ? Math.max(...documents.map(s => parseInt(s.id))) : 0;
-            
-            const headerLine = lines[0] || '';
-            const header = headerLine.toLowerCase().split(',').map(h => h.trim().replace(/"/g, ''));
-            const requiredHeaders = ['no. document', 'sku', 'barcode', 'brand', 'reason', 'received by', 'qty', 'status'];
-            
-            if (!requiredHeaders.every(h => header.includes(h))) {
-              throw new Error('CSV file is missing required headers. Required headers are: ' + requiredHeaders.join(', '));
-            }
-
-            lines.slice(1).forEach((line, index) => {
-              if (!line.trim()) return;
-
-              const values = line.split(',').map(s => s.trim());
-              
-              if(values.length < header.length) {
-                console.warn(`Skipping incomplete line ${index + 2}: ${line}`);
-                return;
-              }
-
-              const docData = header.reduce((obj, h, i) => {
-                const keyMap: { [key: string]: keyof ReturnDocument } = { 
-                    'no. document': 'noDocument', 
-                    'received by': 'receivedBy',
-                    'sku': 'sku',
-                    'barcode': 'barcode',
-                    'brand': 'brand',
-                    'reason': 'reason',
-                    'qty': 'qty',
-                    'status': 'status'
-                };
-                const key = keyMap[h as keyof typeof keyMap] || h;
-                if (key) {
-                  (obj as any)[key] = values[i];
-                }
-                return obj;
-              }, {} as Partial<ReturnDocument>);
-              
-              if (!docData.noDocument || !docData.sku || !docData.qty) {
-                 console.warn(`Skipping line with missing required fields ${index + 2}: ${line}`);
-                 return;
-              }
-
-              newDocs.push({
-                  id: String(++maxId),
-                  noDocument: docData.noDocument,
-                  date: new Date().toISOString(),
-                  qty: parseInt(String(docData.qty), 10) || 0,
-                  status: (docData.status || 'Pending') as 'Processed' | 'Pending' | 'Canceled',
-                  sku: docData.sku,
-                  barcode: docData.barcode || '',
-                  brand: docData.brand || '',
-                  reason: docData.reason || '',
-                  receivedBy: docData.receivedBy || '',
-              });
-            });
-
-            setDocuments(prevDocs => [...prevDocs, ...newDocs]);
-            toast({
-                title: "Success",
-                description: `${newDocs.length} documents uploaded successfully.`,
-            });
-
-        } catch (error: any) {
-            toast({
-                variant: "destructive",
-                title: "Upload Failed",
-                description: error.message || "An error occurred while parsing the CSV file.",
-            });
-        }
-    };
-    reader.readAsText(file);
-    if (event.target) event.target.value = '';
-  };
-
-  const handleExport = () => {
-    const headers = ["No. Document", "SKU", "Barcode", "Brand", "Reason", "Received By", "QTY", "Status"];
     
-    const rows = documents.length > 0
-      ? documents.map(d => [d.noDocument, d.sku, d.barcode, d.brand, d.reason, d.receivedBy, d.qty, d.status].map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))
-      : [];
-    
-    const csvContent = [headers.join(","), ...rows].join("\n");
+    setIsSubmitting(true);
+    try {
+      const response = await fetch('/api/return-documents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...newDocument,
+          qty: parseInt(newDocument.qty, 10),
+        }),
+      });
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.href = url;
-    link.setAttribute("download", `return_docs_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    toast({
-      title: "Success",
-      description: "Return documents exported as CSV.",
-    });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create document');
+      }
+
+      toast({
+        title: 'Success',
+        description: 'New return document has been created.',
+      });
+      // Reset form and navigate to monitoring page
+      setNewDocument({ noDocument: '', qty: '', status: 'Pending', sku: '', barcode: '', brand: '', reason: '', receivedBy: '' });
+      router.push('/return/monitoring-document');
+    } catch (error: any) {
+       toast({
+        variant: 'destructive',
+        title: 'Error creating document',
+        description: error.message,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -309,14 +217,10 @@ export default function CreateReturnPage() {
                 </div>
               </div>
               <div className="flex justify-end pt-4 space-x-2">
-                <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
-                <Button variant="outline" type="button" onClick={handleUploadClick}>
-                    <Upload className="mr-2 h-4 w-4" /> Upload
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Submit
                 </Button>
-                <Button variant="outline" type="button" onClick={handleExport}>
-                    <Download className="mr-2 h-4 w-4" /> Export
-                </Button>
-                <Button type="submit">Submit</Button>
               </div>
             </form>
           </CardContent>
