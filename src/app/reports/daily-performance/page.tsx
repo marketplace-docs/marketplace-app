@@ -341,7 +341,7 @@ export default function DailyPerformancePage() {
                             </DialogTrigger>
                             <DialogContent>
                                 <DialogHeader>
-                                    <DialogTitle>Add New Performance Entry</DialogTitle>
+                                    <DialogTitle>Add Data</DialogTitle>
                                 </DialogHeader>
                                 <div className="grid gap-4 py-4">
                                     <div className="grid grid-cols-4 items-center gap-4">
@@ -390,7 +390,7 @@ export default function DailyPerformancePage() {
                                 </div>
                                 <DialogFooter>
                                     <Button variant="outline" onClick={() => setAddDialogOpen(false)}>Cancel</Button>
-                                    <Button onClick={handleAddEntry}>Add Entry</Button>
+                                    <Button onClick={handleAddEntry}>Submit</Button>
                                 </DialogFooter>
                             </DialogContent>
                         </Dialog>
