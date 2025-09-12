@@ -19,6 +19,12 @@ export default function ApiRoutesPage() {
                     <CardContent className="space-y-4">
                         <p>API ini memungkinkan Anda untuk mengelola sumber daya secara terprogram. Gunakan endpoint di bawah ini untuk membuat, membaca, memperbarui, dan menghapus data.</p>
                         <p>Semua respons API dikembalikan dalam format JSON.</p>
+                        <div>
+                            <h4 className="font-semibold mb-2">Panduan Penggunaan Database (Supabase)</h4>
+                            <p className="text-sm text-muted-foreground">
+                                Aplikasi ini menggunakan Supabase sebagai backend database. Untuk informasi lebih lanjut tentang cara berinteraksi dengan API Supabase, kunjungi dokumentasi resmi mereka.
+                            </p>
+                        </div>
                     </CardContent>
                 </Card>
 
