@@ -13,6 +13,8 @@ import { NAV_LINKS, type NavLink } from "@/lib/constants";
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from 'lucide-react';
 
 type User = {
     id: number;
@@ -33,15 +35,25 @@ export default function MenuManagementPage() {
     const [menuPermissions, setMenuPermissions] = useState<MenuPermissions>({});
     const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [fetchError, setFetchError] = useState<string | null>(null);
     const { toast } = useToast();
 
     const isSuperAdmin = currentUser?.role === 'Super Admin';
 
     useEffect(() => {
         if (isSuperAdmin) {
+            setFetchError(null);
             fetch('/api/users')
-                .then(res => res.json())
-                .then(data => setUsers(data));
+                .then(res => {
+                    if (!res.ok) {
+                        throw new Error('Failed to fetch users list.');
+                    }
+                    return res.json();
+                })
+                .then(data => setUsers(data))
+                .catch(err => {
+                    setFetchError(err.message);
+                });
         }
     }, [isSuperAdmin]);
 
@@ -65,18 +77,23 @@ export default function MenuManagementPage() {
         setIsLoading(true);
         try {
             const response = await fetch(`/api/menu-permissions/${userId}`);
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to fetch menu permissions.');
+            }
             const data = await response.json();
             
             const initialPerms = initializePermissions(NAV_LINKS);
             
-            // Merge fetched permissions with initial defaults
-            data.forEach((p: { menu_href: string, is_accessible: boolean }) => {
-                initialPerms[p.menu_href] = p.is_accessible;
-            });
+            if (data && data.length > 0) {
+                data.forEach((p: { menu_href: string, is_accessible: boolean }) => {
+                    initialPerms[p.menu_href] = p.is_accessible;
+                });
+            }
             
             setMenuPermissions(initialPerms);
-        } catch (error) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch menu permissions.' });
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Error', description: error.message || 'An unknown error occurred.' });
         } finally {
             setIsLoading(false);
         }
@@ -103,17 +120,23 @@ export default function MenuManagementPage() {
         if (!selectedUserId) return;
         setIsSaving(true);
         try {
-            await fetch('/api/menu-permissions', {
+            const response = await fetch('/api/menu-permissions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId: selectedUserId, permissions: menuPermissions })
             });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "Failed to save permissions.");
+            }
+
             toast({
                 title: "Success",
                 description: `Menu permissions for ${users.find(u => u.id.toString() === selectedUserId)?.name || 'user'} have been saved.`
             });
-        } catch (error) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Failed to save permissions.' });
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Error', description: error.message });
         } finally {
             setIsSaving(false);
         }
@@ -147,6 +170,15 @@ export default function MenuManagementPage() {
         <MainLayout>
             <div className="w-full space-y-6">
                 <h1 className="text-2xl font-bold">Menu Management</h1>
+                
+                {fetchError && (
+                    <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Failed to load data</AlertTitle>
+                        <AlertDescription>{fetchError}</AlertDescription>
+                    </Alert>
+                )}
+
                 <Card>
                     <CardHeader>
                         <CardTitle>System Menu Control</CardTitle>
@@ -158,9 +190,9 @@ export default function MenuManagementPage() {
                         <div className="space-y-4">
                             <div className="flex items-center gap-4">
                                 <Label htmlFor="user-select" className="w-24">Select User:</Label>
-                                <Select onValueChange={setSelectedUserId} value={selectedUserId} disabled={!isSuperAdmin}>
+                                <Select onValueChange={setSelectedUserId} value={selectedUserId} disabled={!isSuperAdmin || fetchError !== null}>
                                     <SelectTrigger id="user-select" className="w-[250px]">
-                                        <SelectValue placeholder="Select a user to manage" />
+                                        <SelectValue placeholder={isSuperAdmin ? "Select a user to manage" : "Permission denied"} />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {users.map(user => (
@@ -193,7 +225,7 @@ export default function MenuManagementPage() {
                                         {selectedUserId ? renderMenuRows(NAV_LINKS) : (
                                             <TableRow>
                                                 <TableCell colSpan={2} className="h-24 text-center text-muted-foreground">
-                                                    Please select a user to see menu permissions.
+                                                    {isSuperAdmin ? "Please select a user to see menu permissions." : "You do not have permission."}
                                                 </TableCell>
                                             </TableRow>
                                         )}
@@ -213,5 +245,3 @@ export default function MenuManagementPage() {
         </MainLayout>
     );
 }
-
-    
