@@ -58,10 +58,9 @@ type BacklogItem = {
   storeName: string;
   paymentAccepted: number;
   marketplace: string;
-  platform: string;
 };
 
-type GroupingKey = "storeName" | "marketplace" | "platform";
+type GroupingKey = "storeName" | "marketplace";
 
 type DetailStoreData = {
     platform: string;
@@ -96,10 +95,10 @@ export default function BacklogPage() {
   const detailStoreData = useMemo(() => {
     const grouped: { [key: string]: number } = {};
     backlogItems.forEach(item => {
-        if (!grouped[item.platform]) {
-            grouped[item.platform] = 0;
+        if (!grouped[item.marketplace]) {
+            grouped[item.marketplace] = 0;
         }
-        grouped[item.platform] += item.paymentAccepted;
+        grouped[item.marketplace] += item.paymentAccepted;
     });
     return Object.entries(grouped).map(([platform, paymentAccepted]) => ({
         platform,
@@ -128,10 +127,10 @@ export default function BacklogPage() {
       });
       return;
     }
-    const headers = ["Store Name", "Payment Accepted", "Marketplace", "Platform"];
+    const headers = ["Store Name", "Payment Accepted", "Marketplace"];
     const csvContent = [
         headers.join(","),
-        ...backlogItems.map(item => [item.storeName, item.paymentAccepted, item.marketplace, item.platform].join(","))
+        ...backlogItems.map(item => [item.storeName, item.paymentAccepted, item.marketplace].join(","))
     ].join("\n");
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -168,16 +167,15 @@ export default function BacklogPage() {
         lines.forEach((line, index) => {
           if (index === 0 && line.toLowerCase().includes('store name')) return; // Skip header
 
-          const [storeName, paymentAcceptedStr, marketplace, platform] = line.split(',').map(s => s.trim());
+          const [storeName, paymentAcceptedStr, marketplace] = line.split(',').map(s => s.trim());
           const paymentAccepted = parseInt(paymentAcceptedStr, 10);
 
-          if (storeName && !isNaN(paymentAccepted) && marketplace && platform) {
+          if (storeName && !isNaN(paymentAccepted) && marketplace) {
             newItems.push({
               id: ++maxId,
               storeName,
               paymentAccepted,
               marketplace,
-              platform,
             });
           } else {
             throw new Error(`Invalid CSV format on line ${index + 1}: ${line}`);
@@ -203,20 +201,20 @@ export default function BacklogPage() {
 
 
   const chartData = useMemo(() => {
-    const groupedData: { [key: string]: { value: number; platform: string } } = {};
-  
+    const groupedData: { [key: string]: { value: number; marketplace: string } } = {};
+
     backlogItems.forEach(item => {
       const key = item[chartGrouping];
       if (!groupedData[key]) {
-        groupedData[key] = { value: 0, platform: item.platform };
+        groupedData[key] = { value: 0, marketplace: item.marketplace };
       }
       groupedData[key].value += item.paymentAccepted;
     });
-  
+
     return Object.entries(groupedData).map(([name, data]) => ({
       name: name,
       'Payment Accepted': data.value,
-      fill: marketplaceColors[data.platform] || '#6366f1',
+      fill: marketplaceColors[data.marketplace] || '#6366f1',
     }));
   }, [backlogItems, chartGrouping]);
 
@@ -287,7 +285,6 @@ export default function BacklogPage() {
                             <TableHead>STORE NAME</TableHead>
                             <TableHead>PAYMENT ACCEPTED</TableHead>
                             <TableHead>MARKETPLACE</TableHead>
-                            <TableHead>PLATFORM</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -310,12 +307,11 @@ export default function BacklogPage() {
                                   )}
                                 </TableCell>
                                 <TableCell>{item.marketplace}</TableCell>
-                                <TableCell>{item.platform}</TableCell>
                                 </TableRow>
                             ))
                             ) : (
                             <TableRow>
-                                <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                                <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
                                 No backlog data available.
                                 </TableCell>
                             </TableRow>
@@ -373,7 +369,7 @@ export default function BacklogPage() {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>PLATFORM</TableHead>
+                                        <TableHead>MARKETPLACE</TableHead>
                                         <TableHead className="text-right">PAYMENT ACCEPTED</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -409,7 +405,6 @@ export default function BacklogPage() {
                   <TabsList className="bg-gray-200">
                     <TabsTrigger value="storeName" className="data-[state=active]:bg-indigo-600 data-[state=active]:text-white">Store Name</TabsTrigger>
                     <TabsTrigger value="marketplace" className="data-[state=active]:bg-indigo-600 data-[state=active]:text-white">Marketplace</TabsTrigger>
-                    <TabsTrigger value="platform" className="data-[state=active]:bg-indigo-600 data-[state=active]:text-white">Platform</TabsTrigger>
                   </TabsList>
                 </Tabs>
               </div>
