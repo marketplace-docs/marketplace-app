@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DateRange } from "react-day-picker";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Download, Smile, Frown, Pencil, Save } from "lucide-react";
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Download, Smile, Frown, Pencil, Save, Plus } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { format, addDays, differenceInDays } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -17,6 +17,8 @@ import { performanceData as initialPerformanceData, PerformanceData } from '@/li
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 
 const jobDescriptions = ["All", "Picker", "Packer", "Putaway", "Interco", "Admin"];
 
@@ -35,6 +37,10 @@ const ResultBadge = ({ result }: { result: 'BERHASIL' | 'GAGAL' }) => {
   );
 };
 
+type NewPerformanceData = Omit<PerformanceData, 'id' | 'month' | 'target' | 'targetItem' | 'taskPerformance' | 'itemsPerformance' | 'result'> & {
+  date: string;
+};
+
 
 export default function DailyPerformancePage() {
     const [data, setData] = useState<PerformanceData[]>(initialPerformanceData);
@@ -48,6 +54,16 @@ export default function DailyPerformancePage() {
     const { toast } = useToast();
     const [isEditing, setIsEditing] = useState(false);
     const [editedItems, setEditedItems] = useState<Record<number, Partial<Pick<PerformanceData, 'taskDaily' | 'totalItems'>>>>({});
+
+    const [isAddDialogOpen, setAddDialogOpen] = useState(false);
+    const [newEntry, setNewEntry] = useState<NewPerformanceData>({
+        date: format(new Date(), 'yyyy-MM-dd'),
+        name: '',
+        taskDaily: 0,
+        totalItems: 0,
+        jobDesc: 'Picker',
+        shift: 'PAGI',
+    });
 
     const filteredData = useMemo(() => {
         let filtered = data;
@@ -175,16 +191,129 @@ export default function DailyPerformancePage() {
             }));
         }
     };
+    
+    const handleAddEntry = () => {
+        if (!newEntry.name || !newEntry.date) {
+            toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: 'Name and date are required fields.',
+            });
+            return;
+        }
+
+        const newId = data.length > 0 ? Math.max(...data.map(d => d.id)) + 1 : 1;
+        const entryDate = new Date(newEntry.date);
+        
+        // Mock targets, this should be based on your business logic
+        const target = 400;
+        const targetItem = 1000;
+        
+        const taskPerformance = target > 0 ? Math.round((newEntry.taskDaily / target) * 100) : 0;
+        const itemsPerformance = targetItem > 0 ? Math.round((newEntry.totalItems / targetItem) * 100) : 0;
+
+        const newPerformanceEntry: PerformanceData = {
+            id: newId,
+            date: entryDate.toISOString(),
+            month: format(entryDate, 'MMMM - yy'),
+            name: newEntry.name,
+            taskDaily: newEntry.taskDaily,
+            totalItems: newEntry.totalItems,
+            jobDesc: newEntry.jobDesc,
+            shift: newEntry.shift,
+            target: target,
+            targetItem: targetItem,
+            taskPerformance: taskPerformance,
+            itemsPerformance: itemsPerformance,
+            result: taskPerformance >= 100 ? 'BERHASIL' : 'GAGAL',
+        };
+
+        setData(prevData => [...prevData, newPerformanceEntry]);
+        setAddDialogOpen(false);
+        setNewEntry({
+          date: format(new Date(), 'yyyy-MM-dd'),
+          name: '',
+          taskDaily: 0,
+          totalItems: 0,
+          jobDesc: 'Picker',
+          shift: 'PAGI',
+        });
+        toast({ title: 'Success', description: 'New performance entry added.' });
+    };
 
     return (
         <MainLayout>
              <div className="w-full space-y-6">
                 <div className="flex justify-between items-center">
                     <h1 className="text-2xl font-bold">Performance Report</h1>
-                    <Button onClick={handleExport}>
-                        <Download className="mr-2 h-4 w-4" />
-                        Export
-                    </Button>
+                    <div className="flex gap-2">
+                        <Dialog open={isAddDialogOpen} onOpenChange={setAddDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Button variant="outline">
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    Add Performance
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Add New Performance Entry</DialogTitle>
+                                </DialogHeader>
+                                <div className="grid gap-4 py-4">
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="new-name" className="text-right">Name</Label>
+                                        <Input id="new-name" value={newEntry.name} onChange={(e) => setNewEntry({...newEntry, name: e.target.value})} className="col-span-3" />
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="new-date" className="text-right">Date</Label>
+                                        <Input id="new-date" type="date" value={newEntry.date} onChange={(e) => setNewEntry({...newEntry, date: e.target.value})} className="col-span-3" />
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="new-job" className="text-right">Job Desc</Label>
+                                        <Select value={newEntry.jobDesc} onValueChange={(val: PerformanceData['jobDesc']) => setNewEntry({...newEntry, jobDesc: val})}>
+                                            <SelectTrigger className="col-span-3">
+                                                <SelectValue placeholder="Select job" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="Picker">Picker</SelectItem>
+                                                <SelectItem value="Packer">Packer</SelectItem>
+                                                <SelectItem value="Putaway">Putaway</SelectItem>
+                                                <SelectItem value="Interco">Interco</SelectItem>
+                                                <SelectItem value="Admin">Admin</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                     <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="new-shift" className="text-right">Shift</Label>
+                                        <Select value={newEntry.shift} onValueChange={(val: 'PAGI' | 'SORE') => setNewEntry({...newEntry, shift: val})}>
+                                            <SelectTrigger className="col-span-3">
+                                                <SelectValue placeholder="Select shift" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="PAGI">PAGI</SelectItem>
+                                                <SelectItem value="SORE">SORE</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="new-taskDaily" className="text-right">Task Daily</Label>
+                                        <Input id="new-taskDaily" type="number" value={newEntry.taskDaily} onChange={(e) => setNewEntry({...newEntry, taskDaily: parseInt(e.target.value) || 0})} className="col-span-3" />
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="new-totalItems" className="text-right">Total Items</Label>
+                                        <Input id="new-totalItems" type="number" value={newEntry.totalItems} onChange={(e) => setNewEntry({...newEntry, totalItems: parseInt(e.target.value) || 0})} className="col-span-3" />
+                                    </div>
+                                </div>
+                                <DialogFooter>
+                                    <Button variant="outline" onClick={() => setAddDialogOpen(false)}>Cancel</Button>
+                                    <Button onClick={handleAddEntry}>Add Entry</Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
+                        <Button onClick={handleExport}>
+                            <Download className="mr-2 h-4 w-4" />
+                            Export
+                        </Button>
+                    </div>
                 </div>
                 
                 <Card>
