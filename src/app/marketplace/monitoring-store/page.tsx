@@ -68,8 +68,8 @@ export default function MonitoringStorePage() {
 
   const filteredStores = useMemo(() => {
     return stores.filter(store => 
-      store.marketplace_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      store.store_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (store.marketplace_name && store.marketplace_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (store.store_name && store.store_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (store.platform && store.platform.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   }, [stores, searchTerm]);
@@ -164,9 +164,9 @@ export default function MonitoringStorePage() {
     const csvContent = [
         headers.join(","),
         ...filteredStores.map(item => [
-            `"${item.marketplace_name.replace(/"/g, '""')}"`,
-            `"${item.store_name.replace(/"/g, '""')}"`,
-            `"${item.platform.replace(/"/g, '""')}"`,
+            `"${item.marketplace_name?.replace(/"/g, '""') || ''}"`,
+            `"${item.store_name?.replace(/"/g, '""') || ''}"`,
+            `"${item.platform?.replace(/"/g, '""') || ''}"`,
             `"${format(new Date(item.created_at), "yyyy-MM-dd HH:mm:ss")}"`
         ].join(","))
     ].join("\n");

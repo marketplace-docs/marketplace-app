@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server';
 export async function GET() {
   const { data, error } = await supabase
     .from('marketplace_stores')
-    .select('*')
+    .select('id, marketplace_name, store_name, platform, created_at')
     .order('created_at', { ascending: false });
 
   if (error) {
