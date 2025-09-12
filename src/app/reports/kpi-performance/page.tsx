@@ -1,13 +1,20 @@
 
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
 import { performanceData, PerformanceData } from '@/lib/daily-performance-data';
-import { Users, ClipboardList, TrendingUp, Briefcase } from 'lucide-react';
+import { Users, ClipboardList, TrendingUp, Briefcase, Calendar as CalendarIcon, Clock, AlertTriangle } from 'lucide-react';
+import { DateRange } from "react-day-picker";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from '@/lib/utils';
+import { format } from "date-fns";
+import { Badge } from '@/components/ui/badge';
 
 const KpiCard = ({ title, value, icon: Icon }: { title: string; value: string; icon: React.ElementType }) => (
     <Card>
@@ -21,6 +28,130 @@ const KpiCard = ({ title, value, icon: Icon }: { title: string; value: string; i
     </Card>
 );
 
+const PerformanceRoleCard = ({ role }: { role: 'Picker' | 'Packer' | 'Putaway' | 'Interco' | 'Admin' }) => {
+    const [dateRange, setDateRange] = useState<DateRange | undefined>({
+        from: new Date(2025, 8, 13),
+        to: new Date(2025, 8, 13),
+    });
+    const [activeShift, setActiveShift] = useState<'ALL' | '1' | '2' | '3'>('ALL');
+
+    const filteredData = useMemo(() => {
+        let filtered = performanceData.filter(p => p.jobDesc === role);
+        // Add filtering logic for date and shift when data structure supports it
+        return filtered;
+    }, [role]);
+
+    const stats = useMemo(() => {
+        const dataForStats = filteredData;
+        return {
+            totalManpower: new Set(dataForStats.map(d => d.name)).size,
+            totalOrders: dataForStats.reduce((acc, curr) => acc + curr.taskDaily, 0),
+            totalSku: dataForStats.reduce((acc, curr) => acc + curr.totalItems, 0), // Assuming totalItems is SKU
+            avg: dataForStats.length > 0 ? (dataForStats.reduce((acc, curr) => acc + curr.taskDaily, 0) / dataForStats.length) : 0,
+            totalItems: dataForStats.reduce((acc, curr) => acc + curr.totalItems, 0),
+        }
+    }, [filteredData]);
+    
+    const isDispatcher = role === 'Admin';
+
+
+    const StatDisplay = ({ label, value }: { label: string, value: string | number }) => (
+        <div className="text-center">
+            <p className="text-2xl font-bold">{typeof value === 'number' ? value.toLocaleString() : value}</p>
+            <p className="text-xs text-muted-foreground">{label}</p>
+        </div>
+    );
+
+    return (
+         <Card>
+            <CardHeader>
+                <div className="flex justify-between items-center pb-4 border-b">
+                    <div className="grid grid-cols-5 gap-4 w-full text-center">
+                       <StatDisplay label={role} value={stats.totalManpower} />
+                       <StatDisplay label="Order" value={stats.totalOrders} />
+                       {!isDispatcher && <StatDisplay label="SKU" value={stats.totalSku} />}
+                       {!isDispatcher && <StatDisplay label="AVG" value={stats.avg.toFixed(0)} />}
+                       {!isDispatcher && <StatDisplay label="ITEM" value={stats.totalItems} />}
+                    </div>
+                </div>
+                 <div className="flex justify-between items-center pt-4 text-sm">
+                    <div className="flex gap-4 items-center">
+                        <span className="text-muted-foreground">From</span>
+                         <Popover>
+                            <PopoverTrigger asChild>
+                            <Button
+                                variant={"outline"}
+                                className={cn("w-[240px] justify-start text-left font-normal", !dateRange?.from && "text-muted-foreground")}
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {dateRange?.from ? format(dateRange.from, "dd MMM yyyy HH:mm") : <span>Pick a date</span>}
+                            </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                                <Calendar mode="single" selected={dateRange?.from} onSelect={(d) => setDateRange(prev => ({...prev, from: d}))} initialFocus />
+                            </PopoverContent>
+                        </Popover>
+                    </div>
+                     <div className="flex gap-4 items-center">
+                        <span className="text-muted-foreground">To</span>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                            <Button
+                                variant={"outline"}
+                                className={cn("w-[240px] justify-start text-left font-normal", !dateRange?.to && "text-muted-foreground")}
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {dateRange?.to ? format(dateRange.to, "dd MMM yyyy HH:mm") : <span>Pick a date</span>}
+                            </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                                <Calendar mode="single" selected={dateRange?.to} onSelect={(d) => setDateRange(prev => ({...prev, to: d}))} initialFocus />
+                            </PopoverContent>
+                        </Popover>
+                    </div>
+                    <div className="flex items-center gap-2">
+                         {['ALL', '1', '2', '3'].map(shift => (
+                            <Badge 
+                                key={shift} 
+                                onClick={() => setActiveShift(shift as any)}
+                                className={cn(
+                                    "cursor-pointer text-lg px-3 py-1 rounded-full",
+                                    activeShift === shift ? 'bg-pink-500 text-white' : 'bg-pink-100 text-pink-700'
+                                )}
+                            >
+                                {shift}
+                            </Badge>
+                        ))}
+                    </div>
+                </div>
+            </CardHeader>
+            <CardContent>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Orders</TableHead>
+                            {!isDispatcher && <TableHead>SKU</TableHead>}
+                            {!isDispatcher && <TableHead>Item</TableHead>}
+                            {!isDispatcher && <TableHead>Avg</TableHead>}
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        <TableRow>
+                            <TableCell colSpan={isDispatcher ? 2 : 5} className="h-24 text-center">
+                                <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                                    <AlertTriangle className="h-4 w-4" />
+                                    No data available
+                                </div>
+                            </TableCell>
+                        </TableRow>
+                    </TableBody>
+                </Table>
+            </CardContent>
+        </Card>
+    );
+}
+
 export default function KpiPerformancePage() {
 
     const kpiMetrics = useMemo(() => {
@@ -29,12 +160,13 @@ export default function KpiPerformancePage() {
         const averageProductivity = totalManpower > 0 ? (totalTasks / totalManpower) : 0;
 
         const tasksByJobDesc = performanceData.reduce((acc, p) => {
-            if (!acc[p.jobDesc]) {
-                acc[p.jobDesc] = { totalTasks: 0, manpowerCount: 0, names: new Set() };
+            const jobDesc = p.jobDesc.replace(' Marketplace', '').replace(' Wave', '');
+            if (!acc[jobDesc]) {
+                acc[jobDesc] = { totalTasks: 0, manpowerCount: 0, names: new Set() };
             }
-            acc[p.jobDesc].totalTasks += p.taskDaily;
-            acc[p.jobDesc].names.add(p.name);
-            acc[p.jobDesc].manpowerCount = acc[p.jobDesc].names.size;
+            acc[jobDesc].totalTasks += p.taskDaily;
+            acc[jobDesc].names.add(p.name);
+            acc[jobDesc].manpowerCount = acc[jobDesc].names.size;
             return acc;
         }, {} as { [key: string]: { totalTasks: number; manpowerCount: number, names: Set<string> } });
 
@@ -68,6 +200,12 @@ export default function KpiPerformancePage() {
                     <KpiCard title="Total Manpower" value={kpiMetrics.totalManpower.toString()} icon={Users} />
                     <KpiCard title="Total Tugas Selesai" value={kpiMetrics.totalTasks.toLocaleString()} icon={ClipboardList} />
                     <KpiCard title="Produktivitas Rata-rata" value={`${kpiMetrics.averageProductivity.toFixed(2)} tugas/orang`} icon={TrendingUp} />
+                </div>
+
+                <div className="grid grid-cols-1 gap-6">
+                    <PerformanceRoleCard role="Picker" />
+                    <PerformanceRoleCard role="Packer" />
+                    <PerformanceRoleCard role="Admin" />
                 </div>
                  
                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -136,3 +274,4 @@ export default function KpiPerformancePage() {
     );
 }
 
+    
