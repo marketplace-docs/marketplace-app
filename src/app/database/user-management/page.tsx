@@ -72,6 +72,7 @@ export default function DatabaseUserPage() {
     
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     const [newUser, setNewUser] = useState<NewUser>({ name: '', email: '', status: 'Reguler', role: 'Admin' });
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const { toast } = useToast();
 
@@ -85,7 +86,8 @@ export default function DatabaseUserPage() {
             setLoading(true);
             const response = await fetch('/api/users');
             if (!response.ok) {
-                throw new Error('Failed to fetch users');
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to fetch users');
             }
             const data = await response.json();
             setUsers(data);
@@ -135,19 +137,41 @@ export default function DatabaseUserPage() {
         toast({ title: "Success", description: "User has been updated successfully." });
     };
     
-    const handleAddUser = () => {
-        const userToAdd = { ...newUser };
-        if (!userToAdd.name || !userToAdd.email) {
+    const handleAddUser = async () => {
+        if (!newUser.name || !newUser.email) {
             toast({ variant: "destructive", title: "Add Failed", description: "Name and Email cannot be empty." });
             return;
         }
 
-        const newId = users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1;
-        setUsers([...users, { id: newId, ...userToAdd }]);
-        
-        setAddDialogOpen(false);
-        setNewUser({ name: '', email: '', status: 'Reguler', role: 'Admin' });
-        toast({ title: "Success", description: "New user added." });
+        setIsSubmitting(true);
+        try {
+            const response = await fetch('/api/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newUser),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to add user');
+            }
+            
+            const createdUser = await response.json();
+            setUsers(prevUsers => [...prevUsers, createdUser]);
+
+            setAddDialogOpen(false);
+            setNewUser({ name: '', email: '', status: 'Reguler', role: 'Admin' });
+            toast({ title: "Success", description: "New user added." });
+
+        } catch (e: any) {
+            toast({
+                variant: "destructive",
+                title: "Add Failed",
+                description: e.message,
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const handleDeleteUser = () => {
@@ -186,7 +210,7 @@ export default function DatabaseUserPage() {
                             </div>
                              <div className="grid grid-cols-4 items-center gap-4">
                                 <Label htmlFor="new-email" className="text-right">Email</Label>
-                                <Input id="new-email" value={newUser.email} className="col-span-3" onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} />
+                                <Input id="new-email" type="email" value={newUser.email} className="col-span-3" onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} />
                             </div>
                              <div className="grid grid-cols-4 items-center gap-4">
                                 <Label htmlFor="new-status" className="text-right">Status</Label>
@@ -219,7 +243,10 @@ export default function DatabaseUserPage() {
                         </div>
                         <DialogFooter>
                             <Button variant="outline" onClick={() => setAddDialogOpen(false)}>Cancel</Button>
-                            <Button onClick={handleAddUser}>Add User</Button>
+                            <Button onClick={handleAddUser} disabled={isSubmitting}>
+                                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Add User
+                            </Button>
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
