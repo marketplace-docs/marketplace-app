@@ -1,3 +1,0 @@
--- This file is now deprecated. 
--- All necessary SQL has been consolidated into /src/lib/sql/user_management.sql
--- Please run the script from that file in your Supabase SQL Editor.
