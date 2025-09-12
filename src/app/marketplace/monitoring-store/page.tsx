@@ -69,8 +69,7 @@ export default function MonitoringStorePage() {
   const filteredStores = useMemo(() => {
     return stores.filter(store => 
       store.store_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (store.platform && store.platform.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (store.marketplace_name && store.marketplace_name.toLowerCase().includes(searchTerm.toLowerCase()))
+      (store.platform && store.platform.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   }, [stores, searchTerm]);
 
@@ -106,11 +105,11 @@ export default function MonitoringStorePage() {
     if (!selectedStore) return;
     setIsSubmitting(true);
     try {
-      const { id, marketplace_name, store_name, platform } = selectedStore;
+      const { id, store_name, platform } = selectedStore;
       const response = await fetch(`/api/marketplace-stores/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ marketplace_name, store_name, platform }),
+        body: JSON.stringify({ store_name, platform }),
       });
 
       if (!response.ok) {
@@ -160,11 +159,10 @@ export default function MonitoringStorePage() {
       });
       return;
     }
-    const headers = ["Marketplace Name", "Store Name", "Platform", "Created At"];
+    const headers = ["Store Name", "Platform", "Created At"];
     const csvContent = [
         headers.join(","),
         ...filteredStores.map(item => [
-            `"${(item.marketplace_name || '').replace(/"/g, '""')}"`,
             `"${item.store_name.replace(/"/g, '""')}"`,
             `"${item.platform.replace(/"/g, '""')}"`,
             `"${format(new Date(item.created_at), "yyyy-MM-dd HH:mm:ss")}"`
@@ -219,7 +217,6 @@ export default function MonitoringStorePage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Marketplace Name</TableHead>
                     <TableHead>Store Name</TableHead>
                     <TableHead>Platform</TableHead>
                     <TableHead>Created At</TableHead>
@@ -229,15 +226,14 @@ export default function MonitoringStorePage() {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                        <TableCell colSpan={5} className="h-24 text-center">
+                        <TableCell colSpan={4} className="h-24 text-center">
                             <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                         </TableCell>
                     </TableRow>
                   ) : paginatedStores.length > 0 ? (
                     paginatedStores.map((store) => (
                       <TableRow key={store.id}>
-                        <TableCell className="font-medium">{store.marketplace_name}</TableCell>
-                        <TableCell>{store.store_name}</TableCell>
+                        <TableCell className="font-medium">{store.store_name}</TableCell>
                         <TableCell>{store.platform}</TableCell>
                         <TableCell>{format(new Date(store.created_at), "eee, dd/MMM/yyyy HH:mm")}</TableCell>
                         <TableCell className="text-right">
@@ -257,7 +253,7 @@ export default function MonitoringStorePage() {
                   ) : (
                     <TableRow>
                       <TableCell
-                        colSpan={5}
+                        colSpan={4}
                         className="h-24 text-center text-muted-foreground"
                       >
                         No stores found. Go to Create to add one.
@@ -320,10 +316,6 @@ export default function MonitoringStorePage() {
               </DialogHeader>
               {selectedStore && (
                   <div className="grid gap-4 py-4">
-                      <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="marketplace_name" className="text-right">Marketplace</Label>
-                          <Input id="marketplace_name" value={selectedStore.marketplace_name || ''} className="col-span-3" onChange={(e) => setSelectedStore({ ...selectedStore, marketplace_name: e.target.value })} />
-                      </div>
                       <div className="grid grid-cols-4 items-center gap-4">
                           <Label htmlFor="store_name" className="text-right">Store Name</Label>
                           <Input id="store_name" value={selectedStore.store_name} className="col-span-3" onChange={(e) => setSelectedStore({ ...selectedStore, store_name: e.target.value })} />
