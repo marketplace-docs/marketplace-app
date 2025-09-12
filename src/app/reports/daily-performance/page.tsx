@@ -231,8 +231,6 @@ export default function DailyPerformancePage() {
                                         <TableHead>Total Items</TableHead>
                                         <TableHead>Job-Desc</TableHead>
                                         <TableHead>Shift</TableHead>
-                                        <TableHead>Target</TableHead>
-                                        <TableHead>Target Item</TableHead>
                                         <TableHead>Task Perf.</TableHead>
                                         <TableHead>Items Perf.</TableHead>
                                         <TableHead className='text-center'>Result</TableHead>
@@ -267,8 +265,6 @@ export default function DailyPerformancePage() {
                                                 </TableCell>
                                                 <TableCell><Badge variant="secondary">{item.jobDesc}</Badge></TableCell>
                                                 <TableCell>{item.shift}</TableCell>
-                                                <TableCell>{item.target.toLocaleString()}</TableCell>
-                                                <TableCell>{item.targetItem.toLocaleString()}</TableCell>
                                                 <TableCell>{item.taskPerformance}%</TableCell>
                                                 <TableCell>{item.itemsPerformance}%</TableCell>
                                                 <TableCell className="text-center">
@@ -278,7 +274,7 @@ export default function DailyPerformancePage() {
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={12} className="h-24 text-center text-muted-foreground">
+                                            <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
                                                 No data found for the selected filters.
                                             </TableCell>
                                         </TableRow>
@@ -331,5 +327,3 @@ export default function DailyPerformancePage() {
         </MainLayout>
     );
 }
-
-    
