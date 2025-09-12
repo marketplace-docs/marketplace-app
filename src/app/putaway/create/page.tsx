@@ -21,14 +21,23 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { MainLayout } from '@/components/layout/main-layout';
-import type { PutawayDocument } from '@/types/putaway-document';
-import { useLocalStorage } from '@/hooks/use-local-storage';
+import { useRouter } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { Upload, Download } from 'lucide-react';
+
+type NewPutawayDocument = {
+    noDocument: string;
+    qty: string;
+    status: string;
+    sku: string;
+    barcode: string;
+    brand: string;
+    expDate: string;
+    checkBy: string;
+};
 
 export default function CreatePutawayPage() {
-  const [documents, setDocuments] = useLocalStorage<PutawayDocument[]>('putawayDocuments', []);
-  const [newDocument, setNewDocument] = React.useState({
+  const [newDocument, setNewDocument] = React.useState<NewPutawayDocument>({
     noDocument: '',
     qty: '',
     status: 'Pending',
@@ -38,8 +47,9 @@ export default function CreatePutawayPage() {
     expDate: '',
     checkBy: '',
   });
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const { toast } = useToast();
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const router = useRouter();
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement>
@@ -49,10 +59,10 @@ export default function CreatePutawayPage() {
   };
   
   const handleSelectChange = (name: string, value: string) => {
-    setNewDocument(prev => ({ ...prev, [name]: value as 'Done' | 'Pending' }));
+    setNewDocument(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newDocument.noDocument || !newDocument.qty || !newDocument.sku || !newDocument.barcode || !newDocument.brand || !newDocument.expDate || !newDocument.checkBy) {
       toast({
@@ -62,141 +72,39 @@ export default function CreatePutawayPage() {
       });
       return;
     }
-
-    const newId = documents.length > 0 ? String(Math.max(...documents.map(t => parseInt(t.id))) + 1) : '1';
-    const docToAdd: PutawayDocument = {
-      id: newId,
-      noDocument: newDocument.noDocument,
-      date: new Date().toISOString(),
-      qty: parseInt(newDocument.qty, 10),
-      status: newDocument.status as 'Done' | 'Pending',
-      sku: newDocument.sku,
-      barcode: newDocument.barcode,
-      brand: newDocument.brand,
-      expDate: newDocument.expDate,
-      checkBy: newDocument.checkBy,
-    };
-
-    setDocuments([...documents, docToAdd]);
-    toast({
-      title: 'Success',
-      description: 'New putaway document has been created.',
-    });
-    // Reset form
-    setNewDocument({ noDocument: '', qty: '', status: 'Pending', sku: '', barcode: '', brand: '', expDate: '', checkBy: '' });
-  };
-  
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const text = e.target?.result as string;
-        try {
-            const lines = text.split('\n').filter(line => line.trim() !== '');
-            const newDocs: PutawayDocument[] = [];
-            let maxId = documents.length > 0 ? Math.max(...documents.map(s => parseInt(s.id))) : 0;
-            
-            const headerLine = lines[0] || '';
-            const header = headerLine.toLowerCase().split(',').map(h => h.trim().replace(/"/g, ''));
-            const requiredHeaders = ['no. document', 'sku', 'barcode', 'brand', 'exp date', 'check by', 'qty', 'status'];
-            
-            if (!requiredHeaders.every(h => header.includes(h))) {
-              throw new Error('CSV file is missing required headers. Required headers are: ' + requiredHeaders.join(', '));
-            }
-
-            lines.slice(1).forEach((line, index) => {
-              if (!line.trim()) return; // Skip empty lines
-
-              const values = line.split(',').map(s => s.trim());
-              
-              if(values.length < header.length) {
-                console.warn(`Skipping incomplete line ${index + 2}: ${line}`);
-                return;
-              }
-
-              const docData = header.reduce((obj, h, i) => {
-                const keyMap: { [key: string]: keyof PutawayDocument } = { 
-                    'no. document': 'noDocument', 
-                    'exp date': 'expDate', 
-                    'check by': 'checkBy',
-                    'sku': 'sku',
-                    'barcode': 'barcode',
-                    'brand': 'brand',
-                    'qty': 'qty',
-                    'status': 'status'
-                };
-                const key = keyMap[h as keyof typeof keyMap] || h;
-                if (key) {
-                  (obj as any)[key] = values[i];
-                }
-                return obj;
-              }, {} as Partial<PutawayDocument>);
-              
-              if (!docData.noDocument || !docData.sku || !docData.qty) {
-                 console.warn(`Skipping line with missing required fields ${index + 2}: ${line}`);
-                 return;
-              }
-
-              newDocs.push({
-                  id: String(++maxId),
-                  noDocument: docData.noDocument,
-                  date: new Date().toISOString(),
-                  qty: parseInt(String(docData.qty), 10) || 0,
-                  status: (docData.status || 'Pending') as 'Done' | 'Pending',
-                  sku: docData.sku,
-                  barcode: docData.barcode || '',
-                  brand: docData.brand || '',
-                  expDate: docData.expDate || '',
-                  checkBy: docData.checkBy || '',
-              });
-            });
-
-            setDocuments(prevDocs => [...prevDocs, ...newDocs]);
-            toast({
-                title: "Success",
-                description: `${newDocs.length} documents uploaded successfully.`,
-            });
-
-        } catch (error: any) {
-            toast({
-                variant: "destructive",
-                title: "Upload Failed",
-                description: error.message || "An error occurred while parsing the CSV file.",
-            });
-        }
-    };
-    reader.readAsText(file);
-    if (event.target) event.target.value = '';
-  };
-
-  const handleExport = () => {
-    const headers = ["No. Document", "SKU", "Barcode", "Brand", "EXP Date", "Check By", "QTY", "Status"];
     
-    const rows = documents.length > 0
-      ? documents.map(d => [d.noDocument, d.sku, d.barcode, d.brand, d.expDate, d.checkBy, d.qty, d.status].map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))
-      : [];
-    
-    const csvContent = [headers.join(","), ...rows].join("\n");
+    setIsSubmitting(true);
+    try {
+      const response = await fetch('/api/putaway-documents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...newDocument,
+          qty: parseInt(newDocument.qty, 10),
+        }),
+      });
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.href = url;
-    link.setAttribute("download", `putaway_docs_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    toast({
-      title: "Success",
-      description: "Putaway documents exported as CSV.",
-    });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create document');
+      }
+
+      toast({
+        title: 'Success',
+        description: 'New putaway document has been created.',
+      });
+      // Reset form and navigate to monitoring page
+      setNewDocument({ noDocument: '', qty: '', status: 'Pending', sku: '', barcode: '', brand: '', expDate: '', checkBy: '' });
+      router.push('/putaway/monitoring-document');
+    } catch (error: any) {
+       toast({
+        variant: 'destructive',
+        title: 'Error creating document',
+        description: error.message,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -307,14 +215,10 @@ export default function CreatePutawayPage() {
                 </div>
               </div>
               <div className="flex justify-end pt-4 space-x-2">
-                <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
-                <Button variant="outline" type="button" onClick={handleUploadClick}>
-                    <Upload className="mr-2 h-4 w-4" /> Upload
+                <Button type="submit" disabled={isSubmitting}>
+                   {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                   Submit
                 </Button>
-                <Button variant="outline" type="button" onClick={handleExport}>
-                    <Download className="mr-2 h-4 w-4" /> Export
-                </Button>
-                <Button type="submit">Submit</Button>
               </div>
             </form>
           </CardContent>
@@ -323,5 +227,3 @@ export default function CreatePutawayPage() {
     </MainLayout>
   );
 }
-
-    

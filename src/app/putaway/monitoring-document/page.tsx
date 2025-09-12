@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import {
   Card,
   CardContent,
@@ -19,16 +19,16 @@ import {
 } from '@/components/ui/table';
 import { MainLayout } from '@/components/layout/main-layout';
 import type { PutawayDocument } from '@/types/putaway-document';
-import { useLocalStorage } from '@/hooks/use-local-storage';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Pencil, Trash2, Upload, Download } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pencil, Trash2, Loader2, AlertCircle } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const statusVariantMap: { [key in PutawayDocument['status']]: "default" | "secondary" | "destructive" | "outline" } = {
     'Done': 'default',
@@ -36,18 +36,48 @@ const statusVariantMap: { [key in PutawayDocument['status']]: "default" | "secon
 };
 
 export default function MonitoringPutawayPage() {
-  const [documents, setDocuments] = useLocalStorage<PutawayDocument[]>('putawayDocuments', []);
+  const [documents, setDocuments] = useState<PutawayDocument[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState<PutawayDocument | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [searchDocument, setSearchDocument] = useState('');
   const [searchBarcode, setSearchBarcode] = useState('');
+
+  const fetchDocuments = useCallback(async () => {
+    try {
+        setLoading(true);
+        const response = await fetch('/api/putaway-documents');
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to fetch documents');
+        }
+        const data = await response.json();
+        setDocuments(data);
+        setError(null);
+    } catch (e: any) {
+        setError(e.message);
+        toast({
+            variant: "destructive",
+            title: "Error fetching data",
+            description: e.message,
+        });
+    } finally {
+        setLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    fetchDocuments();
+  }, [fetchDocuments]);
 
   const filteredDocuments = useMemo(() => {
     return documents.filter(doc => 
@@ -73,10 +103,15 @@ export default function MonitoringPutawayPage() {
   
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [rowsPerPage, documents, searchDocument, searchBarcode]);
+  }, [rowsPerPage, searchDocument, searchBarcode]);
 
   const handleOpenEditDialog = (doc: PutawayDocument) => {
-    setSelectedDoc({ ...doc });
+    // Ensure expDate is in yyyy-MM-dd format for the input
+    const formattedDoc = {
+        ...doc,
+        expDate: doc.expDate ? format(new Date(doc.expDate), 'yyyy-MM-dd') : ''
+    };
+    setSelectedDoc(formattedDoc);
     setEditDialogOpen(true);
   };
 
@@ -85,139 +120,75 @@ export default function MonitoringPutawayPage() {
     setDeleteDialogOpen(true);
   };
 
-  const handleSaveChanges = () => {
+  const handleSaveChanges = async () => {
     if (!selectedDoc) return;
-    setDocuments(documents.map(d => d.id === selectedDoc.id ? selectedDoc : d));
-    setEditDialogOpen(false);
-    setSelectedDoc(null);
-    toast({ title: "Success", description: "Document has been updated successfully." });
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`/api/putaway-documents/${selectedDoc.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(selectedDoc),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update document');
+      }
+
+      await fetchDocuments(); 
+      setEditDialogOpen(false);
+      setSelectedDoc(null);
+      toast({ title: "Success", description: "Document has been updated successfully." });
+    } catch (e: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Update Failed',
+        description: e.message,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleDeleteDoc = () => {
+  const handleDeleteDoc = async () => {
     if (!selectedDoc) return;
-    setDocuments(documents.filter(d => d.id !== selectedDoc.id));
-    setDeleteDialogOpen(false);
-    setSelectedDoc(null);
-    toast({ title: "Success", description: "Document has been deleted.", variant: "destructive" });
-  };
-
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const text = e.target?.result as string;
-        try {
-            const lines = text.split('\n').filter(line => line.trim() !== '');
-            const newDocs: PutawayDocument[] = [];
-            let maxId = documents.length > 0 ? Math.max(...documents.map(s => parseInt(s.id))) : 0;
-            
-            const headerLine = lines[0] || '';
-            const header = headerLine.toLowerCase().split(',').map(h => h.trim().replace(/"/g, ''));
-            const requiredHeaders = ['no. document', 'sku', 'barcode', 'brand', 'exp date', 'check by', 'qty', 'status'];
-            
-            if (!requiredHeaders.every(h => header.includes(h))) {
-              throw new Error('CSV file is missing required headers. Required headers are: ' + requiredHeaders.join(', '));
-            }
-
-            lines.slice(1).forEach((line, index) => {
-              if (!line.trim()) return; 
-
-              const values = line.split(',').map(s => s.trim());
-              
-              if(values.length < header.length) {
-                console.warn(`Skipping incomplete line ${index + 2}: ${line}`);
-                return;
-              }
-
-              const docData = header.reduce((obj, h, i) => {
-                const keyMap: { [key: string]: keyof PutawayDocument } = { 
-                    'no. document': 'noDocument', 
-                    'exp date': 'expDate', 
-                    'check by': 'checkBy',
-                    'sku': 'sku',
-                    'barcode': 'barcode',
-                    'brand': 'brand',
-                    'qty': 'qty',
-                    'status': 'status'
-                };
-                const key = keyMap[h as keyof typeof keyMap] || h;
-                if (key) {
-                  (obj as any)[key] = values[i];
-                }
-                return obj;
-              }, {} as Partial<PutawayDocument>);
-              
-              if (!docData.noDocument || !docData.sku || !docData.qty) {
-                 console.warn(`Skipping line with missing required fields ${index + 2}: ${line}`);
-                 return;
-              }
-
-              newDocs.push({
-                  id: String(++maxId),
-                  noDocument: docData.noDocument,
-                  date: new Date().toISOString(),
-                  qty: parseInt(String(docData.qty), 10) || 0,
-                  status: (docData.status || 'Pending') as 'Done' | 'Pending',
-                  sku: docData.sku,
-                  barcode: docData.barcode || '',
-                  brand: docData.brand || '',
-                  expDate: docData.expDate || '',
-                  checkBy: docData.checkBy || '',
-              });
-            });
-
-            setDocuments(prevDocs => [...prevDocs, ...newDocs]);
-            toast({
-                title: "Success",
-                description: `${newDocs.length} documents uploaded successfully.`,
-            });
-
-        } catch (error: any) {
-            toast({
-                variant: "destructive",
-                title: "Upload Failed",
-                description: error.message || "An error occurred while parsing the CSV file.",
-            });
+    setIsSubmitting(true);
+    try {
+        const response = await fetch(`/api/putaway-documents/${selectedDoc.id}`, {
+            method: 'DELETE',
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to delete document');
         }
-    };
-    reader.readAsText(file);
-    if (event.target) event.target.value = '';
-  };
+        
+        await fetchDocuments();
+        setDeleteDialogOpen(false);
+        setSelectedDoc(null);
+        toast({ title: "Success", description: "Document has been deleted.", variant: "destructive" });
 
-  const handleExport = () => {
-    const headers = ["No. Document", "SKU", "Barcode", "Brand", "EXP Date", "Check By", "QTY", "Status"];
-    
-    const rows = documents.length > 0
-      ? documents.map(d => [d.noDocument, d.sku, d.barcode, d.brand, d.expDate, d.checkBy, d.qty, d.status].map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))
-      : [];
-    
-    const csvContent = [headers.join(","), ...rows].join("\n");
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.href = url;
-    link.setAttribute("download", `putaway_docs_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    toast({
-      title: "Success",
-      description: "Putaway documents exported as CSV.",
-    });
+    } catch (e: any) {
+        toast({
+            variant: "destructive",
+            title: "Delete Failed",
+            description: e.message,
+        });
+    } finally {
+        setIsSubmitting(false);
+    }
   };
 
   return (
     <MainLayout>
       <div className="w-full space-y-6">
         <h1 className="text-2xl font-bold">Monitoring Document</h1>
+        {error && (
+            <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+            </Alert>
+        )}
         <Card>
           <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-6">
             <div className="flex-1">
@@ -237,15 +208,6 @@ export default function MonitoringPutawayPage() {
                     onChange={(e) => setSearchBarcode(e.target.value)}
                     className="flex-1 md:flex-auto md:w-auto"
                 />
-                <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
-                <Button variant="outline" size="icon" onClick={handleUploadClick}>
-                    <Upload className="h-4 w-4" />
-                    <span className="sr-only">Import</span>
-                </Button>
-                <Button variant="outline" size="icon" onClick={handleExport}>
-                    <Download className="h-4 w-4" />
-                    <span className="sr-only">Export</span>
-                </Button>
             </div>
           </CardHeader>
           <CardContent>
@@ -266,7 +228,13 @@ export default function MonitoringPutawayPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginatedDocs.length > 0 ? (
+                  {loading ? (
+                    <TableRow>
+                        <TableCell colSpan={10} className="h-24 text-center">
+                            <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+                        </TableCell>
+                    </TableRow>
+                  ) : paginatedDocs.length > 0 ? (
                     paginatedDocs.map((doc) => (
                       <TableRow key={doc.id}>
                         <TableCell className="font-medium">{doc.noDocument}</TableCell>
@@ -274,7 +242,7 @@ export default function MonitoringPutawayPage() {
                         <TableCell>{doc.sku}</TableCell>
                         <TableCell>{doc.barcode}</TableCell>
                         <TableCell>{doc.brand}</TableCell>
-                        <TableCell>{doc.expDate}</TableCell>
+                        <TableCell>{format(new Date(doc.expDate), 'dd/MM/yyyy')}</TableCell>
                         <TableCell>{doc.checkBy}</TableCell>
                         <TableCell>{doc.qty}</TableCell>
                         <TableCell>
@@ -356,7 +324,7 @@ export default function MonitoringPutawayPage() {
 
        {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
-          <DialogContent>
+          <DialogContent className="sm:max-w-md">
               <DialogHeader>
                   <DialogTitle>Edit Document</DialogTitle>
                   <DialogDescription>
@@ -409,7 +377,10 @@ export default function MonitoringPutawayPage() {
               )}
               <DialogFooter>
                   <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
-                  <Button onClick={handleSaveChanges}>Save Changes</Button>
+                  <Button onClick={handleSaveChanges} disabled={isSubmitting}>
+                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Save Changes
+                  </Button>
               </DialogFooter>
           </DialogContent>
       </Dialog>
@@ -425,12 +396,13 @@ export default function MonitoringPutawayPage() {
               </DialogHeader>
               <DialogFooter>
                   <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-                  <Button variant="destructive" onClick={handleDeleteDoc}>Delete</Button>
+                  <Button variant="destructive" onClick={handleDeleteDoc} disabled={isSubmitting}>
+                     {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Delete
+                  </Button>
               </DialogFooter>
           </DialogContent>
       </Dialog>
     </MainLayout>
   );
 }
-
-    
