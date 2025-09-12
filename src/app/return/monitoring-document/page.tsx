@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
@@ -29,7 +30,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useLocalStorage } from '@/hooks/use-local-storage';
 
 const statusVariantMap: { [key in ReturnDocument['status']]: "default" | "secondary" | "destructive" | "outline" } = {
     'Processed': 'default',
@@ -38,7 +38,7 @@ const statusVariantMap: { [key in ReturnDocument['status']]: "default" | "second
 };
 
 export default function MonitoringReturnPage() {
-  const [documents, setDocuments] = useLocalStorage<ReturnDocument[]>('return-documents', []);
+  const [documents, setDocuments] = useState<ReturnDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,12 +54,26 @@ export default function MonitoringReturnPage() {
   const [searchDocument, setSearchDocument] = useState('');
   const [searchBarcode, setSearchBarcode] = useState('');
 
-  useEffect(() => {
-    // Simulate loading
-    setTimeout(() => {
+   const fetchDocuments = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/return-documents');
+      if (!response.ok) {
+        throw new Error('Failed to fetch documents');
+      }
+      const data = await response.json();
+      setDocuments(data);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchDocuments();
+  }, [fetchDocuments]);
 
   const filteredDocuments = useMemo(() => {
     return documents.filter(doc => 
@@ -97,20 +111,50 @@ export default function MonitoringReturnPage() {
     setDeleteDialogOpen(true);
   };
 
-  const handleSaveChanges = () => {
+  const handleSaveChanges = async () => {
     if (!selectedDoc) return;
-    setDocuments(documents.map(d => d.id === selectedDoc.id ? selectedDoc : d));
-    setEditDialogOpen(false);
-    setSelectedDoc(null);
-    toast({ title: "Success", description: "Document has been updated successfully." });
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`/api/return-documents/${selectedDoc.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(selectedDoc)
+      });
+      if (!response.ok) throw new Error('Failed to update document');
+      
+      await fetchDocuments();
+      setEditDialogOpen(false);
+      setSelectedDoc(null);
+      toast({ title: "Success", description: "Document has been updated successfully." });
+    } catch (error) {
+      toast({ variant: 'destructive', title: "Error", description: "Could not update document." });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleDeleteDoc = () => {
+  const handleDeleteDoc = async () => {
     if (!selectedDoc) return;
-    setDocuments(documents.filter(d => d.id !== selectedDoc.id));
-    setDeleteDialogOpen(false);
-    setSelectedDoc(null);
-    toast({ title: "Success", description: "Document has been deleted.", variant: "destructive" });
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`/api/return-documents/${selectedDoc.id}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error('Failed to delete document');
+
+      await fetchDocuments();
+      setDeleteDialogOpen(false);
+      setSelectedDoc(null);
+      toast({ title: "Success", description: "Document has been deleted.", variant: "destructive" });
+
+      if (paginatedDocs.length === 1 && currentPage > 1) {
+        setCurrentPage(currentPage - 1);
+      }
+    } catch (error) {
+      toast({ variant: 'destructive', title: "Error", description: "Could not delete document." });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
