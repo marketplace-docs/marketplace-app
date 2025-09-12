@@ -56,7 +56,6 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
        <SheetHeader className="p-2 border-b md:hidden">
-          <SheetTitle className="sr-only">Sidebar Menu</SheetTitle>
           <div className="flex items-center justify-between">
             <AppLogo />
              <Button variant="ghost" size="icon" onClick={toggleSidebar}>
@@ -130,3 +129,5 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
+
+    
