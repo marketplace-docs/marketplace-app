@@ -16,15 +16,15 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const { store_name, platform } = await request.json();
+  const { marketplace_name, store_name, platform } = await request.json();
 
-  if (!store_name || !platform) {
-    return NextResponse.json({ error: 'store_name and platform are required' }, { status: 400 });
+  if (!store_name || !platform || !marketplace_name) {
+    return NextResponse.json({ error: 'marketplace_name, store_name and platform are required' }, { status: 400 });
   }
 
   const { data, error } = await supabase
     .from('marketplace_stores')
-    .insert([{ store_name, platform, marketplace_name: store_name }]) // Menambahkan marketplace_name
+    .insert([{ marketplace_name, store_name, platform }])
     .select()
     .single();
 

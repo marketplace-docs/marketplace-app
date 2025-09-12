@@ -22,6 +22,7 @@ type NewStore = Omit<MarketplaceStore, 'id' | 'created_at'>;
 
 export default function CreateMarketplacePage() {
   const [newStore, setNewStore] = React.useState<NewStore>({
+    marketplace_name: '',
     store_name: '',
     platform: '',
   });
@@ -36,7 +37,7 @@ export default function CreateMarketplacePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newStore.store_name || !newStore.platform) {
+    if (!newStore.store_name || !newStore.platform || !newStore.marketplace_name) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -51,11 +52,7 @@ export default function CreateMarketplacePage() {
       const response = await fetch('/api/marketplace-stores', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          store_name: newStore.store_name,
-          platform: newStore.platform,
-          marketplace_name: newStore.store_name, // Menggunakan store_name sebagai fallback
-        }),
+        body: JSON.stringify(newStore),
       });
 
       if (!response.ok) {
@@ -68,7 +65,7 @@ export default function CreateMarketplacePage() {
         title: 'Success',
         description: 'New store has been created.',
       });
-      setNewStore({ store_name: '', platform: '' });
+      setNewStore({ marketplace_name: '', store_name: '', platform: '' });
       router.push('/marketplace/monitoring-store');
     } catch (error: any) {
       toast({
@@ -94,6 +91,16 @@ export default function CreateMarketplacePage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="marketplace_name">Marketplace Name</Label>
+                <Input
+                  id="marketplace_name"
+                  name="marketplace_name"
+                  placeholder="Enter marketplace name"
+                  value={newStore.marketplace_name}
+                  onChange={handleInputChange}
+                />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="store_name">Store Name</Label>
                 <Input
