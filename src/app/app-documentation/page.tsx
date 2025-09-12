@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { NAV_LINKS } from "@/lib/constants";
 import Link from "next/link";
+import { Route } from "lucide-react";
 
 const techStack = ["Next.js", "React", "TypeScript", "Tailwind CSS", "ShadCN UI", "Genkit", "Firebase"];
 
@@ -68,6 +69,19 @@ export default function AppDocumentationPage() {
                                     )}
                                 </div>
                             ))}
+                             <div>
+                                <h3 className="font-semibold text-md mb-2 flex items-center gap-2">
+                                    <Route className="h-5 w-5 text-primary" />
+                                    API Routes
+                                </h3>
+                                <ul className="space-y-1 list-disc list-inside text-sm text-muted-foreground pl-2">
+                                    <li>
+                                        <Link href="/app-documentation/api-routes" className="hover:text-primary hover:underline">
+                                            API Documentation
+                                        </Link>
+                                    </li>
+                                </ul>
+                            </div>
                         </div>
                     </CardContent>
                 </Card>

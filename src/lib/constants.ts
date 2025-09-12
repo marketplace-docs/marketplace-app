@@ -1,6 +1,6 @@
 
 
-import { LayoutDashboard, ListTodo, Store, FileText, Settings, type LucideIcon, Briefcase, Users, Archive, BarChart3, AppWindow, BookText, Database, History, FilePlus, Eye, File, PieChart, Users2, Shield, Menu, Monitor, Undo2 } from 'lucide-react';
+import { LayoutDashboard, ListTodo, Store, FileText, Settings, type LucideIcon, Briefcase, Users, Archive, BarChart3, AppWindow, BookText, Database, History, FilePlus, Eye, File, PieChart, Users2, Shield, Menu, Monitor, Undo2, Route } from 'lucide-react';
 
 export type NavLink = {
     href: string;
