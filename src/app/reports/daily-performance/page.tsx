@@ -9,13 +9,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DateRange } from "react-day-picker";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Download, Smile, Frown } from "lucide-react";
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Download, Smile, Frown, Pencil, Save } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { format, addDays } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { performanceData, PerformanceData } from '@/lib/daily-performance-data';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { Input } from '@/components/ui/input';
 
 const jobDescriptions = ["All", "Picker Marketplace", "Admin Wave", "Packer Marketplace"];
 
@@ -36,7 +37,7 @@ const ResultBadge = ({ result }: { result: 'BERHASIL' | 'GAGAL' }) => {
 
 
 export default function DailyPerformancePage() {
-    const [data] = useState<PerformanceData[]>(performanceData);
+    const [data, setData] = useState<PerformanceData[]>(performanceData);
     const [dateRange, setDateRange] = useState<DateRange | undefined>({
         from: new Date(2025, 0, 2),
         to: new Date(2025, 0, 2),
@@ -45,6 +46,8 @@ export default function DailyPerformancePage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const { toast } = useToast();
+    const [isEditing, setIsEditing] = useState(false);
+    const [editedItems, setEditedItems] = useState<Record<number, Partial<Pick<PerformanceData, 'taskDaily' | 'totalItems'>>>>({});
 
     const filteredData = useMemo(() => {
         let filtered = data;
@@ -111,6 +114,39 @@ export default function DailyPerformancePage() {
         toast({ title: "Success", description: "Data has been exported to CSV." });
     };
 
+    const handleEditToggle = () => {
+      if (isEditing) {
+          const updatedData = data.map(item => {
+              if (editedItems[item.id]) {
+                  const { taskDaily, totalItems } = editedItems[item.id];
+                  return {
+                      ...item,
+                      taskDaily: taskDaily ?? item.taskDaily,
+                      totalItems: totalItems ?? item.totalItems,
+                  };
+              }
+              return item;
+          });
+          setData(updatedData);
+          setEditedItems({});
+          toast({ title: "Success", description: "Performance data has been updated." });
+      }
+      setIsEditing(!isEditing);
+    };
+
+    const handleItemChange = (id: number, field: 'taskDaily' | 'totalItems', value: string) => {
+        const numericValue = parseInt(value, 10);
+        if (!isNaN(numericValue)) {
+            setEditedItems(prev => ({
+                ...prev,
+                [id]: {
+                    ...prev[id],
+                    [field]: numericValue
+                }
+            }));
+        }
+    };
+
     return (
         <MainLayout>
              <div className="w-full space-y-6">
@@ -124,8 +160,16 @@ export default function DailyPerformancePage() {
                 
                 <Card>
                     <CardHeader>
-                        <CardTitle>Performance Report</CardTitle>
-                        <CardDescription>Detailed daily performance metrics of team members.</CardDescription>
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <CardTitle>Performance Report</CardTitle>
+                                <CardDescription>Detailed daily performance metrics of team members.</CardDescription>
+                            </div>
+                            <Button variant="outline" onClick={handleEditToggle}>
+                                {isEditing ? <Save className="mr-2 h-4 w-4" /> : <Pencil className="mr-2 h-4 w-4" />}
+                                {isEditing ? 'Save' : 'Edit'}
+                            </Button>
+                        </div>
                          <div className="flex items-center gap-4 pt-4">
                             <Popover>
                                 <PopoverTrigger asChild>
@@ -201,8 +245,26 @@ export default function DailyPerformancePage() {
                                                 <TableCell>{format(new Date(item.date), "d MMM yyyy")}</TableCell>
                                                 <TableCell>{item.month}</TableCell>
                                                 <TableCell className="font-medium">{item.name}</TableCell>
-                                                <TableCell>{item.taskDaily.toLocaleString()}</TableCell>
-                                                <TableCell>{item.totalItems.toLocaleString()}</TableCell>
+                                                <TableCell>
+                                                    {isEditing ? (
+                                                        <Input 
+                                                          type="number"
+                                                          value={editedItems[item.id]?.taskDaily ?? item.taskDaily}
+                                                          onChange={(e) => handleItemChange(item.id, 'taskDaily', e.target.value)}
+                                                          className="h-8 w-24"
+                                                        />
+                                                    ) : item.taskDaily.toLocaleString()}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {isEditing ? (
+                                                        <Input 
+                                                          type="number"
+                                                          value={editedItems[item.id]?.totalItems ?? item.totalItems}
+                                                          onChange={(e) => handleItemChange(item.id, 'totalItems', e.target.value)}
+                                                          className="h-8 w-24"
+                                                        />
+                                                    ) : item.totalItems.toLocaleString()}
+                                                </TableCell>
                                                 <TableCell><Badge variant="secondary">{item.jobDesc}</Badge></TableCell>
                                                 <TableCell>{item.shift}</TableCell>
                                                 <TableCell>{item.target.toLocaleString()}</TableCell>
@@ -269,3 +331,5 @@ export default function DailyPerformancePage() {
         </MainLayout>
     );
 }
+
+    
