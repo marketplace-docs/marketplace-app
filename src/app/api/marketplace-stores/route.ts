@@ -18,8 +18,8 @@ export async function GET() {
 export async function POST(request: Request) {
   const { marketplace_name, store_name, platform } = await request.json();
 
-  if (!store_name || !platform || !marketplace_name) {
-    return NextResponse.json({ error: 'marketplace_name, store_name and platform are required' }, { status: 400 });
+  if (!marketplace_name || !store_name || !platform) {
+    return NextResponse.json({ error: 'marketplace_name, store_name, and platform are required' }, { status: 400 });
   }
 
   const { data, error } = await supabase
