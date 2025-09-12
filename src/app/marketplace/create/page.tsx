@@ -22,12 +22,14 @@ import type { MarketplaceStore } from '@/types/marketplace-store';
 type NewStore = {
   marketplace_name: string;
   store_name: string;
+  platform: string;
 };
 
 export default function CreateMarketplacePage() {
   const [newStore, setNewStore] = React.useState<NewStore>({
     marketplace_name: '',
     store_name: '',
+    platform: '',
   });
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const { toast } = useToast();
@@ -41,7 +43,7 @@ export default function CreateMarketplacePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newStore.marketplace_name || !newStore.store_name) {
+    if (!newStore.marketplace_name || !newStore.store_name || !newStore.platform) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -66,7 +68,7 @@ export default function CreateMarketplacePage() {
       title: 'Success',
       description: 'New store has been created locally.',
     });
-    setNewStore({ marketplace_name: '', store_name: '' });
+    setNewStore({ marketplace_name: '', store_name: '', platform: '' });
     router.push('/marketplace/monitoring-store');
   };
 
@@ -100,6 +102,16 @@ export default function CreateMarketplacePage() {
                   name="store_name"
                   placeholder="Enter store name"
                   value={newStore.store_name}
+                  onChange={handleInputChange}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="platform">Platform</Label>
+                <Input
+                  id="platform"
+                  name="platform"
+                  placeholder="Enter platform"
+                  value={newStore.platform}
                   onChange={handleInputChange}
                 />
               </div>

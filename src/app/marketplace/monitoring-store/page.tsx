@@ -52,7 +52,8 @@ export default function MonitoringStorePage() {
   const filteredStores = useMemo(() => {
     return stores.filter(store => 
       store.store_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      store.marketplace_name.toLowerCase().includes(searchTerm.toLowerCase())
+      store.marketplace_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (store.platform && store.platform.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   }, [stores, searchTerm]);
 
@@ -134,6 +135,7 @@ export default function MonitoringStorePage() {
                   <TableRow>
                     <TableHead>Marketplace</TableHead>
                     <TableHead>Store Name</TableHead>
+                    <TableHead>Platform</TableHead>
                     <TableHead>Created At</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -141,7 +143,7 @@ export default function MonitoringStorePage() {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                        <TableCell colSpan={4} className="h-24 text-center">
+                        <TableCell colSpan={5} className="h-24 text-center">
                             <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                         </TableCell>
                     </TableRow>
@@ -150,6 +152,7 @@ export default function MonitoringStorePage() {
                       <TableRow key={store.id}>
                         <TableCell className="font-medium">{store.marketplace_name}</TableCell>
                         <TableCell>{store.store_name}</TableCell>
+                        <TableCell>{store.platform}</TableCell>
                         <TableCell>{format(new Date(store.created_at), "eee, dd/MMM/yyyy HH:mm")}</TableCell>
                         <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-2">
@@ -168,7 +171,7 @@ export default function MonitoringStorePage() {
                   ) : (
                     <TableRow>
                       <TableCell
-                        colSpan={4}
+                        colSpan={5}
                         className="h-24 text-center text-muted-foreground"
                       >
                         No stores found. Go to Create to add one.
@@ -238,6 +241,10 @@ export default function MonitoringStorePage() {
                       <div className="grid grid-cols-4 items-center gap-4">
                           <Label htmlFor="store_name" className="text-right">Store Name</Label>
                           <Input id="store_name" value={selectedStore.store_name} className="col-span-3" onChange={(e) => setSelectedStore({ ...selectedStore, store_name: e.target.value })} />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="platform" className="text-right">Platform</Label>
+                          <Input id="platform" value={selectedStore.platform || ''} className="col-span-3" onChange={(e) => setSelectedStore({ ...selectedStore, platform: e.target.value })} />
                       </div>
                   </div>
               )}
