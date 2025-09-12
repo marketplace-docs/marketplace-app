@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -27,10 +28,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useLocalStorage } from '@/hooks/use-local-storage';
 
 export default function MonitoringManpowerPage() {
-  const [tasks, setTasks] = useLocalStorage<AdminTask[]>('admin-tasks', []);
+  const [tasks, setTasks] = useState<AdminTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,12 +43,26 @@ export default function MonitoringManpowerPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   
-  useEffect(() => {
-    // Simulate loading
-    setTimeout(() => {
-        setLoading(false);
-    }, 500);
+  const fetchTasks = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/admin-tasks');
+      if (!response.ok) {
+        throw new Error('Failed to fetch tasks');
+      }
+      const data = await response.json();
+      setTasks(data);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchTasks();
+  }, [fetchTasks]);
 
   const totalPages = Math.ceil(tasks.length / rowsPerPage);
   const paginatedTasks = tasks.slice(
@@ -78,23 +92,49 @@ export default function MonitoringManpowerPage() {
     setDeleteDialogOpen(true);
   };
 
-  const handleSaveChanges = () => {
+  const handleSaveChanges = async () => {
     if (!selectedTask) return;
-    setTasks(tasks.map(t => t.id === selectedTask.id ? selectedTask : t));
-    setEditDialogOpen(false);
-    setSelectedTask(null);
-    toast({ title: "Success", description: "Task has been updated successfully." });
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`/api/admin-tasks/${selectedTask.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(selectedTask)
+      });
+      if (!response.ok) throw new Error('Failed to update task');
+      
+      await fetchTasks(); // Refetch tasks
+      setEditDialogOpen(false);
+      setSelectedTask(null);
+      toast({ title: "Success", description: "Task has been updated successfully." });
+    } catch (error) {
+      toast({ variant: 'destructive', title: "Error", description: "Could not update task." });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleDeleteTask = () => {
+  const handleDeleteTask = async () => {
     if (!selectedTask) return;
-    setTasks(tasks.filter(t => t.id !== selectedTask.id));
-    setDeleteDialogOpen(false);
-    setSelectedTask(null);
-    toast({ title: "Success", description: "Task has been deleted.", variant: "destructive" });
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`/api/admin-tasks/${selectedTask.id}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error('Failed to delete task');
 
-    if (paginatedTasks.length === 1 && currentPage > 1) {
+      await fetchTasks(); // Refetch tasks
+      setDeleteDialogOpen(false);
+      setSelectedTask(null);
+      toast({ title: "Success", description: "Task has been deleted.", variant: "destructive" });
+
+      if (paginatedTasks.length === 1 && currentPage > 1) {
         setCurrentPage(currentPage - 1);
+      }
+    } catch (error) {
+      toast({ variant: 'destructive', title: "Error", description: "Could not delete task." });
+    } finally {
+      setIsSubmitting(false);
     }
   };
   

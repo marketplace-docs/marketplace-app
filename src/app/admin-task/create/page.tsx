@@ -23,15 +23,9 @@ import { useToast } from '@/hooks/use-toast';
 import { MainLayout } from '@/components/layout/main-layout';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
-import { useLocalStorage } from '@/hooks/use-local-storage';
 import type { AdminTask } from '@/types/admin-task';
 
-type NewAdminTask = {
-    name: string;
-    job: string;
-    shift: string;
-    status: string;
-};
+type NewAdminTask = Omit<AdminTask, 'id' | 'date'>;
 
 export default function CreateTaskPage() {
   const [newTask, setNewTask] = React.useState<NewAdminTask>({
@@ -43,7 +37,6 @@ export default function CreateTaskPage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const { toast } = useToast();
   const router = useRouter();
-  const [tasks, setTasks] = useLocalStorage<AdminTask[]>('admin-tasks', []);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement>
@@ -69,24 +62,36 @@ export default function CreateTaskPage() {
     }
     
     setIsSubmitting(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    const newTaskWithId: AdminTask = {
-      id: Date.now(),
-      ...newTask,
-      date: new Date().toISOString(),
-    }
-
-    setTasks([...tasks, newTaskWithId]);
     
-    setIsSubmitting(false);
-    toast({
-        title: 'Success',
-        description: 'New task has been created locally.',
-    });
-    setNewTask({ name: '', job: '', shift: '', status: '' });
-    router.push('/admin-task/monitoring-manpower');
+    try {
+      const response = await fetch('/api/admin-tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newTask),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create task');
+      }
+      
+      toast({
+          title: 'Success',
+          description: 'New task has been created.',
+      });
+      setNewTask({ name: '', job: '', shift: '', status: '' });
+      router.push('/admin-task/monitoring-manpower');
+
+    } catch (error) {
+       toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Something went wrong while creating the task.',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
