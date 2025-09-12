@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -13,7 +13,7 @@ import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Download, Smile, F
 import { Calendar } from "@/components/ui/calendar";
 import { format, addDays } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { performanceData, PerformanceData } from '@/lib/daily-performance-data';
+import { performanceData as initialPerformanceData, PerformanceData } from '@/lib/daily-performance-data';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
@@ -37,7 +37,7 @@ const ResultBadge = ({ result }: { result: 'BERHASIL' | 'GAGAL' }) => {
 
 
 export default function DailyPerformancePage() {
-    const [data, setData] = useState<PerformanceData[]>(performanceData);
+    const [data, setData] = useState<PerformanceData[]>(initialPerformanceData);
     const [dateRange, setDateRange] = useState<DateRange | undefined>({
         from: new Date(2025, 0, 2),
         to: new Date(2025, 0, 2),
@@ -69,7 +69,7 @@ export default function DailyPerformancePage() {
         currentPage * rowsPerPage
     );
     
-    React.useEffect(() => {
+    useEffect(() => {
         setCurrentPage(1);
     }, [rowsPerPage, dateRange, jobFilter]);
 
@@ -83,7 +83,7 @@ export default function DailyPerformancePage() {
     };
 
     const handleExport = () => {
-        const headers = ["Date", "Month", "Name", "Task Daily", "Total Items", "Job-Desc", "Shift", "Target", "Target Item", "Task Performance", "Items Performance", "Result"];
+        const headers = ["Date", "Month", "Name", "Task Daily", "Total Items", "Job-Desc", "Shift", "Task Performance", "Items Performance", "Result"];
         const csvContent = [
             headers.join(","),
             ...filteredData.map(item => [
@@ -94,8 +94,6 @@ export default function DailyPerformancePage() {
                 item.totalItems,
                 item.jobDesc,
                 item.shift,
-                item.target,
-                item.targetItem,
                 `${item.taskPerformance}%`,
                 `${item.itemsPerformance}%`,
                 item.result
@@ -117,12 +115,21 @@ export default function DailyPerformancePage() {
     const handleEditToggle = () => {
       if (isEditing) {
           const updatedData = data.map(item => {
-              if (editedItems[item.id]) {
-                  const { taskDaily, totalItems } = editedItems[item.id];
+              const editedItem = editedItems[item.id];
+              if (editedItem) {
+                  const newTaskDaily = editedItem.taskDaily ?? item.taskDaily;
+                  const newTotalItems = editedItem.totalItems ?? item.totalItems;
+                  
+                  const taskPerformance = item.target > 0 ? Math.round((newTaskDaily / item.target) * 100) : 0;
+                  const itemsPerformance = item.targetItem > 0 ? Math.round((newTotalItems / item.targetItem) * 100) : 0;
+
                   return {
                       ...item,
-                      taskDaily: taskDaily ?? item.taskDaily,
-                      totalItems: totalItems ?? item.totalItems,
+                      taskDaily: newTaskDaily,
+                      totalItems: newTotalItems,
+                      taskPerformance: taskPerformance,
+                      itemsPerformance: itemsPerformance,
+                      result: taskPerformance >= 100 ? 'BERHASIL' : 'GAGAL',
                   };
               }
               return item;
@@ -142,6 +149,14 @@ export default function DailyPerformancePage() {
                 [id]: {
                     ...prev[id],
                     [field]: numericValue
+                }
+            }));
+        } else if (value === '') {
+             setEditedItems(prev => ({
+                ...prev,
+                [id]: {
+                    ...prev[id],
+                    [field]: 0
                 }
             }));
         }
