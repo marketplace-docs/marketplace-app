@@ -129,12 +129,36 @@ export default function DatabaseUserPage() {
         setDeleteDialogOpen(true);
     };
 
-    const handleSaveChanges = () => {
+    const handleSaveChanges = async () => {
         if (!selectedUser) return;
-        setUsers(users.map(u => u.id === selectedUser.id ? selectedUser : u));
-        setEditDialogOpen(false);
-        setSelectedUser(null);
-        toast({ title: "Success", description: "User has been updated successfully." });
+        setIsSubmitting(true);
+        try {
+             const response = await fetch(`/api/users/${selectedUser.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(selectedUser),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to update user');
+            }
+            
+            const updatedUser = await response.json();
+            setUsers(users.map(u => u.id === updatedUser.id ? updatedUser : u));
+            setEditDialogOpen(false);
+            setSelectedUser(null);
+            toast({ title: "Success", description: "User has been updated successfully." });
+
+        } catch (e: any) {
+             toast({
+                variant: "destructive",
+                title: "Update Failed",
+                description: e.message,
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
     };
     
     const handleAddUser = async () => {
@@ -174,17 +198,34 @@ export default function DatabaseUserPage() {
         }
     };
 
-    const handleDeleteUser = () => {
+    const handleDeleteUser = async () => {
         if (!selectedUser) return;
-        
-        setUsers(users.filter(u => u.id !== selectedUser.id));
-        
-        setDeleteDialogOpen(false);
-        setSelectedUser(null);
-        toast({ title: "Success", description: "User has been deleted.", variant: "destructive" });
+        setIsSubmitting(true);
+        try {
+            const response = await fetch(`/api/users/${selectedUser.id}`, {
+                method: 'DELETE',
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to delete user');
+            }
+            
+            setUsers(users.filter(u => u.id !== selectedUser.id));
+            setDeleteDialogOpen(false);
+            setSelectedUser(null);
+            toast({ title: "Success", description: "User has been deleted.", variant: "destructive" });
 
-        if (paginatedUsers.length === 1 && currentPage > 1) {
-            setCurrentPage(currentPage - 1);
+            if (paginatedUsers.length === 1 && currentPage > 1) {
+                setCurrentPage(currentPage - 1);
+            }
+        } catch (e: any) {
+            toast({
+                variant: "destructive",
+                title: "Delete Failed",
+                description: e.message,
+            });
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -412,7 +453,10 @@ export default function DatabaseUserPage() {
                     )}
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
-                        <Button onClick={handleSaveChanges}>Save Changes</Button>
+                        <Button onClick={handleSaveChanges} disabled={isSubmitting}>
+                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Save Changes
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -428,7 +472,10 @@ export default function DatabaseUserPage() {
                     </DialogHeader>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-                        <Button variant="destructive" onClick={handleDeleteUser}>Delete</Button>
+                        <Button variant="destructive" onClick={handleDeleteUser} disabled={isSubmitting}>
+                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Delete
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
