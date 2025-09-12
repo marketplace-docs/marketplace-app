@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 
-const jobDescriptions = ["All", "Picker Marketplace", "Admin Wave", "Packer Marketplace"];
+const jobDescriptions = ["All", "Picker Marketplace", "Admin Wave", "Packer Marketplace", "Picker", "Packer", "Putaway", "Interco", "Admin"];
 
 const ResultBadge = ({ result }: { result: 'BERHASIL' | 'GAGAL' }) => {
   const isSuccess = result === 'BERHASIL';
