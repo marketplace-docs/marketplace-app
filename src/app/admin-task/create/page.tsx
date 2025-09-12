@@ -21,20 +21,26 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { MainLayout } from '@/components/layout/main-layout';
-import type { AdminTask } from '@/types/admin-task';
-import { Upload, Download } from 'lucide-react';
-import { useLocalStorage } from '@/hooks/use-local-storage';
+import { useRouter } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
+
+type NewAdminTask = {
+    name: string;
+    job: string;
+    shift: string;
+    status: string;
+};
 
 export default function CreateTaskPage() {
-  const [tasks, setTasks] = useLocalStorage<AdminTask[]>('adminTasks', []);
-  const [newTask, setNewTask] = React.useState({
+  const [newTask, setNewTask] = React.useState<NewAdminTask>({
     name: '',
     job: '',
     shift: '',
     status: '',
   });
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const { toast } = useToast();
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const router = useRouter();
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement>
@@ -48,7 +54,7 @@ export default function CreateTaskPage() {
   };
 
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTask.name || !newTask.job || !newTask.shift || !newTask.status) {
       toast({
@@ -58,108 +64,36 @@ export default function CreateTaskPage() {
       });
       return;
     }
+    
+    setIsSubmitting(true);
+    try {
+      const response = await fetch('/api/admin-tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newTask),
+      });
 
-    const newId = tasks.length > 0 ? String(Math.max(...tasks.map(t => parseInt(t.id))) + 1) : '1';
-    const taskToAdd: AdminTask = {
-      id: newId,
-      name: newTask.name,
-      job: newTask.job,
-      shift: newTask.shift,
-      status: newTask.status,
-      date: new Date().toISOString(),
-    };
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create task');
+      }
 
-    setTasks([...tasks, taskToAdd]);
-    toast({
-      title: 'Success',
-      description: 'New task has been created.',
-    });
-    // Reset form
-    setNewTask({ name: '', job: '', shift: '', status: '' });
-  };
-
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const text = e.target?.result as string;
-        try {
-            const lines = text.split('\n').filter(line => line.trim() !== '');
-            const newTasks: AdminTask[] = [];
-            let maxId = tasks.length > 0 ? Math.max(...tasks.map(s => parseInt(s.id))) : 0;
-            
-            lines.forEach((line, index) => {
-              if (index === 0 && line.toLowerCase().includes('name,job,shift,status')) return; // Skip header
-
-              const [name, job, shift, status] = line.split(',').map(s => s.trim());
-
-              if (name && job && shift && status) {
-                  newTasks.push({
-                      id: String(++maxId),
-                      name,
-                      job,
-                      shift,
-                      status,
-                      date: new Date().toISOString()
-                  });
-              } else if (line.trim()) { // Only throw error for non-empty invalid lines
-                 throw new Error(`Invalid CSV format on line ${index + 1}: ${line}`);
-              }
-            });
-
-            setTasks(prevTasks => [...prevTasks, ...newTasks]);
-            toast({
-                title: "Success",
-                description: `${newTasks.length} tasks uploaded successfully.`,
-            });
-
-        } catch (error: any) {
-            toast({
-                variant: "destructive",
-                title: "Upload Failed",
-                description: error.message || "An error occurred while parsing the CSV file.",
-            });
-        }
-    };
-    reader.readAsText(file);
-    // Reset file input
-    if (event.target) {
-        event.target.value = '';
+      toast({
+        title: 'Success',
+        description: 'New task has been created.',
+      });
+      // Reset form and navigate to monitoring page
+      setNewTask({ name: '', job: '', shift: '', status: '' });
+      router.push('/admin-task/monitoring-manpower');
+    } catch (error: any) {
+       toast({
+        variant: 'destructive',
+        title: 'Error creating task',
+        description: error.message,
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-  };
-
-  const handleExport = () => {
-    const headers = ["Name", "Job", "Shift", "Status"];
-    
-    // For template, we can just export headers. If there is data, we export data.
-    const rows = tasks.length > 0
-      ? tasks.map(t => [t.name, t.job, t.shift, t.status].join(","))
-      : [];
-    
-    const csvContent = [
-        headers.join(","),
-        ...rows
-    ].join("\n");
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.href = url;
-    link.setAttribute("download", `tasks_export_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    toast({
-      title: "Success",
-      description: "Tasks exported as CSV.",
-    });
   };
 
   return (
@@ -230,14 +164,10 @@ export default function CreateTaskPage() {
                 </div>
               </div>
               <div className="flex justify-end pt-4 space-x-2">
-                 <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
-                 <Button variant="outline" type="button" onClick={handleUploadClick}>
-                    <Upload className="mr-2 h-4 w-4" /> Upload
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Submit
                 </Button>
-                <Button variant="outline" type="button" onClick={handleExport}>
-                    <Download className="mr-2 h-4 w-4" /> Export
-                </Button>
-                <Button type="submit">Submit</Button>
               </div>
             </form>
           </CardContent>
