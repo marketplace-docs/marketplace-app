@@ -9,9 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DateRange } from "react-day-picker";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Download, Smile, Frown, Pencil, Save, Plus } from "lucide-react";
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Download, Smile, Frown, Pencil, Save, Plus, Upload } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
-import { format, addDays, differenceInDays } from "date-fns";
+import { format, addDays, differenceInDays, parse } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { performanceData as initialPerformanceData, PerformanceData } from '@/lib/daily-performance-data';
 import { cn } from '@/lib/utils';
@@ -54,6 +54,7 @@ export default function DailyPerformancePage() {
     const { toast } = useToast();
     const [isEditing, setIsEditing] = useState(false);
     const [editedItems, setEditedItems] = useState<Record<number, Partial<Pick<PerformanceData, 'taskDaily' | 'totalItems'>>>>({});
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
 
     const [isAddDialogOpen, setAddDialogOpen] = useState(false);
     const [newEntry, setNewEntry] = useState<NewPerformanceData>({
@@ -141,6 +142,85 @@ export default function DailyPerformancePage() {
         URL.revokeObjectURL(url);
         toast({ title: "Success", description: "Data has been exported to CSV." });
     };
+
+    const handleUploadClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const text = e.target?.result as string;
+            try {
+                const lines = text.split('\n').filter(line => line.trim() !== '');
+                const newEntries: PerformanceData[] = [];
+                let maxId = data.length > 0 ? Math.max(...data.map(item => item.id)) : 0;
+                
+                const header = lines[0].split(',').map(h => h.trim().toLowerCase());
+                const requiredHeaders = ['date', 'name', 'task daily', 'total items', 'job-desc', 'shift'];
+                if(!requiredHeaders.every(h => header.includes(h))) {
+                    throw new Error(`Invalid CSV headers. Required: ${requiredHeaders.join(', ')}`);
+                }
+
+                lines.slice(1).forEach((line, index) => {
+                    const values = line.split(',');
+                    const entry: { [key: string]: string } = {};
+                    header.forEach((h, i) => entry[h] = values[i]?.trim());
+                    
+                    const entryDate = parse(entry.date, 'dd MMMM yyyy', new Date());
+                    if (isNaN(entryDate.getTime())) {
+                        console.warn(`Skipping line with invalid date: ${line}`);
+                        return;
+                    }
+
+                    const taskDaily = parseInt(entry['task daily'], 10);
+                    const totalItems = parseInt(entry['total items'], 10);
+
+                    if (entry.name && !isNaN(taskDaily) && !isNaN(totalItems) && entry['job-desc'] && entry.shift) {
+                        const target = 400; // Mock target
+                        const targetItem = 1000; // Mock target item
+                        const taskPerformance = target > 0 ? Math.round((taskDaily / target) * 100) : 0;
+                        const itemsPerformance = targetItem > 0 ? Math.round((totalItems / targetItem) * 100) : 0;
+
+                        newEntries.push({
+                            id: ++maxId,
+                            date: entryDate.toISOString(),
+                            month: format(entryDate, 'MMMM - yy'),
+                            name: entry.name,
+                            taskDaily: taskDaily,
+                            totalItems: totalItems,
+                            jobDesc: entry['job-desc'] as any,
+                            shift: entry.shift as any,
+                            target: target,
+                            targetItem: targetItem,
+                            taskPerformance: taskPerformance,
+                            itemsPerformance: itemsPerformance,
+                            result: taskPerformance >= 100 ? 'BERHASIL' : 'GAGAL',
+                        });
+                    }
+                });
+
+                setData(prev => [...prev, ...newEntries]);
+                toast({
+                    title: "Success",
+                    description: `${newEntries.length} entries uploaded successfully.`,
+                });
+
+            } catch (error: any) {
+                toast({
+                    variant: "destructive",
+                    title: "Upload Failed",
+                    description: error.message || "Failed to parse CSV file.",
+                });
+            }
+        };
+        reader.readAsText(file);
+        if (event.target) event.target.value = '';
+    };
+
 
     const handleEditToggle = () => {
       if (isEditing) {
@@ -247,6 +327,11 @@ export default function DailyPerformancePage() {
                 <div className="flex justify-between items-center">
                     <h1 className="text-2xl font-bold">Performance Report</h1>
                     <div className="flex gap-2">
+                        <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
+                        <Button variant="outline" onClick={handleUploadClick}>
+                            <Upload className="mr-2 h-4 w-4" />
+                            Upload
+                        </Button>
                         <Dialog open={isAddDialogOpen} onOpenChange={setAddDialogOpen}>
                             <DialogTrigger asChild>
                                 <Button variant="outline">
@@ -485,3 +570,4 @@ export default function DailyPerformancePage() {
         </MainLayout>
     );
 }
+
