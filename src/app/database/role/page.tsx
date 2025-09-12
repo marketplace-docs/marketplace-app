@@ -19,8 +19,12 @@ import {
 } from '@/components/ui/table';
 
 const roles = [
-  { role: 'Super Admin', title: 'Leader, Supervisor & Manager' },
-  { role: 'Admin', title: 'Reguler' },
+    { role: 'Super Admin', title: 'Akses penuh, bisa manage semua user, role, permission, dan konfigurasi sistem.' },
+    { role: 'Admin / Leader', title: 'Bisa mengatur tim, monitoring task, approval tertentu, tapi tidak bisa ubah konfigurasi global.' },
+    { role: 'Supervisor', title: 'Kontrol operasional harian, monitoring manpower, report, task management.' },
+    { role: 'Operator / Staff', title: 'Hanya bisa akses fitur sesuai job role (misalnya input OOS, print picklist, update status).' },
+    { role: 'Viewer / Auditor', title: 'Hanya bisa melihat data & laporan tanpa bisa mengubah.' },
+    { role: 'CX / Return Handler', title: 'Khusus menangani klaim barang, damaged/lost, komunikasi ke customer.' },
 ];
 
 export default function RolePage() {
