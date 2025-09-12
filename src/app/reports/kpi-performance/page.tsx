@@ -71,16 +71,19 @@ const PerformanceRoleCard = ({ role }: { role: 'Picker' | 'Packer' | 'Putaway' |
 
     const stats = useMemo(() => {
         const dataForStats = filteredData;
+        const totalSku = new Set(dataForStats.map(d => d.totalItems > 0)).size;
         return {
             totalManpower: new Set(dataForStats.map(d => d.name)).size,
             totalOrders: dataForStats.reduce((acc, curr) => acc + curr.taskDaily, 0),
-            totalSku: dataForStats.reduce((acc, curr) => acc + curr.totalItems, 0),
+            totalSku: totalSku,
             avg: dataForStats.length > 0 ? (dataForStats.reduce((acc, curr) => acc + curr.taskDaily, 0) / dataForStats.length) : 0,
             totalItems: dataForStats.reduce((acc, curr) => acc + curr.totalItems, 0),
+            totalQty: dataForStats.reduce((acc, curr) => acc + curr.totalItems, 0),
         }
     }, [filteredData]);
     
     const isDispatcher = role === 'Admin' || role === 'Putaway' || role === 'Interco';
+    const isPutaway = role === 'Putaway';
 
 
     const StatDisplay = ({ label, value }: { label: string, value: string | number }) => (
@@ -96,9 +99,11 @@ const PerformanceRoleCard = ({ role }: { role: 'Picker' | 'Packer' | 'Putaway' |
                 <div className="flex justify-between items-center pb-4 border-b">
                     <div className="grid grid-cols-5 gap-4 w-full text-center">
                        <StatDisplay label={role} value={stats.totalManpower} />
-                       <StatDisplay label="Order" value={stats.totalOrders} />
+                       <StatDisplay label={isPutaway ? "Document" : "Order"} value={stats.totalOrders} />
+                       {isPutaway && <StatDisplay label="SKU" value={stats.totalSku} />}
+                       {isPutaway && <StatDisplay label="Qty" value={stats.totalQty} />}
                        {!isDispatcher && <StatDisplay label="AVG" value={stats.avg.toFixed(0)} />}
-                       {!isDispatcher && <StatDisplay label="ITEM" value={stats.totalItems} />}
+                       {!isDispatcher && !isPutaway && <StatDisplay label="ITEM" value={stats.totalItems} />}
                     </div>
                 </div>
                  <div className="flex justify-between items-center pt-4 text-sm">
@@ -157,7 +162,7 @@ const PerformanceRoleCard = ({ role }: { role: 'Picker' | 'Packer' | 'Putaway' |
                     <TableHeader>
                         <TableRow>
                             <TableHead>Name</TableHead>
-                            <TableHead>Orders</TableHead>
+                            <TableHead>{isPutaway ? "Document" : "Orders"}</TableHead>
                             {!isDispatcher && <TableHead>Item</TableHead>}
                             {!isDispatcher && <TableHead>Avg</TableHead>}
                         </TableRow>
@@ -168,7 +173,7 @@ const PerformanceRoleCard = ({ role }: { role: 'Picker' | 'Packer' | 'Putaway' |
                                 <TableRow key={item.id}>
                                     <TableCell>{item.name}</TableCell>
                                     <TableCell>{item.taskDaily.toLocaleString()}</TableCell>
-                                    {!isDispatcher && <TableCell>{item.totalItems.toLocaleString()}</TableCell>}
+                                    {!isDispatcher && !isPutaway && <TableCell>{item.totalItems.toLocaleString()}</TableCell>}
                                     {!isDispatcher && <TableCell>{((item.taskDaily / (filteredData.length || 1))).toFixed(0)}</TableCell>}
                                 </TableRow>
                             ))
