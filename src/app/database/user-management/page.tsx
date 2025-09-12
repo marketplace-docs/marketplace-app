@@ -43,8 +43,6 @@ import { useToast } from "@/hooks/use-toast";
 import { MainLayout } from "@/components/layout/main-layout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuth } from "@/hooks/use-auth";
-import { useLocalStorage } from "@/hooks/use-local-storage";
-
 
 type User = {
     id: number;
@@ -56,14 +54,6 @@ type User = {
 
 type NewUser = Omit<User, 'id'>;
 
-const initialUsers: User[] = [
-    { id: 1, name: 'Arlan Saputra', email: 'arlan.saputra@marketplace.com', status: 'Leader', role: 'Super Admin' },
-    { id: 2, name: 'Rudi Setiawan', email: 'rudi.setiawan@marketplace.com', status: 'Reguler', role: 'Admin' },
-    { id: 3, name: 'Nova Aurelia', email: 'nova.aurelia@marketplace.com', status: 'Reguler', role: 'Admin' },
-    { id: 4, name: 'Nurul Tanzilla', email: 'nurul.tanzilla@marketplace.com', status: 'Event', role: 'Event Staff' },
-    { id: 5, name: 'Regina Rifana', email: 'regina.rifana@marketplace.com', status: 'Leader', role: 'Captain' },
-];
-
 const statusVariantMap: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
     'Leader': 'destructive',
     'Reguler': 'default',
@@ -72,7 +62,9 @@ const statusVariantMap: { [key: string]: "default" | "secondary" | "destructive"
 
 export default function DatabaseUserPage() {
     const { user: currentUser } = useAuth();
-    const [users, setUsers] = useLocalStorage<User[]>('users', initialUsers);
+    const [users, setUsers] = useState<User[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     
     const [isAddDialogOpen, setAddDialogOpen] = useState(false);
     const [isEditDialogOpen, setEditDialogOpen] = useState(false);
@@ -87,6 +79,32 @@ export default function DatabaseUserPage() {
     const [rowsPerPage, setRowsPerPage] = useState(10); 
 
     const isSuperAdmin = currentUser ? currentUser.role === 'Super Admin' : false;
+
+    const fetchUsers = useCallback(async () => {
+        try {
+            setLoading(true);
+            const response = await fetch('/api/users');
+            if (!response.ok) {
+                throw new Error('Failed to fetch users');
+            }
+            const data = await response.json();
+            setUsers(data);
+            setError(null);
+        } catch (e: any) {
+            setError(e.message);
+            toast({
+                variant: "destructive",
+                title: "Error fetching data",
+                description: e.message,
+            });
+        } finally {
+            setLoading(false);
+        }
+    }, [toast]);
+
+    useEffect(() => {
+        fetchUsers();
+    }, [fetchUsers]);
 
     const totalPages = Math.ceil(users.length / rowsPerPage);
     const paginatedUsers = users.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
@@ -206,6 +224,13 @@ export default function DatabaseUserPage() {
                     </DialogContent>
                 </Dialog>
             </div>
+            {error && (
+                 <Alert variant="destructive" className="mb-4">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Error</AlertTitle>
+                    <AlertDescription>{error}</AlertDescription>
+                </Alert>
+            )}
             <Card>
                 <CardHeader>
                     <CardTitle>Marketplace Team Work</CardTitle>
@@ -223,7 +248,13 @@ export default function DatabaseUserPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {paginatedUsers.length > 0 ? (
+                            {loading ? (
+                                <TableRow>
+                                    <TableCell colSpan={5} className="h-24 text-center">
+                                        <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+                                    </TableCell>
+                                </TableRow>
+                            ) : paginatedUsers.length > 0 ? (
                                 paginatedUsers.map((user) => (
                                     <TableRow key={user.id}>
                                         <TableCell className="font-medium">{user.name}</TableCell>
