@@ -89,11 +89,11 @@ export default function ProductOutPage() {
                 setNewDocument(prev => ({ ...prev, sku: foundStock.sku, expDate: foundStock.expDate }));
             } else {
                 setAvailableStock(null);
-                setNewDocument(prev => ({ ...prev, sku: '' }));
+                setNewDocument(prev => ({ ...prev, sku: '', expDate: '' }));
             }
         } else {
             setAvailableStock(null);
-            setNewDocument(prev => ({ ...prev, sku: '' }));
+            setNewDocument(prev => ({ ...prev, sku: '', expDate: '' }));
         }
     }, [newDocument.barcode, productInStock]);
 
@@ -198,7 +198,7 @@ export default function ProductOutPage() {
                                     </div>
                                     <div className="grid grid-cols-4 items-center gap-4">
                                         <Label htmlFor="expDate" className="text-right">EXP Date</Label>
-                                        <Input id="expDate" name="expDate" type="date" value={newDocument.expDate} onChange={handleInputChange} className="col-span-3" />
+                                        <Input id="expDate" name="expDate" type="date" value={newDocument.expDate} className="col-span-3 bg-muted" readOnly />
                                     </div>
                                     <div className="grid grid-cols-4 items-center gap-4">
                                         <Label htmlFor="qty" className="text-right">Quantity</Label>
