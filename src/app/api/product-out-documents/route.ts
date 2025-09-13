@@ -1,4 +1,3 @@
-
 'use server';
 
 import { supabaseService } from '@/lib/supabase-service';
@@ -31,6 +30,7 @@ export async function POST(request: Request) {
     .single();
 
   if (error) {
+    console.error('Supabase insert error in product-out-documents:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
