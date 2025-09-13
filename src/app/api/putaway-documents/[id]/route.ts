@@ -5,6 +5,33 @@ import { NextResponse } from 'next/server';
 import { logActivity } from '@/lib/logger';
 import { format } from 'date-fns';
 
+async function generateNewDocumentNumber(): Promise<string> {
+  const year = new Date().getFullYear();
+  const prefix = `UPD-EXP-${year}`;
+  
+  const { data, error } = await supabaseService
+    .from('putaway_documents')
+    .select('no_document')
+    .like('no_document', `${prefix}-%`)
+    .order('no_document', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (error && error.code !== 'PGRST116') { // PGRST116 is "No rows found"
+    console.error("Error fetching last document number:", error);
+    // Fallback in case of error
+    return `${prefix}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+  }
+
+  let newSeq = 1;
+  if (data) {
+    const lastSeq = parseInt(data.no_document.split('-').pop() || '0', 10);
+    newSeq = lastSeq + 1;
+  }
+  
+  return `${prefix}-${newSeq.toString().padStart(5, '0')}`;
+}
+
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const { id } = params;
   const body = await request.json();
@@ -28,15 +55,18 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       console.error("Supabase PATCH (update original) error:", updateError);
       return NextResponse.json({ error: "Failed to update original document: " + updateError.message }, { status: 500 });
     }
+    
+    // 2. Generate a new document number for the split-off quantity
+    const newDocNumber = await generateNewDocumentNumber();
 
-    // 2. Create a new document for the split-off quantity
+    // 3. Create a new document for the split-off quantity
     const { error: insertError } = await supabaseService
       .from('putaway_documents')
       .insert({
         ...originalDoc,
         id: undefined, // Let Supabase generate a new ID
         created_at: undefined,
-        no_document: `${originalDoc.no_document}-SPLIT`, // Mark as a split document
+        no_document: newDocNumber, // Use the new document number
         qty: qtyToUpdate,
         location: newLocation,
         exp_date: newExpDate,
@@ -58,13 +88,13 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       const newExpFormatted = format(new Date(newExpDate), 'dd/MM/yyyy');
 
       if (newLocation !== originalLocation) {
-        logDetails.push(`location from "${originalLocation}" to "${newLocation}"`);
+         logDetails.push(`location from "${originalLocation}" to "${newLocation}"`);
       }
       if (newExpFormatted !== oldExpFormatted) {
          logDetails.push(`exp date from ${oldExpFormatted} to ${newExpFormatted}`);
       }
 
-      const detailsString = `Split ${qtyToUpdate} items from Doc ID ${originalDoc.id}. Updated ${logDetails.join(' & ')}.`;
+      const detailsString = `Split ${qtyToUpdate} items from Doc ID ${originalDoc.id}. Updated ${logDetails.join(' & ')}. New Doc: ${newDocNumber}`;
 
       await logActivity({
         userName,
