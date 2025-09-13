@@ -193,7 +193,7 @@ export default function UpdateExpiredPage() {
                                             </TableHeader>
                                             <TableBody>
                                                 {originalBatches.map((batch) => (
-                                                    <TableRow key={`${batch.location}-${batch.exp_date}`} className={selectedBatch?.id === batch.id ? "bg-accent" : ""}>
+                                                    <TableRow key={`${batch.id}-${batch.location}-${batch.exp_date}`} className={selectedBatch?.id === batch.id ? "bg-accent" : ""}>
                                                         <TableCell>{batch.location}</TableCell>
                                                         <TableCell>{format(new Date(batch.exp_date), 'dd/MM/yyyy')}</TableCell>
                                                         <TableCell>{batch.stock.toLocaleString()}</TableCell>
