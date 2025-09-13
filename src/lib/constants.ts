@@ -1,6 +1,6 @@
 
 
-import { LayoutDashboard, ListTodo, Store, FileText, Settings, type LucideIcon, Briefcase, Users, Archive, BarChart3, AppWindow, BookText, Database, History, FilePlus, Eye, File, PieChart, Users2, Shield, Menu, Monitor, Undo2, Route, Package, PackagePlus, PackageMinus, Boxes } from 'lucide-react';
+import { LayoutDashboard, ListTodo, Store, FileText, Settings, type LucideIcon, Briefcase, Users, Archive, BarChart3, AppWindow, BookText, Database, History, FilePlus, Eye, File, PieChart, Users2, Shield, Menu, Monitor, Undo2, Route, Package, PackagePlus, PackageMinus, Boxes, CalendarClock } from 'lucide-react';
 
 export type NavLink = {
     href: string;
@@ -51,6 +51,11 @@ export const NAV_LINKS: NavLink[] = [
                 href: '/putaway/monitoring-document',
                 label: 'Monitoring Document',
                 icon: Eye,
+            },
+            {
+                href: '/putaway/update-expired',
+                label: 'Update Expired',
+                icon: CalendarClock,
             },
              {
                 href: '/putaway/task',
