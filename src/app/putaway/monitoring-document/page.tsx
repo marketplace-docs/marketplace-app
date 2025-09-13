@@ -337,7 +337,7 @@ export default function MonitoringPutawayPage() {
                     paginatedDocs.map((doc) => (
                       <TableRow key={doc.id}>
                         <TableCell className="font-medium">{doc.no_document}</TableCell>
-                        <TableCell>{format(new Date(doc.date), "eee, dd/MMM/yyyy HH:mm")}</TableCell>
+                        <TableCell>{doc.date ? format(new Date(doc.date), "eee, dd/MMM/yyyy HH:mm") : '-'}</TableCell>
                         <TableCell>{doc.sku}</TableCell>
                         <TableCell>{doc.barcode}</TableCell>
                         <TableCell>{doc.brand}</TableCell>
