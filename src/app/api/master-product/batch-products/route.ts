@@ -27,7 +27,7 @@ export async function GET() {
             { data: productOutData, error: productOutError }
         ] = await Promise.all([
             supabaseService.from('putaway_documents').select('sku, barcode, brand, exp_date, location, qty'),
-            supabaseService.from('product_out_documents').select('sku, barcode, exp_date, location, qty')
+            supabaseService.from('product_out_documents').select('sku, barcode, location, qty') // Corrected: Removed non-existent exp_date
         ]);
 
         if (putawayError) throw putawayError;
@@ -57,19 +57,19 @@ export async function GET() {
         });
         
         // Process outgoing stock from product_out_documents
-        (productOutData as Omit<ProductDoc, 'brand'>[]).forEach((doc: any) => {
+        (productOutData as Omit<ProductDoc, 'brand' | 'exp_date'>[]).forEach((doc: any) => {
              const key = doc.barcode;
              if (stockMap.has(key)) {
                 const existing = stockMap.get(key)!;
                 existing.stock -= doc.qty;
              } else {
                 // This case should ideally not happen if inventory is managed properly
-                // But as a fallback, we create an entry with negative stock
+                // But as a fallback, we create an entry with negative stock. Exp_date will be missing.
                  stockMap.set(key, {
                     sku: doc.sku,
                     barcode: doc.barcode,
-                    brand: '', // Brand is not in product_out, so we leave it empty
-                    exp_date: doc.exp_date, // Use exp_date from product_out_documents
+                    brand: '', 
+                    exp_date: new Date().toISOString(), // Fallback to current date
                     location: doc.location,
                     stock: -doc.qty,
                 });
