@@ -51,6 +51,22 @@ const apiRoutes = [
             { method: "DELETE", path: "/api/marketplace-stores/[id]", description: "Menghapus toko." },
         ]
     },
+    {
+        category: "Dokumen Putaway (Goods Receipt)",
+        endpoints: [
+            { method: "GET", path: "/api/putaway-documents", description: "Mengambil semua dokumen putaway." },
+            { method: "POST", path: "/api/putaway-documents", description: "Membuat dokumen putaway baru (tunggal atau massal)." },
+            { method: "PATCH", path: "/api/putaway-documents/[id]", description: "Memperbarui dokumen putaway." },
+            { method: "DELETE", path: "/api/putaway-documents/[id]", description: "Menghapus dokumen putaway." },
+        ]
+    },
+    {
+        category: "Dokumen Product Out (Goods Issue)",
+        endpoints: [
+            { method: "GET", path: "/api/product-out-documents", description: "Mengambil semua dokumen product out." },
+            { method: "POST", path: "/api/product-out-documents", description: "Membuat dokumen product out baru (tunggal atau massal)." },
+        ]
+    },
      {
         category: "Dokumen Retur (Return Documents)",
         endpoints: [
@@ -58,6 +74,12 @@ const apiRoutes = [
             { method: "POST", path: "/api/return-documents", description: "Membuat dokumen retur baru (tunggal atau massal)." },
             { method: "PATCH", path: "/api/return-documents/[id]", description: "Memperbarui dokumen retur." },
             { method: "DELETE", path: "/api/return-documents/[id]", description: "Menghapus dokumen retur." },
+        ]
+    },
+    {
+        category: "Master Product & Stok",
+        endpoints: [
+            { method: "GET", path: "/api/master-product/batch-products", description: "Mengambil data stok agregat dari semua pergerakan barang." },
         ]
     },
     {
