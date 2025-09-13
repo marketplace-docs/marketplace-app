@@ -16,6 +16,7 @@ import type { PutawayDocument } from '@/types/putaway-document';
 
 type ProductOutDocument = {
     id: string;
+    noDocument: string;
     sku: string;
     barcode: string;
     expDate: string;
@@ -28,6 +29,7 @@ type ProductOutDocument = {
 type StockLogEntry = {
     id: string;
     date: string;
+    noDocument: string;
     barcode: string;
     qty_before: number;
     qty_change: number;
@@ -64,6 +66,7 @@ export default function StockLogPage() {
                 logEntries.push({
                     id: `in-${putawayDoc.id}`,
                     date: putawayDoc.date,
+                    noDocument: putawayDoc.noDocument,
                     barcode: barcode,
                     qty_before: currentStock,
                     qty_change: change,
@@ -78,6 +81,7 @@ export default function StockLogPage() {
                 logEntries.push({
                     id: `out-${outDoc.id}`,
                     date: outDoc.date,
+                    noDocument: outDoc.noDocument,
                     barcode: barcode,
                     qty_before: currentStock,
                     qty_change: -change,
@@ -97,7 +101,8 @@ export default function StockLogPage() {
     const filteredData = useMemo(() => {
         if (!searchTerm) return stockLogData;
         return stockLogData.filter(log =>
-            log.barcode.toLowerCase().includes(searchTerm.toLowerCase())
+            log.barcode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            log.noDocument.toLowerCase().includes(searchTerm.toLowerCase())
         );
     }, [stockLogData, searchTerm]);
 
@@ -137,7 +142,7 @@ export default function StockLogPage() {
                                 <CardDescription>Menampung data histori barang masuk dan keluar.</CardDescription>
                             </div>
                              <Input 
-                                placeholder="Cari Barcode..." 
+                                placeholder="Cari Barcode atau No. Dokumen..." 
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="w-full md:w-auto md:max-w-sm"
@@ -150,6 +155,7 @@ export default function StockLogPage() {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Date</TableHead>
+                                        <TableHead>No. Document</TableHead>
                                         <TableHead>Barcode</TableHead>
                                         <TableHead>Qty Before</TableHead>
                                         <TableHead>Qty Change</TableHead>
@@ -161,7 +167,7 @@ export default function StockLogPage() {
                                 <TableBody>
                                     {loading ? (
                                         <TableRow>
-                                            <TableCell colSpan={7} className="h-24 text-center">
+                                            <TableCell colSpan={8} className="h-24 text-center">
                                                 <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                                             </TableCell>
                                         </TableRow>
@@ -169,6 +175,7 @@ export default function StockLogPage() {
                                         paginatedData.map((log) => (
                                             <TableRow key={log.id}>
                                                 <TableCell>{format(new Date(log.date), 'dd/MM/yyyy HH:mm')}</TableCell>
+                                                <TableCell>{log.noDocument}</TableCell>
                                                 <TableCell className="font-medium">{log.barcode}</TableCell>
                                                 <TableCell>{log.qty_before.toLocaleString()}</TableCell>
                                                 <TableCell>
@@ -184,7 +191,7 @@ export default function StockLogPage() {
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                                            <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                                                 Tidak ada histori stok.
                                             </TableCell>
                                         </TableRow>
