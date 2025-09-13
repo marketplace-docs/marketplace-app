@@ -126,13 +126,13 @@ export const NAV_LINKS: NavLink[] = [
         ]
     },
     {
-        href: '/master',
-        label: 'Master',
+        href: '/database',
+        label: 'Database',
         icon: Database,
         children: [
             {
                 href: '/database/user-management',
-                label: 'User',
+                label: 'User Management',
                 icon: Users2,
             },
             {
@@ -140,15 +140,10 @@ export const NAV_LINKS: NavLink[] = [
                 label: 'Role',
                 icon: Shield,
             },
-            {
-                href: '/master/menu',
-                label: 'Menu',
-                icon: Menu,
-            },
              {
-                href: '/app-documentation',
-                label: 'APP',
-                icon: Monitor,
+                href: '/master/menu',
+                label: 'Menu Permission',
+                icon: Menu,
             },
              {
                 href: '/database/log-activity',
@@ -156,5 +151,15 @@ export const NAV_LINKS: NavLink[] = [
                 icon: History,
             },
         ]
+    },
+    {
+        href: '/app-documentation',
+        label: 'Documentation',
+        icon: BookText,
+    },
+    {
+        href: '/settings/app',
+        label: 'Settings',
+        icon: Settings,
     }
 ];

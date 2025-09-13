@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -169,7 +170,7 @@ export default function MenuManagementPage() {
     return (
         <MainLayout>
             <div className="w-full space-y-6">
-                <h1 className="text-2xl font-bold">Menu Management</h1>
+                <h1 className="text-2xl font-bold">Menu Permission</h1>
                 
                 {fetchError && (
                     <Alert variant="destructive">

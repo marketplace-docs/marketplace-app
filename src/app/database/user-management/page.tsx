@@ -59,7 +59,6 @@ const statusVariantMap: { [key: string]: "default" | "secondary" | "destructive"
     'Event': 'secondary',
 };
 
-// This page will now fetch from a new /api/users endpoint
 export default function DatabaseUserPage() {
     const { user: currentUser } = useAuth();
     const [users, setUsers] = useState<User[]>([]);
@@ -132,7 +131,7 @@ export default function DatabaseUserPage() {
             });
             if (!response.ok) throw new Error('Failed to update user');
             
-            await fetchUsers();
+            await fetchUsers(); // Re-fetch all users to get the latest state
             setEditDialogOpen(false);
             setSelectedUser(null);
             toast({ title: "Success", description: "User has been updated successfully." });
@@ -155,14 +154,17 @@ export default function DatabaseUserPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newUser)
             });
-            if (!response.ok) throw new Error('Failed to add user');
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to add user');
+            };
             
-            await fetchUsers();
+            await fetchUsers(); // Re-fetch to include the new user
             setAddDialogOpen(false);
             setNewUser({ name: '', email: '', status: 'Reguler', role: 'Admin' });
             toast({ title: "Success", description: "New user added." });
-        } catch (error) {
-            toast({ variant: 'destructive', title: "Error", description: "Could not add user." });
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: "Error", description: error.message || "Could not add user." });
         } finally {
             setIsSubmitting(false);
         }
@@ -175,18 +177,24 @@ export default function DatabaseUserPage() {
              const response = await fetch(`/api/users/${selectedUser.id}`, {
                 method: 'DELETE',
             });
-            if (!response.ok) throw new Error('Failed to delete user');
+            if (!response.ok) {
+                 const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to delete user');
+            }
 
-            await fetchUsers();
+            // Optimistically update UI or re-fetch
+            setUsers(prevUsers => prevUsers.filter(user => user.id !== selectedUser.id));
+            
             setDeleteDialogOpen(false);
             setSelectedUser(null);
             toast({ title: "Success", description: "User has been deleted.", variant: "destructive" });
 
+            // Adjust current page if the last item on a page was deleted
             if (paginatedUsers.length === 1 && currentPage > 1) {
                 setCurrentPage(currentPage - 1);
             }
-        } catch (error) {
-             toast({ variant: 'destructive', title: "Error", description: "Could not delete user." });
+        } catch (error: any) {
+             toast({ variant: 'destructive', title: "Error", description: error.message || "Could not delete user." });
         } finally {
             setIsSubmitting(false);
         }
@@ -196,7 +204,7 @@ export default function DatabaseUserPage() {
       <MainLayout>
         <div className="w-full">
             <div className="flex justify-between items-center mb-6">
-              <h1 className="text-3xl font-bold">Database User</h1>
+              <h1 className="text-3xl font-bold">User Management</h1>
                <Dialog open={isAddDialogOpen} onOpenChange={setAddDialogOpen}>
                     <DialogTrigger asChild>
                         <Button>
@@ -447,5 +455,3 @@ export default function DatabaseUserPage() {
       </MainLayout>
     )
 }
-
-    
