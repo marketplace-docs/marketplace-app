@@ -116,26 +116,27 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     }
     
     if (userName && userEmail) {
-      const logDetails = [];
-      const oldExpFormatted = format(new Date(originalExpDate), 'dd/MM/yyyy');
-      const newExpFormatted = format(new Date(newExpDate), 'dd/MM/yyyy');
+        const logDetails = [];
+        const oldExpFormatted = format(new Date(originalExpDate), 'dd/MM/yyyy');
+        const newExpFormatted = format(new Date(newExpDate), 'dd/MM/yyyy');
 
-      if (newLocation !== originalLocation) {
-         logDetails.push(`location from "${originalLocation}" to "${newLocation}"`);
-      }
-      if (newExpFormatted !== oldExpFormatted) {
-         logDetails.push(`exp date from ${oldExpFormatted} to ${newExpFormatted}`);
-      }
+        if (newLocation !== originalLocation) {
+            logDetails.push(`location from "${originalLocation}" to "${newLocation}"`);
+        }
+        if (newExpFormatted !== oldExpFormatted) {
+            logDetails.push(`exp date from ${oldExpFormatted} to ${newExpFormatted}`);
+        }
 
-      const detailsString = `Split ${qtyToUpdate} items from Doc ID ${originalDoc.id}. ${logDetails.join(' & ')}. New Doc: ${newDocNumber}`;
+        const detailsString = logDetails.length > 0 ? logDetails.join(' & ') : "No changes in location or exp date";
 
-      await logActivity({
-        userName,
-        userEmail,
-        action: 'UPDATE_BATCH',
-        details: detailsString || `Split ${qtyToUpdate} items from Doc ID ${originalDoc.id}.`,
-      });
+        await logActivity({
+            userName,
+            userEmail,
+            action: 'UPDATE_BATCH',
+            details: `Split ${qtyToUpdate} items for Doc ID ${originalDoc.id}. ${detailsString}. New Doc: ${newDocNumber}`,
+        });
     }
+
 
     return NextResponse.json({ message: 'Stock split successful' });
 
