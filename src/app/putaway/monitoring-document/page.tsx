@@ -341,7 +341,7 @@ export default function MonitoringPutawayPage() {
                         <TableCell>{doc.sku}</TableCell>
                         <TableCell>{doc.barcode}</TableCell>
                         <TableCell>{doc.brand}</TableCell>
-                        <TableCell>{format(new Date(doc.exp_date), 'dd/MM/yyyy')}</TableCell>
+                        <TableCell>{doc.exp_date ? format(new Date(doc.exp_date), 'dd/MM/yyyy') : '-'}</TableCell>
                         <TableCell>{doc.location}</TableCell>
                         <TableCell>{doc.check_by}</TableCell>
                         <TableCell>{doc.qty}</TableCell>
