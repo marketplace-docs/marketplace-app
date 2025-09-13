@@ -135,8 +135,8 @@ export default function BatchProductPage() {
                     <CardHeader>
                         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                             <div className="flex-1">
-                                <CardTitle>Current Stock</CardTitle>
-                                <CardDescription>Data stok inventaris terkini berdasarkan barang masuk dan keluar.</CardDescription>
+                                <CardTitle>Stock Overview</CardTitle>
+                                <CardDescription>Up-to-date stock information from goods received and issued.</CardDescription>
                             </div>
                              <Input 
                                 placeholder="Search SKU, Barcode, or Brand..." 
