@@ -9,7 +9,7 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Dialog
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Loader2, AlertCircle } from 'lucide-react';
+import { Plus, Loader2, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth';
@@ -61,6 +61,10 @@ export default function ProductOutPage() {
     });
     const [availableStock, setAvailableStock] = useState<AggregatedProduct | null>(null);
 
+    const [currentPage, setCurrentPage] = useState(1);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
+
+
     const fetchData = useCallback(async () => {
         setLoading(true);
         setError(null);
@@ -88,6 +92,24 @@ export default function ProductOutPage() {
     useEffect(() => {
         fetchData();
     }, [fetchData]);
+
+    const totalPages = Math.ceil(documents.length / rowsPerPage);
+    const paginatedDocuments = documents.slice(
+        (currentPage - 1) * rowsPerPage,
+        currentPage * rowsPerPage
+    );
+
+    const handleNextPage = () => {
+        setCurrentPage((prev) => (prev < totalPages ? prev + 1 : prev));
+    };
+
+    const handlePrevPage = () => {
+        setCurrentPage((prev) => (prev > 1 ? prev - 1 : prev));
+    };
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [rowsPerPage]);
 
 
     useEffect(() => {
@@ -311,8 +333,8 @@ export default function ProductOutPage() {
                                                 <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                                             </TableCell>
                                         </TableRow>
-                                    ) : documents.length > 0 ? (
-                                        documents.map((doc) => (
+                                    ) : paginatedDocuments.length > 0 ? (
+                                        paginatedDocuments.map((doc) => (
                                              <TableRow key={doc.id}>
                                                 <TableCell>{doc.nodocument}</TableCell>
                                                 <TableCell>{format(new Date(doc.date), 'dd/MM/yyyy HH:mm')}</TableCell>
@@ -336,13 +358,49 @@ export default function ProductOutPage() {
                             </Table>
                         </div>
                     </CardContent>
-                    {documents.length > 0 && (
-                        <CardFooter className="justify-end pt-4">
-                            <p className="text-sm text-muted-foreground">
-                                Total {documents.length} documents.
-                            </p>
-                        </CardFooter>
-                    )}
+                    <CardFooter>
+                         <div className="flex items-center justify-end space-x-2 py-4 w-full">
+                            <div className="flex-1 text-sm text-muted-foreground">
+                                Page {documents.length > 0 ? currentPage : 0} of {totalPages}
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <span className="text-sm text-muted-foreground">Rows per page:</span>
+                                <Select
+                                    value={`${rowsPerPage}`}
+                                    onValueChange={(value) => {
+                                        setRowsPerPage(Number(value));
+                                    }}
+                                    >
+                                    <SelectTrigger className="h-8 w-[70px]">
+                                        <SelectValue placeholder={rowsPerPage} />
+                                    </SelectTrigger>
+                                    <SelectContent side="top">
+                                        {[10, 30, 50, 100].map((pageSize) => (
+                                        <SelectItem key={pageSize} value={`${pageSize}`}>
+                                            {pageSize}
+                                        </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handlePrevPage}
+                                disabled={currentPage === 1}
+                            >
+                                <ChevronLeft className="h-4 w-4" />
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleNextPage}
+                                disabled={currentPage === totalPages || totalPages === 0}
+                            >
+                                <ChevronRight className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </CardFooter>
                 </Card>
             </div>
         </MainLayout>
