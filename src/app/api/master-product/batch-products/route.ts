@@ -6,12 +6,17 @@ type ProductDoc = {
     sku: string;
     barcode: string;
     brand: string;
-    expDate: string;
+    exp_date: string;
     location: string;
     qty: number;
 };
 
-type AggregatedProduct = ProductDoc & {
+type AggregatedProduct = {
+    sku: string;
+    barcode: string;
+    brand: string;
+    exp_date: string;
+    location: string;
     stock: number;
 };
 
@@ -21,8 +26,8 @@ export async function GET() {
             { data: putawayData, error: putawayError },
             { data: productOutData, error: productOutError }
         ] = await Promise.all([
-            supabaseService.from('putaway_documents').select('sku, barcode, brand, "expDate", location, qty'),
-            supabaseService.from('product_out_documents').select('sku, barcode, brand, "expDate", location, qty')
+            supabaseService.from('putaway_documents').select('sku, barcode, brand, exp_date, location, qty'),
+            supabaseService.from('product_out_documents').select('sku, barcode, exp_date, location, qty')
         ]);
 
         if (putawayError) throw putawayError;
@@ -30,7 +35,7 @@ export async function GET() {
         
         const stockMap = new Map<string, AggregatedProduct>();
 
-        // Process incoming stock
+        // Process incoming stock from putaway_documents
         (putawayData as ProductDoc[]).forEach(doc => {
             const key = doc.barcode;
             if (stockMap.has(key)) {
@@ -41,26 +46,31 @@ export async function GET() {
                 }
             } else {
                 stockMap.set(key, {
-                    ...doc,
+                    sku: doc.sku,
+                    barcode: doc.barcode,
+                    brand: doc.brand,
+                    exp_date: doc.exp_date,
+                    location: doc.location,
                     stock: doc.qty,
                 });
             }
         });
         
-        // Process outgoing stock
-        (productOutData as ProductDoc[]).forEach(doc => {
+        // Process outgoing stock from product_out_documents
+        (productOutData as Omit<ProductDoc, 'brand'>[]).forEach(doc => {
              const key = doc.barcode;
              if (stockMap.has(key)) {
                 const existing = stockMap.get(key)!;
                 existing.stock -= doc.qty;
              } else {
+                // This case should ideally not happen if inventory is managed properly
+                // But as a fallback, we create an entry with negative stock
                  stockMap.set(key, {
                     sku: doc.sku,
                     barcode: doc.barcode,
-                    brand: doc.brand,
-                    expDate: doc.expDate,
+                    brand: '', // Brand is not in product_out, so we leave it empty
+                    exp_date: doc.exp_date,
                     location: doc.location,
-                    qty: doc.qty,
                     stock: -doc.qty,
                 });
              }

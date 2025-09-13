@@ -8,16 +8,17 @@ import { logActivity } from '@/lib/logger';
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const { id } = params;
   const body = await request.json();
-  const { noDocument, qty, status, sku, barcode, brand, expDate, location, checkBy, userName, userEmail } = body;
+  const { no_document, qty, status, sku, barcode, brand, exp_date, location, check_by, userName, userEmail } = body;
 
   const { data, error } = await supabaseService
     .from('putaway_documents')
-    .update({ "noDocument": noDocument, qty, status, sku, barcode, brand, "expDate": expDate, location, "checkBy": checkBy })
+    .update({ no_document, qty, status, sku, barcode, brand, exp_date, location, check_by })
     .eq('id', id)
     .select()
     .single();
 
   if (error) {
+    console.error("Supabase PATCH error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
@@ -46,6 +47,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     .eq('id', id);
 
   if (error) {
+    console.error("Supabase DELETE error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 

@@ -6,12 +6,14 @@ import { NextResponse } from 'next/server';
 import { logActivity } from '@/lib/logger';
 
 export async function GET() {
+  // Always select snake_case columns
   const { data, error } = await supabaseService
     .from('putaway_documents')
-    .select('id, "noDocument", date, qty, status, sku, barcode, brand, "expDate", location, "checkBy", created_at')
+    .select('id, no_document, date, qty, status, sku, barcode, brand, exp_date, location, check_by, created_at')
     .order('date', { ascending: false });
 
   if (error) {
+    console.error("Supabase GET error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
   
@@ -25,16 +27,16 @@ export async function POST(request: Request) {
   // Handle bulk upload from CSV
   if (Array.isArray(documents)) {
     const docsToInsert = documents.map(doc => ({
-      noDocument: doc.noDocument,
+      no_document: doc.no_document,
       date: new Date().toISOString(),
       qty: doc.qty,
       status: doc.status,
       sku: doc.sku,
       barcode: doc.barcode,
       brand: doc.brand,
-      expDate: doc.expDate,
+      exp_date: doc.exp_date,
       location: doc.location,
-      checkBy: doc.checkBy,
+      check_by: doc.check_by,
     }));
 
     const { data, error } = await supabaseService
@@ -43,6 +45,7 @@ export async function POST(request: Request) {
       .select();
 
     if (error) {
+      console.error("Supabase bulk insert error:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
@@ -59,16 +62,16 @@ export async function POST(request: Request) {
 
 
   // Handle single document creation
-  const { noDocument, qty, status, sku, barcode, brand, expDate, location, checkBy } = singleDoc;
+  const { no_document, qty, status, sku, barcode, brand, exp_date, location, check_by } = singleDoc;
 
   const { data, error } = await supabaseService
     .from('putaway_documents')
-    .insert([{ "noDocument": noDocument, qty, status, sku, barcode, brand, "expDate": expDate, location, "checkBy": checkBy }])
+    .insert([{ no_document, qty, status, sku, barcode, brand, exp_date, location, check_by }])
     .select()
     .single();
 
   if (error) {
-    console.error("Supabase insert error:", error);
+    console.error("Supabase single insert error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
@@ -77,7 +80,7 @@ export async function POST(request: Request) {
         userName: user.name,
         userEmail: user.email,
         action: 'CREATE',
-        details: `Putaway Document: ${noDocument}`,
+        details: `Putaway Document: ${no_document}`,
     });
   }
 
