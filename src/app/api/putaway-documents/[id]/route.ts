@@ -1,9 +1,9 @@
-
 'use server';
 
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 import { logActivity } from '@/lib/logger';
+import { format } from 'date-fns';
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const { id } = params;
@@ -13,7 +13,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   // Check for the new stock splitting logic
   if (body.originalDoc && body.update) {
     const { originalDoc, update } = body;
-    const { qty: originalQty } = originalDoc;
+    const { qty: originalQty, location: originalLocation, exp_date: originalExpDate } = originalDoc;
     const { qty: qtyToUpdate, location: newLocation, exp_date: newExpDate } = update;
 
     const newOriginalQty = originalQty - qtyToUpdate;
@@ -53,11 +53,24 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     }
     
     if (userName && userEmail) {
+      const logDetails = [];
+      const oldExpFormatted = format(new Date(originalExpDate), 'dd/MM/yyyy');
+      const newExpFormatted = format(new Date(newExpDate), 'dd/MM/yyyy');
+
+      if (newLocation !== originalLocation) {
+        logDetails.push(`location from "${originalLocation}" to "${newLocation}"`);
+      }
+      if (newExpFormatted !== oldExpFormatted) {
+         logDetails.push(`exp date from ${oldExpFormatted} to ${newExpFormatted}`);
+      }
+
+      const detailsString = `Split ${qtyToUpdate} items from Doc ID ${originalDoc.id}. Updated ${logDetails.join(' & ')}.`;
+
       await logActivity({
         userName,
         userEmail,
-        action: 'SPLIT',
-        details: `Split Putaway Document ID: ${originalDoc.id}. Moved ${qtyToUpdate} items.`,
+        action: 'UPDATE_BATCH',
+        details: detailsString || `Split ${qtyToUpdate} items from Doc ID ${originalDoc.id}.`,
       });
     }
 
