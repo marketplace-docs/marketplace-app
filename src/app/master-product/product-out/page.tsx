@@ -2,7 +2,19 @@
 'use client';
 
 import { MainLayout } from "@/components/layout/main-layout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { CheckSquare } from "lucide-react";
+
+const productOutProcess = [
+    "Menerima picklist atau perintah pengambilan barang dari sistem.",
+    "Melakukan pengambilan barang (picking) sesuai dengan SKU, jumlah, dan lokasi yang tertera.",
+    "Melakukan proses packing dan persiapan pengiriman pesanan.",
+    "Melakukan scanning barcode barang keluar untuk memotong stok secara otomatis di sistem.",
+    "Memperbarui status pesanan menjadi 'Shipped' atau 'Terkirim'.",
+    "Menyerahkan paket kepada pihak ekspedisi untuk pengiriman.",
+    "Mencatat semua transaksi keluar untuk pelaporan dan audit.",
+    "Berkoordinasi dengan tim sales atau marketplace jika terjadi kendala (misal: stok habis).",
+];
 
 export default function ProductOutPage() {
     return (
@@ -11,11 +23,18 @@ export default function ProductOutPage() {
                 <h1 className="text-2xl font-bold">Product Out</h1>
                 <Card>
                     <CardHeader>
-                        <CardTitle>Pengeluaran Barang</CardTitle>
-                        <CardDescription>Memotong stok data barang dari fitur yang akan kita buat nanti.</CardDescription>
+                        <CardTitle>Proses Alur Pengeluaran Barang</CardTitle>
+                        <CardDescription>Berikut adalah tahapan standar dalam proses pengeluaran barang dari gudang.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <p>Fitur untuk mengelola stok keluar akan dikembangkan di sini.</p>
+                        <ul className="space-y-3">
+                            {productOutProcess.map((task, index) => (
+                                <li key={index} className="flex items-start gap-3">
+                                    <CheckSquare className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
+                                    <span>{task}</span>
+                                </li>
+                            ))}
+                        </ul>
                     </CardContent>
                 </Card>
             </div>
