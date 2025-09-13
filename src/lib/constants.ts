@@ -1,6 +1,6 @@
 
 
-import { LayoutDashboard, ListTodo, Store, FileText, Settings, type LucideIcon, Briefcase, Users, Archive, BarChart3, AppWindow, BookText, Database, History, FilePlus, Eye, File, PieChart, Users2, Shield, Menu, Monitor, Undo2, Route } from 'lucide-react';
+import { LayoutDashboard, ListTodo, Store, FileText, Settings, type LucideIcon, Briefcase, Users, Archive, BarChart3, AppWindow, BookText, Database, History, FilePlus, Eye, File, PieChart, Users2, Shield, Menu, Monitor, Undo2, Route, Package, PackagePlus, PackageMinus } from 'lucide-react';
 
 export type NavLink = {
     href: string;
@@ -78,6 +78,28 @@ export const NAV_LINKS: NavLink[] = [
                 href: '/return/task',
                 label: 'Task',
                 icon: ListTodo,
+            },
+        ]
+    },
+    {
+        href: '/master-product',
+        label: 'Master Product',
+        icon: Package,
+        children: [
+            {
+                href: '/master-product/product-in',
+                label: 'Product In',
+                icon: PackagePlus,
+            },
+            {
+                href: '/master-product/product-out',
+                label: 'Product Out',
+                icon: PackageMinus,
+            },
+            {
+                href: '/master-product/stock-log',
+                label: 'Stock Log',
+                icon: History,
             },
         ]
     },
