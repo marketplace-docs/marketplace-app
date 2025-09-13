@@ -10,10 +10,11 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Dialog
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Loader2 } from 'lucide-react';
+import { Plus, Loader2, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 type ProductOutStatus = 'Issue - Order' | 'Issue - Internal Transfer' | 'Issue - Adjustment Manual';
 
@@ -34,7 +35,7 @@ type AggregatedProduct = {
     barcode: string;
     brand: string;
     expDate: string;
-    qty: number;
+    stock: number;
 };
 
 export default function ProductOutPage() {
@@ -45,6 +46,8 @@ export default function ProductOutPage() {
     
     const [documents, setDocuments] = useState<ProductOutDocument[]>([]);
     const [productInStock, setProductInStock] = useState<AggregatedProduct[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string|null>(null);
     
     const [newDocument, setNewDocument] = useState({
         noDocument: '',
@@ -56,33 +59,33 @@ export default function ProductOutPage() {
     });
     const [availableStock, setAvailableStock] = useState<AggregatedProduct | null>(null);
 
-    const fetchProductOutDocs = useCallback(async () => {
+    const fetchData = useCallback(async () => {
+        setLoading(true);
+        setError(null);
         try {
-            const response = await fetch('/api/product-out-documents');
-            if (!response.ok) throw new Error('Failed to fetch product out documents');
-            const data = await response.json();
-            setDocuments(data);
-        } catch (error) {
-            console.error(error);
-        }
-    }, []);
-
-    const fetchProductInStock = useCallback(async () => {
-        try {
-            // This API gives the final aggregated stock.
-            const response = await fetch('/api/master-product/batch-products');
-            if (!response.ok) throw new Error('Failed to fetch product stock');
-            const data = await response.json();
-            setProductInStock(data);
-        } catch (error) {
-            console.error(error);
+            const [outDocsRes, stockRes] = await Promise.all([
+                fetch('/api/product-out-documents'),
+                fetch('/api/master-product/batch-products')
+            ]);
+            
+            if (!outDocsRes.ok) throw new Error('Failed to fetch product out documents');
+            if (!stockRes.ok) throw new Error('Failed to fetch product stock');
+            
+            const outDocsData = await outDocsRes.json();
+            const stockData = await stockRes.json();
+            
+            setDocuments(outDocsData);
+            setProductInStock(stockData);
+        } catch (error: any) {
+            setError(error.message);
+        } finally {
+            setLoading(false);
         }
     }, []);
 
     useEffect(() => {
-        fetchProductOutDocs();
-        fetchProductInStock();
-    }, [fetchProductOutDocs, fetchProductInStock]);
+        fetchData();
+    }, [fetchData]);
 
 
     useEffect(() => {
@@ -154,11 +157,11 @@ export default function ProductOutPage() {
             });
             return;
         }
-         if (qtyToTake > availableStock.qty) {
+         if (qtyToTake > availableStock.stock) {
             toast({
                 variant: 'destructive',
                 title: 'Error',
-                description: `Quantity exceeds available stock of ${availableStock.qty}.`,
+                description: `Quantity exceeds available stock of ${availableStock.stock}.`,
             });
             return;
         }
@@ -184,8 +187,7 @@ export default function ProductOutPage() {
                 throw new Error('Failed to save document to database.');
             }
 
-            await fetchProductOutDocs();
-            await fetchProductInStock(); // Refresh stock
+            await fetchData();
             
             setIsSubmitting(false);
             setAddDialogOpen(false);
@@ -204,6 +206,13 @@ export default function ProductOutPage() {
         <MainLayout>
              <div className="w-full space-y-6">
                 <h1 className="text-2xl font-bold">Product Out</h1>
+                {error && (
+                    <Alert variant="destructive" className="mb-4">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Error</AlertTitle>
+                        <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                )}
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between">
                         <div>
@@ -241,7 +250,7 @@ export default function ProductOutPage() {
                                         <Label htmlFor="qty" className="text-right">Quantity</Label>
                                         <div className="col-span-3">
                                             <Input id="qty" name="qty" type="number" value={newDocument.qty} onChange={handleInputChange} placeholder="0" />
-                                            {availableStock && <p className="text-xs text-muted-foreground mt-1">Available Stock: {availableStock.qty.toLocaleString()}</p>}
+                                            {availableStock && <p className="text-xs text-muted-foreground mt-1">Available Stock: {availableStock.stock.toLocaleString()}</p>}
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-4 items-center gap-4">
@@ -283,7 +292,13 @@ export default function ProductOutPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {documents.length > 0 ? (
+                                    {loading ? (
+                                        <TableRow>
+                                            <TableCell colSpan={7} className="h-24 text-center">
+                                                <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : documents.length > 0 ? (
                                         documents.map((doc) => (
                                              <TableRow key={doc.id}>
                                                 <TableCell>{doc.sku}</TableCell>

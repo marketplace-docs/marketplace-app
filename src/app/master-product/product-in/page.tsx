@@ -1,18 +1,30 @@
 
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { useLocalStorage } from '@/hooks/use-local-storage';
-import type { PutawayDocument } from '@/types/putaway-document';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+
+type PutawayDocument = {
+    id: string;
+    noDocument: string;
+    date: string;
+    qty: number;
+    status: 'Done' | 'Pending';
+    sku: string;
+    barcode: string;
+    brand: string;
+    expDate: string;
+    checkBy: string;
+};
 
 type AggregatedProduct = {
     sku: string;
@@ -29,25 +41,43 @@ const statusVariantMap: { [key in PutawayDocument['status']]: "default" | "secon
 };
 
 export default function ProductInPage() {
-    const [putawayDocs] = useLocalStorage<PutawayDocument[]>('putaway-documents', []);
+    const [putawayDocs, setPutawayDocs] = useState<PutawayDocument[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
+    
+    const fetchPutawayDocs = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const response = await fetch('/api/putaway-documents');
+            if (!response.ok) throw new Error('Failed to fetch putaway documents');
+            const data = await response.json();
+            setPutawayDocs(data);
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchPutawayDocs();
+    }, [fetchPutawayDocs]);
+
 
     const aggregatedData = useMemo(() => {
         const productMap = new Map<string, AggregatedProduct>();
         
-        // Sort documents by date to ensure the latest data is used for non-qty fields
         const sortedDocs = [...putawayDocs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
         sortedDocs.forEach(doc => {
             if (productMap.has(doc.sku)) {
-                // SKU exists, just add quantity
                 const existing = productMap.get(doc.sku)!;
                 existing.qty += doc.qty;
             } else {
-                // New SKU, add to map
                 productMap.set(doc.sku, {
                     sku: doc.sku,
                     barcode: doc.barcode,
@@ -68,11 +98,6 @@ export default function ProductInPage() {
             product.barcode.toLowerCase().includes(searchTerm.toLowerCase())
         );
     }, [aggregatedData, searchTerm]);
-
-    useEffect(() => {
-        // Simulate initial loading
-        setTimeout(() => setLoading(false), 500);
-    }, []);
     
     useEffect(() => {
         setCurrentPage(1);
@@ -97,6 +122,13 @@ export default function ProductInPage() {
         <MainLayout>
              <div className="w-full space-y-6">
                 <h1 className="text-2xl font-bold">Product In</h1>
+                 {error && (
+                    <Alert variant="destructive" className="mb-4">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Error</AlertTitle>
+                        <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                )}
                 <Card>
                     <CardHeader>
                         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
