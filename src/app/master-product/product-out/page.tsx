@@ -87,6 +87,15 @@ export default function ProductOutPage() {
     }, [putawayDocs, documents]);
 
     useEffect(() => {
+        if (isAddDialogOpen) {
+            const currentYear = new Date().getFullYear();
+            const nextId = (documents.length + 1).toString().padStart(5, '0');
+            const newDocNumber = `PB-OUT-${currentYear}-${nextId}`;
+            setNewDocument(prev => ({ ...prev, noDocument: newDocNumber }));
+        }
+    }, [isAddDialogOpen, documents]);
+
+    useEffect(() => {
         if (newDocument.barcode) {
             const foundStock = productInStock.find(p => p.barcode === newDocument.barcode);
             if (foundStock) {
@@ -200,7 +209,7 @@ export default function ProductOutPage() {
                                 <div className="grid gap-4 py-4">
                                      <div className="grid grid-cols-4 items-center gap-4">
                                         <Label htmlFor="noDocument" className="text-right">No. Document</Label>
-                                        <Input id="noDocument" name="noDocument" value={newDocument.noDocument} onChange={handleInputChange} className="col-span-3" placeholder="Enter document number" />
+                                        <Input id="noDocument" name="noDocument" value={newDocument.noDocument} className="col-span-3 bg-muted" readOnly />
                                     </div>
                                     <div className="grid grid-cols-4 items-center gap-4">
                                         <Label htmlFor="barcode" className="text-right">Barcode</Label>
@@ -268,7 +277,7 @@ export default function ProductOutPage() {
                                                 <TableCell>{doc.expDate ? format(new Date(doc.expDate), 'dd/MM/yyyy') : '-'}</TableCell>
                                                 <TableCell>{doc.qty.toLocaleString()}</TableCell>
                                                 <TableCell>{doc.status}</TableCell>
-                                                <TableCell>{doc.noDocument || doc.id}</TableCell>
+                                                <TableCell>{doc.noDocument}</TableCell>
                                                 <TableCell>{format(new Date(doc.date), 'dd/MM/yyyy HH:mm')}</TableCell>
                                             </TableRow>
                                         ))
