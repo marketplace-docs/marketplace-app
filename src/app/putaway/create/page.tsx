@@ -24,8 +24,7 @@ import { MainLayout } from '@/components/layout/main-layout';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { useLocalStorage } from '@/hooks/use-local-storage';
-import type { PutawayDocument } from '@/types/putaway-document';
+import { useAuth } from '@/hooks/use-auth';
 
 type NewPutawayDocument = {
     noDocument: string;
@@ -39,6 +38,7 @@ type NewPutawayDocument = {
 };
 
 export default function CreatePutawayPage() {
+  const { user } = useAuth();
   const [newDocument, setNewDocument] = React.useState<NewPutawayDocument>({
     noDocument: '',
     qty: '',
@@ -52,8 +52,7 @@ export default function CreatePutawayPage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const { toast } = useToast();
   const router = useRouter();
-  const [documents, setDocuments] = useLocalStorage<PutawayDocument[]>('putaway-documents', []);
-
+  
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -75,26 +74,43 @@ export default function CreatePutawayPage() {
       });
       return;
     }
+
+    if (!user) {
+      toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
+      return;
+    }
     
     setIsSubmitting(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
+    try {
+        const response = await fetch('/api/putaway-documents', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ...newDocument,
+                qty: parseInt(newDocument.qty, 10),
+                user: { name: user.name, email: user.email }
+            })
+        });
 
-    const newDoc: PutawayDocument = {
-        id: Date.now().toString(),
-        ...newDocument,
-        qty: parseInt(newDocument.qty, 10),
-        date: new Date().toISOString(),
-    };
+        if (!response.ok) {
+            throw new Error('Failed to create document');
+        }
 
-    setDocuments([...documents, newDoc]);
+        toast({
+            title: 'Success',
+            description: 'New putaway document has been created.',
+        });
+        router.push('/putaway/monitoring-document');
 
-    setIsSubmitting(false);
-    toast({
-        title: 'Success',
-        description: 'New putaway document has been created locally.',
-    });
-    setNewDocument({ noDocument: '', qty: '', status: 'Pending', sku: '', barcode: '', brand: '', expDate: '', checkBy: '' });
-    router.push('/putaway/monitoring-document');
+    } catch (error) {
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Something went wrong while creating the document.',
+        });
+    } finally {
+        setIsSubmitting(false);
+    }
   };
 
   return (

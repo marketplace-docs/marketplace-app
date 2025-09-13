@@ -18,7 +18,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { MainLayout } from '@/components/layout/main-layout';
-import type { PutawayDocument } from '@/types/putaway-document';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Pencil, Trash2, Loader2, AlertCircle, Upload, Download } from 'lucide-react';
@@ -29,15 +28,28 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useLocalStorage } from '@/hooks/use-local-storage';
+import { useAuth } from '@/hooks/use-auth';
 
-const statusVariantMap: { [key in PutawayDocument['status']]: "default" | "secondary" | "destructive" | "outline" } = {
+type PutawayDocument = {
+  id: string;
+  noDocument: string;
+  date: string; // ISO string
+  qty: number;
+  status: 'Done' | 'Pending';
+  sku: string;
+  barcode: string;
+  brand: string;
+  expDate: string;
+  checkBy: string;
+};
+
+const statusVariantMap: { [key in PutawayDocument['status']]: "default" | "secondary" } = {
     'Done': 'default',
     'Pending': 'secondary',
 };
 
 export default function MonitoringPutawayPage() {
-  const [documents, setDocuments] = useLocalStorage<PutawayDocument[]>('putaway-documents', []);
+  const [documents, setDocuments] = useState<PutawayDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,17 +63,29 @@ export default function MonitoringPutawayPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { user } = useAuth();
 
   const [searchDocument, setSearchDocument] = useState('');
   const [searchBarcode, setSearchBarcode] = useState('');
 
-  useEffect(() => {
-    // Simulate loading
-    setTimeout(() => {
-        setLoading(false);
-    }, 500);
+  const fetchDocuments = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/putaway-documents');
+      if (!response.ok) throw new Error('Failed to fetch documents');
+      const data = await response.json();
+      setDocuments(data);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
+  useEffect(() => {
+    fetchDocuments();
+  }, [fetchDocuments]);
 
   const filteredDocuments = useMemo(() => {
     return documents.filter(doc => 
@@ -103,20 +127,47 @@ export default function MonitoringPutawayPage() {
     setDeleteDialogOpen(true);
   };
 
-  const handleSaveChanges = () => {
-    if (!selectedDoc) return;
-    setDocuments(documents.map(d => d.id === selectedDoc.id ? selectedDoc : d));
-    setEditDialogOpen(false);
-    setSelectedDoc(null);
-    toast({ title: "Success", description: "Document has been updated successfully." });
+  const handleSaveChanges = async () => {
+    if (!selectedDoc || !user) return;
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`/api/putaway-documents/${selectedDoc.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...selectedDoc, userName: user.name, userEmail: user.email })
+      });
+      if (!response.ok) throw new Error('Failed to update document');
+
+      await fetchDocuments();
+      setEditDialogOpen(false);
+      setSelectedDoc(null);
+      toast({ title: "Success", description: "Document has been updated successfully." });
+    } catch (error) {
+      toast({ variant: 'destructive', title: "Error", description: "Could not update document." });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleDeleteDoc = () => {
-    if (!selectedDoc) return;
-    setDocuments(documents.filter(d => d.id !== selectedDoc.id));
-    setDeleteDialogOpen(false);
-    setSelectedDoc(null);
-    toast({ title: "Success", description: "Document has been deleted.", variant: "destructive" });
+  const handleDeleteDoc = async () => {
+    if (!selectedDoc || !user) return;
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`/api/putaway-documents/${selectedDoc.id}`, {
+        method: 'DELETE',
+        headers: { 'X-User-Name': user.name, 'X-User-Email': user.email }
+      });
+      if (!response.ok) throw new Error('Failed to delete document');
+
+      await fetchDocuments();
+      setDeleteDialogOpen(false);
+      setSelectedDoc(null);
+      toast({ title: "Success", description: "Document has been deleted.", variant: "destructive" });
+    } catch (error) {
+       toast({ variant: 'destructive', title: "Error", description: "Could not delete document." });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   const handleExport = () => {
@@ -154,7 +205,7 @@ export default function MonitoringPutawayPage() {
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file || !user) return;
     setIsSubmitting(true);
     const reader = new FileReader();
     reader.onload = async (e) => {
@@ -162,25 +213,30 @@ export default function MonitoringPutawayPage() {
       try {
         const lines = text.split('\n').filter(line => line.trim() !== '').slice(1); // Skip header
         
-        const newDocs: PutawayDocument[] = lines.map(line => {
+        const newDocs: Omit<PutawayDocument, 'id'|'date'>[] = lines.map(line => {
           const values = line.split(',');
           return {
-            id: Date.now().toString() + Math.random(),
             noDocument: values[0]?.trim().replace(/"/g, '') || '',
-            date: new Date().toISOString(),
-            sku: values[1]?.trim().replace(/"/g, '') || '',
-            barcode: values[2]?.trim().replace(/"/g, '') || '',
-            brand: values[3]?.trim().replace(/"/g, '') || '',
-            expDate: values[4]?.trim().replace(/"/g, '') || '',
-            checkBy: values[5]?.trim().replace(/"/g, '') || '',
-            qty: parseInt(values[6]?.trim() || '0', 10),
-            status: (values[7]?.trim().replace(/"/g, '') as 'Done' | 'Pending') || 'Pending',
+            sku: values[2]?.trim().replace(/"/g, '') || '',
+            barcode: values[3]?.trim().replace(/"/g, '') || '',
+            brand: values[4]?.trim().replace(/"/g, '') || '',
+            expDate: values[5]?.trim().replace(/"/g, '') || '',
+            checkBy: values[6]?.trim().replace(/"/g, '') || '',
+            qty: parseInt(values[7]?.trim() || '0', 10),
+            status: (values[8]?.trim().replace(/"/g, '') as 'Done' | 'Pending') || 'Pending',
           };
         });
 
-        setDocuments(prevDocs => [...prevDocs, ...newDocs]);
+        const response = await fetch('/api/putaway-documents', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ documents: newDocs, user: { name: user.name, email: user.email } })
+        });
+        if (!response.ok) throw new Error('Failed to upload documents');
+
+        await fetchDocuments();
         setUploadDialogOpen(false);
-        toast({ title: "Success", description: `${newDocs.length} documents uploaded locally.` });
+        toast({ title: "Success", description: `${newDocs.length} documents uploaded.` });
       } catch (error) {
         toast({ variant: "destructive", title: "Upload Failed", description: "Could not process CSV file." });
       } finally {
@@ -207,7 +263,7 @@ export default function MonitoringPutawayPage() {
           <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-6">
             <div className="flex-1">
               <CardTitle>Putaway Documents</CardTitle>
-              <CardDescription>A list of all putaway documents (stored locally).</CardDescription>
+              <CardDescription>A list of all putaway documents.</CardDescription>
             </div>
             <div className="flex w-full md:w-auto items-center gap-2">
                 <Input 
@@ -230,7 +286,7 @@ export default function MonitoringPutawayPage() {
                         <DialogHeader>
                             <DialogTitle>Upload CSV</DialogTitle>
                             <DialogDescription>
-                                Select a CSV file to bulk upload putaway documents. The data will be stored locally in your browser.
+                                Select a CSV file to bulk upload putaway documents. The data will be stored in the database.
                             </DialogDescription>
                         </DialogHeader>
                         <div className="py-4">

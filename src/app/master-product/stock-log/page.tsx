@@ -1,29 +1,23 @@
 
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { useLocalStorage } from '@/hooks/use-local-storage';
 import { format } from 'date-fns';
 import { Loader2, ChevronLeft, ChevronRight, ArrowDown, ArrowUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import type { PutawayDocument } from '@/types/putaway-document';
+
+type PutawayDocument = {
+  id: string; noDocument: string; date: string; qty: number; status: 'Done' | 'Pending'; sku: string; barcode: string; brand: string; expDate: string; checkBy: string;
+};
 
 type ProductOutDocument = {
-    id: string;
-    noDocument: string;
-    sku: string;
-    barcode: string;
-    expDate: string;
-    qty: number;
-    status: 'Issue - Order' | 'Issue - Internal Transfer' | 'Issue - Adjustment Manual';
-    date: string;
-    validatedBy: string;
+  id: string; noDocument: string; sku: string; barcode: string; expDate: string; qty: number; status: 'Issue - Order' | 'Issue - Internal Transfer' | 'Issue - Adjustment Manual'; date: string; validatedBy: string;
 };
 
 type StockLogEntry = {
@@ -40,12 +34,37 @@ type StockLogEntry = {
 };
 
 export default function StockLogPage() {
-    const [putawayDocs] = useLocalStorage<PutawayDocument[]>('putaway-documents', []);
-    const [productOutDocs] = useLocalStorage<ProductOutDocument[]>('product-out-documents', []);
+    const [putawayDocs, setPutawayDocs] = useState<PutawayDocument[]>([]);
+    const [productOutDocs, setProductOutDocs] = useState<ProductOutDocument[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
+
+    const fetchData = useCallback(async () => {
+        setLoading(true);
+        try {
+            const [putawayRes, productOutRes] = await Promise.all([
+                fetch('/api/putaway-documents'),
+                fetch('/api/product-out-documents')
+            ]);
+            if (!putawayRes.ok || !productOutRes.ok) {
+                throw new Error('Failed to fetch stock data');
+            }
+            const putawayData = await putawayRes.json();
+            const productOutData = await productOutRes.json();
+            setPutawayDocs(putawayData);
+            setProductOutDocs(productOutData);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
 
     const stockLogData = useMemo(() => {
         const combinedDocs = [
@@ -106,11 +125,6 @@ export default function StockLogPage() {
         );
     }, [stockLogData, searchTerm]);
 
-    useEffect(() => {
-        // Simulate initial loading
-        setTimeout(() => setLoading(false), 500);
-    }, []);
-    
     useEffect(() => {
         setCurrentPage(1);
     }, [rowsPerPage, searchTerm]);

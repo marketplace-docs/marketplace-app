@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -12,9 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useLocalStorage } from '@/hooks/use-local-storage';
 import { format } from 'date-fns';
-import type { PutawayDocument } from '@/types/putaway-document';
 import { useAuth } from '@/hooks/use-auth';
 
 type ProductOutStatus = 'Issue - Order' | 'Issue - Internal Transfer' | 'Issue - Adjustment Manual';
@@ -45,9 +43,9 @@ export default function ProductOutPage() {
     const { toast } = useToast();
     const { user } = useAuth();
     
-    const [documents, setDocuments] = useLocalStorage<ProductOutDocument[]>('product-out-documents', []);
-    const [putawayDocs] = useLocalStorage<PutawayDocument[]>('putaway-documents', []);
-
+    const [documents, setDocuments] = useState<ProductOutDocument[]>([]);
+    const [productInStock, setProductInStock] = useState<AggregatedProduct[]>([]);
+    
     const [newDocument, setNewDocument] = useState({
         noDocument: '',
         sku: '',
@@ -58,33 +56,34 @@ export default function ProductOutPage() {
     });
     const [availableStock, setAvailableStock] = useState<AggregatedProduct | null>(null);
 
-    const productInStock = useMemo(() => {
-        const productMap = new Map<string, AggregatedProduct>();
-        
-        [...putawayDocs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-            .forEach(doc => {
-                const key = doc.barcode; // Use barcode as the key for lookup
-                if (productMap.has(key)) {
-                    productMap.get(key)!.qty += doc.qty;
-                } else {
-                    productMap.set(key, {
-                        sku: doc.sku,
-                        barcode: doc.barcode,
-                        brand: doc.brand,
-                        expDate: doc.expDate,
-                        qty: doc.qty,
-                    });
-                }
-            });
-        
-        documents.forEach(outDoc => {
-            if(productMap.has(outDoc.barcode)) {
-                productMap.get(outDoc.barcode)!.qty -= outDoc.qty;
-            }
-        });
+    const fetchProductOutDocs = useCallback(async () => {
+        try {
+            const response = await fetch('/api/product-out-documents');
+            if (!response.ok) throw new Error('Failed to fetch product out documents');
+            const data = await response.json();
+            setDocuments(data);
+        } catch (error) {
+            console.error(error);
+        }
+    }, []);
 
-        return Array.from(productMap.values());
-    }, [putawayDocs, documents]);
+    const fetchProductInStock = useCallback(async () => {
+        try {
+            // This API gives the final aggregated stock.
+            const response = await fetch('/api/master-product/batch-products');
+            if (!response.ok) throw new Error('Failed to fetch product stock');
+            const data = await response.json();
+            setProductInStock(data);
+        } catch (error) {
+            console.error(error);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchProductOutDocs();
+        fetchProductInStock();
+    }, [fetchProductOutDocs, fetchProductInStock]);
+
 
     useEffect(() => {
         if (isAddDialogOpen) {
@@ -165,25 +164,40 @@ export default function ProductOutPage() {
         }
 
         setIsSubmitting(true);
-        await new Promise(resolve => setTimeout(resolve, 500)); 
-
-        const docToAdd: ProductOutDocument = {
-            id: Date.now().toString(),
+        
+        const docToAdd = {
             ...newDocument,
             qty: qtyToTake,
             date: new Date().toISOString(),
             validatedBy: user.name,
+            user: { name: user.name, email: user.email }
         };
-        
-        setDocuments([...documents, docToAdd]);
 
-        setIsSubmitting(false);
-        setAddDialogOpen(false);
-        resetForm();
-        toast({
-            title: 'Success',
-            description: 'Product out document has been created locally.',
-        });
+        try {
+            const response = await fetch('/api/product-out-documents', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(docToAdd),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to save document to database.');
+            }
+
+            await fetchProductOutDocs();
+            await fetchProductInStock(); // Refresh stock
+            
+            setIsSubmitting(false);
+            setAddDialogOpen(false);
+            resetForm();
+            toast({
+                title: 'Success',
+                description: 'Product out document has been created.',
+            });
+        } catch (error: any) {
+            setIsSubmitting(false);
+            toast({ variant: 'destructive', title: 'Error', description: error.message });
+        }
     };
 
     return (
