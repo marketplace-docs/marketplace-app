@@ -52,10 +52,10 @@ const statusVariantMap: { [key in PutawayDocument['status']]: "default" | "secon
 const formatDateSafely = (dateString: string | null | undefined, formatString: string): string => {
     if (!dateString) return '-';
     const date = new Date(dateString);
-    if (!isNaN(date.getTime())) {
-        return format(date, formatString);
+    if (isNaN(date.getTime())) {
+        return '-';
     }
-    return '-';
+    return format(date, formatString);
 };
 
 
@@ -223,21 +223,29 @@ export default function MonitoringPutawayPage() {
     reader.onload = async (e) => {
       const text = e.target?.result as string;
       try {
-        const lines = text.split('\n').filter(line => line.trim() !== '').slice(1); // Skip header
+        const lines = text.split('\n').filter(line => line.trim() !== '');
+        if (lines.length <= 1) throw new Error("CSV is empty or has only a header.");
         
-        const newDocs: Omit<PutawayDocument, 'id'|'date'>[] = lines.map(line => {
-          const values = line.split(',');
-          return {
-            no_document: values[0]?.trim().replace(/"/g, '') || '',
-            sku: values[2]?.trim().replace(/"/g, '') || '',
-            barcode: values[3]?.trim().replace(/"/g, '') || '',
-            brand: values[4]?.trim().replace(/"/g, '') || '',
-            exp_date: values[5]?.trim().replace(/"/g, '') || '',
-            location: values[6]?.trim().replace(/"/g, '') || '',
-            check_by: values[7]?.trim().replace(/"/g, '') || '',
-            qty: parseInt(values[8]?.trim() || '0', 10),
-            status: (values[9]?.trim().replace(/"/g, '') as 'Done' | 'Pending') || 'Pending',
-          };
+        const header = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
+        
+        const newDocs = lines.slice(1).map(line => {
+            const values = line.split(',');
+            const docData: Record<string, any> = {};
+            header.forEach((col, index) => {
+              docData[col] = values[index]?.trim().replace(/"/g, '') || '';
+            });
+
+            return {
+              no_document: docData.no_document || '',
+              sku: docData.sku || '',
+              barcode: docData.barcode || '',
+              brand: docData.brand || '',
+              exp_date: docData.exp_date || '',
+              location: docData.location || '',
+              check_by: docData.check_by || '',
+              qty: parseInt(docData.qty || '0', 10),
+              status: docData.status || 'Pending',
+            };
         });
 
         const response = await fetch('/api/putaway-documents', {
@@ -245,13 +253,16 @@ export default function MonitoringPutawayPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ documents: newDocs, user: { name: user.name, email: user.email } })
         });
-        if (!response.ok) throw new Error('Failed to upload documents');
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || "Failed to upload documents.");
+        }
 
         await fetchDocuments();
         setUploadDialogOpen(false);
         toast({ title: "Success", description: `${newDocs.length} documents uploaded.` });
-      } catch (error) {
-        toast({ variant: "destructive", title: "Upload Failed", description: "Could not process CSV file." });
+      } catch (error: any) {
+        toast({ variant: "destructive", title: "Upload Failed", description: error.message || "Could not process CSV file." });
       } finally {
         setIsSubmitting(false);
         if (event.target) event.target.value = '';
