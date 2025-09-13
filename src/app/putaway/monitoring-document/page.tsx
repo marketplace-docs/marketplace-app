@@ -49,6 +49,16 @@ const statusVariantMap: { [key in PutawayDocument['status']]: "default" | "secon
     'Pending': 'secondary',
 };
 
+const formatDateSafely = (dateString: string | null | undefined, formatString: string): string => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    if (!isNaN(date.getTime())) {
+        return format(date, formatString);
+    }
+    return '-';
+};
+
+
 export default function MonitoringPutawayPage() {
   const [documents, setDocuments] = useState<PutawayDocument[]>([]);
   const [loading, setLoading] = useState(true);
@@ -337,11 +347,11 @@ export default function MonitoringPutawayPage() {
                     paginatedDocs.map((doc) => (
                       <TableRow key={doc.id}>
                         <TableCell className="font-medium">{doc.no_document}</TableCell>
-                        <TableCell>{doc.date ? format(new Date(doc.date), "eee, dd/MMM/yyyy HH:mm") : '-'}</TableCell>
+                        <TableCell>{formatDateSafely(doc.date, "eee, dd/MMM/yyyy HH:mm")}</TableCell>
                         <TableCell>{doc.sku}</TableCell>
                         <TableCell>{doc.barcode}</TableCell>
                         <TableCell>{doc.brand}</TableCell>
-                        <TableCell>{doc.exp_date ? format(new Date(doc.exp_date), 'dd/MM/yyyy') : '-'}</TableCell>
+                        <TableCell>{formatDateSafely(doc.exp_date, 'dd/MM/yyyy')}</TableCell>
                         <TableCell>{doc.location}</TableCell>
                         <TableCell>{doc.check_by}</TableCell>
                         <TableCell>{doc.qty}</TableCell>
@@ -510,3 +520,5 @@ export default function MonitoringPutawayPage() {
     </MainLayout>
   );
 }
+
+    
