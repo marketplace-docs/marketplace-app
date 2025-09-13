@@ -124,7 +124,7 @@ export default function DailyPerformancePage() {
     
     useEffect(() => {
         setCurrentPage(1);
-    }, [rowsPerPage]);
+    }, [rowsPerPage, dateRange, jobFilter]);
 
     const handleDateChange = (range: DateRange | undefined) => {
         if (range?.from && range?.to) {
@@ -150,6 +150,14 @@ export default function DailyPerformancePage() {
     };
 
     const handleExport = () => {
+        if (data.length === 0) {
+            toast({
+                variant: 'destructive',
+                title: 'Export Failed',
+                description: 'There is no data to export.',
+            });
+            return;
+        }
         const headers = ["Date", "Month", "Name", "Task Daily", "Total Items", "Job-Desc", "Shift", "Task Perf.", "Items Perf.", "Result"];
         const csvContent = [
             headers.join(","),
@@ -253,16 +261,19 @@ export default function DailyPerformancePage() {
 
     const handleEditToggle = async () => {
       if (isEditing) {
+          const updates = Object.entries(editedItems).map(([id, changes]) => ({
+              id: Number(id),
+              ...changes
+          }));
+          
+          if(updates.length === 0) {
+             toast({ title: "No Changes", description: "No changes to save." });
+             setIsEditing(false);
+             return;
+          }
+
           setIsSubmitting(true);
           try {
-              const updates = Object.entries(editedItems).map(([id, changes]) => ({
-                  id: Number(id),
-                  ...changes
-              }));
-              if(updates.length === 0) {
-                 toast({ title: "No Changes", description: "No changes to save." });
-                 return;
-              }
               const response = await fetch('/api/daily-performance', {
                   method: 'PATCH',
                   headers: { 'Content-Type': 'application/json' },
@@ -273,14 +284,16 @@ export default function DailyPerformancePage() {
               
               await fetchPerformanceData();
               setEditedItems({});
+              setIsEditing(false);
               toast({ title: "Success", description: "Performance data has been updated." });
           } catch(err: any) {
               toast({ variant: "destructive", title: "Save Failed", description: err.message });
           } finally {
               setIsSubmitting(false);
           }
+      } else {
+        setIsEditing(true);
       }
-      setIsEditing(!isEditing);
     };
 
     const handleItemChange = (id: number, field: 'task_daily' | 'total_items', value: string) => {

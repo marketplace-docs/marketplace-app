@@ -28,7 +28,7 @@ export async function GET(request: Request) {
   if (to) {
     query = query.lte('date', to);
   }
-  if (job_desc) {
+  if (job_desc && job_desc !== 'All') {
     query = query.eq('job_desc', job_desc);
   }
   
@@ -122,7 +122,7 @@ export async function PATCH(request: Request) {
     const errors = results.filter(res => res && res.error);
     if (errors.length > 0) {
         console.error('Some updates failed:', errors);
-        return NextResponse.json({ error: `Failed to update ${errors.length} records.`, details: errors.map(e => e.error.message) }, { status: 500 });
+        return NextResponse.json({ error: `Failed to update ${errors.length} records.`, details: errors.map(e => e.error?.message) }, { status: 500 });
     }
 
     return NextResponse.json({ message: 'Performance data updated successfully.' });
