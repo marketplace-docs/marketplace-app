@@ -14,11 +14,11 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 type PutawayDocument = {
-  id: string; noDocument: string; date: string; qty: number; status: 'Done' | 'Pending'; sku: string; barcode: string; brand: string; expDate: string; checkBy: string;
+  id: string; noDocument: string; date: string; qty: number; status: 'Done' | 'Pending'; sku: string; barcode: string; brand: string; expDate: string; location: string; checkBy: string;
 };
 
 type ProductOutDocument = {
-  id: string; noDocument: string; sku: string; barcode: string; expDate: string; qty: number; status: 'Issue - Order' | 'Issue - Internal Transfer' | 'Issue - Adjustment Manual'; date: string; validatedBy: string;
+  id: string; noDocument: string; sku: string; barcode: string; expDate: string; qty: number; status: 'Issue - Order' | 'Issue - Internal Transfer' | 'Issue - Adjustment Manual'; date: string; location: string; validatedBy: string;
 };
 
 type StockLogEntry = {
@@ -26,6 +26,7 @@ type StockLogEntry = {
     date: string;
     noDocument: string;
     barcode: string;
+    location: string;
     qty_before: number;
     qty_change: number;
     qty_after: number;
@@ -90,6 +91,7 @@ export default function StockLogPage() {
                     date: putawayDoc.date,
                     noDocument: putawayDoc.noDocument,
                     barcode: barcode,
+                    location: putawayDoc.location,
                     qty_before: currentStock,
                     qty_change: change,
                     qty_after: currentStock + change,
@@ -105,6 +107,7 @@ export default function StockLogPage() {
                     date: outDoc.date,
                     noDocument: outDoc.noDocument,
                     barcode: barcode,
+                    location: outDoc.location,
                     qty_before: currentStock,
                     qty_change: -change,
                     qty_after: currentStock - change,
@@ -166,7 +169,7 @@ export default function StockLogPage() {
                                 <CardDescription>Stores historical data of incoming and outgoing items.</CardDescription>
                             </div>
                              <Input 
-                                placeholder="Cari Barcode atau No. Dokumen..." 
+                                placeholder="Search Barcode or Document No..." 
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="w-full md:w-auto md:max-w-sm"
@@ -181,6 +184,7 @@ export default function StockLogPage() {
                                         <TableHead>Date</TableHead>
                                         <TableHead>No. Document</TableHead>
                                         <TableHead>Barcode</TableHead>
+                                        <TableHead>Location</TableHead>
                                         <TableHead>Qty Before</TableHead>
                                         <TableHead>Qty Change</TableHead>
                                         <TableHead>Qty After</TableHead>
@@ -191,7 +195,7 @@ export default function StockLogPage() {
                                 <TableBody>
                                     {loading ? (
                                         <TableRow>
-                                            <TableCell colSpan={8} className="h-24 text-center">
+                                            <TableCell colSpan={9} className="h-24 text-center">
                                                 <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                                             </TableCell>
                                         </TableRow>
@@ -201,6 +205,7 @@ export default function StockLogPage() {
                                                 <TableCell>{format(new Date(log.date), 'dd/MM/yyyy HH:mm')}</TableCell>
                                                 <TableCell>{log.noDocument}</TableCell>
                                                 <TableCell className="font-medium">{log.barcode}</TableCell>
+                                                <TableCell>{log.location}</TableCell>
                                                 <TableCell>{log.qty_before.toLocaleString()}</TableCell>
                                                 <TableCell>
                                                     <Badge variant={log.type === 'IN' ? 'default' : 'destructive'} className="gap-1">
@@ -215,8 +220,8 @@ export default function StockLogPage() {
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
-                                                Tidak ada histori stok.
+                                            <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
+                                                No stock history.
                                             </TableCell>
                                         </TableRow>
                                     )}

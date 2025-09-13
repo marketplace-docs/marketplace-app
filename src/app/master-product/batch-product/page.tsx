@@ -22,7 +22,7 @@ const getProductStatus = (expDate: string): ProductStatus => {
     const expiryDate = new Date(expDate);
     const monthsUntilExpiry = differenceInMonths(expiryDate, today);
 
-    if (monthsUntilExpiry < 3) { // Should be <= 3, but API returns products expiring in 3 months as 'Expired'
+    if (monthsUntilExpiry < 3) {
         return 'Expired';
     }
     if (monthsUntilExpiry <= 9) {
@@ -133,6 +133,7 @@ export default function BatchProductPage() {
                                         <TableHead>Barcode</TableHead>
                                         <TableHead>Brand</TableHead>
                                         <TableHead>EXP Date</TableHead>
+                                        <TableHead>Location</TableHead>
                                         <TableHead>Stock</TableHead>
                                         <TableHead>Status</TableHead>
                                     </TableRow>
@@ -140,7 +141,7 @@ export default function BatchProductPage() {
                                 <TableBody>
                                     {loading ? (
                                         <TableRow>
-                                            <TableCell colSpan={6} className="h-24 text-center">
+                                            <TableCell colSpan={7} className="h-24 text-center">
                                                 <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                                             </TableCell>
                                         </TableRow>
@@ -151,6 +152,7 @@ export default function BatchProductPage() {
                                                 <TableCell>{product.barcode}</TableCell>
                                                 <TableCell>{product.brand}</TableCell>
                                                 <TableCell>{format(new Date(product.expDate), 'dd/MM/yyyy')}</TableCell>
+                                                <TableCell>{product.location}</TableCell>
                                                 <TableCell>
                                                      <Badge variant={product.stock > 0 ? 'default' : 'destructive'} className="font-semibold">
                                                         {product.stock.toLocaleString()}
@@ -170,7 +172,7 @@ export default function BatchProductPage() {
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                                            <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                                                 <div className="flex flex-col items-center justify-center gap-2">
                                                     <PackageSearch className="h-8 w-8" />
                                                     <span>No inventory data found.</span>

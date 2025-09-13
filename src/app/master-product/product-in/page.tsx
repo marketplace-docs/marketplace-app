@@ -23,6 +23,7 @@ type PutawayDocument = {
     barcode: string;
     brand: string;
     expDate: string;
+    location: string;
     checkBy: string;
 };
 
@@ -31,6 +32,7 @@ type AggregatedProduct = {
     barcode: string;
     brand: string;
     expDate: string;
+    location: string;
     qty: number;
     status: 'Done' | 'Pending';
 };
@@ -83,6 +85,7 @@ export default function ProductInPage() {
                     barcode: doc.barcode,
                     brand: doc.brand,
                     expDate: doc.expDate,
+                    location: doc.location,
                     qty: doc.qty,
                     status: doc.status,
                 });
@@ -137,7 +140,7 @@ export default function ProductInPage() {
                                 <CardDescription>Aggregate stock data of received items from putaway.</CardDescription>
                             </div>
                              <Input 
-                                placeholder="Cari SKU atau Barcode..." 
+                                placeholder="Search SKU or Barcode..." 
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="w-full md:w-auto md:max-w-sm"
@@ -153,6 +156,7 @@ export default function ProductInPage() {
                                         <TableHead>Barcode</TableHead>
                                         <TableHead>Brand</TableHead>
                                         <TableHead>EXP</TableHead>
+                                        <TableHead>Location</TableHead>
                                         <TableHead>Quantity</TableHead>
                                         <TableHead>Status</TableHead>
                                     </TableRow>
@@ -160,7 +164,7 @@ export default function ProductInPage() {
                                 <TableBody>
                                     {loading ? (
                                         <TableRow>
-                                            <TableCell colSpan={6} className="h-24 text-center">
+                                            <TableCell colSpan={7} className="h-24 text-center">
                                                 <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                                             </TableCell>
                                         </TableRow>
@@ -171,6 +175,7 @@ export default function ProductInPage() {
                                                 <TableCell>{product.barcode}</TableCell>
                                                 <TableCell>{product.brand}</TableCell>
                                                 <TableCell>{format(new Date(product.expDate), 'dd/MM/yyyy')}</TableCell>
+                                                <TableCell>{product.location}</TableCell>
                                                 <TableCell>{product.qty.toLocaleString()}</TableCell>
                                                 <TableCell>
                                                     <Badge variant={statusVariantMap[product.status] || 'default'}>
@@ -181,8 +186,8 @@ export default function ProductInPage() {
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                                                Tidak ada data produk masuk.
+                                            <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                                                No incoming product data.
                                             </TableCell>
                                         </TableRow>
                                     )}

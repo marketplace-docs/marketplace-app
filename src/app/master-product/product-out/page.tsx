@@ -24,6 +24,7 @@ type ProductOutDocument = {
     sku: string;
     barcode: string;
     expDate: string;
+    location: string;
     qty: number;
     status: ProductOutStatus;
     date: string; // ISO String
@@ -35,6 +36,7 @@ type AggregatedProduct = {
     barcode: string;
     brand: string;
     expDate: string;
+    location: string;
     stock: number;
 };
 
@@ -54,6 +56,7 @@ export default function ProductOutPage() {
         sku: '',
         barcode: '',
         expDate: '',
+        location: '',
         qty: '',
         status: 'Issue - Order' as ProductOutStatus,
     });
@@ -102,14 +105,14 @@ export default function ProductOutPage() {
             const foundStock = productInStock.find(p => p.barcode === newDocument.barcode);
             if (foundStock) {
                 setAvailableStock(foundStock);
-                setNewDocument(prev => ({ ...prev, sku: foundStock.sku, expDate: foundStock.expDate }));
+                setNewDocument(prev => ({ ...prev, sku: foundStock.sku, expDate: foundStock.expDate, location: foundStock.location }));
             } else {
                 setAvailableStock(null);
-                setNewDocument(prev => ({ ...prev, sku: '', expDate: '' }));
+                setNewDocument(prev => ({ ...prev, sku: '', expDate: '', location: '' }));
             }
         } else {
             setAvailableStock(null);
-            setNewDocument(prev => ({ ...prev, sku: '', expDate: '' }));
+            setNewDocument(prev => ({ ...prev, sku: '', expDate: '', location: '' }));
         }
     }, [newDocument.barcode, productInStock]);
 
@@ -123,7 +126,7 @@ export default function ProductOutPage() {
     };
 
     const resetForm = () => {
-        setNewDocument({ noDocument: '', sku: '', barcode: '', expDate: '', qty: '', status: 'Issue - Order' });
+        setNewDocument({ noDocument: '', sku: '', barcode: '', expDate: '', location: '', qty: '', status: 'Issue - Order' });
         setAvailableStock(null);
     };
 
@@ -246,6 +249,10 @@ export default function ProductOutPage() {
                                         <Label htmlFor="expDate" className="text-right">EXP Date</Label>
                                         <Input id="expDate" name="expDate" value={newDocument.expDate ? format(new Date(newDocument.expDate), 'yyyy-MM-dd') : ''} className="col-span-3 bg-muted" readOnly />
                                     </div>
+                                     <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="location" className="text-right">Location</Label>
+                                        <Input id="location" name="location" value={newDocument.location} className="col-span-3 bg-muted" readOnly />
+                                    </div>
                                     <div className="grid grid-cols-4 items-center gap-4">
                                         <Label htmlFor="qty" className="text-right">Quantity</Label>
                                         <div className="col-span-3">
@@ -285,6 +292,7 @@ export default function ProductOutPage() {
                                         <TableHead>SKU</TableHead>
                                         <TableHead>Barcode</TableHead>
                                         <TableHead>EXP Date</TableHead>
+                                        <TableHead>Location</TableHead>
                                         <TableHead>Quantity</TableHead>
                                         <TableHead>Status</TableHead>
                                         <TableHead>Document</TableHead>
@@ -294,7 +302,7 @@ export default function ProductOutPage() {
                                 <TableBody>
                                     {loading ? (
                                         <TableRow>
-                                            <TableCell colSpan={7} className="h-24 text-center">
+                                            <TableCell colSpan={8} className="h-24 text-center">
                                                 <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                                             </TableCell>
                                         </TableRow>
@@ -304,6 +312,7 @@ export default function ProductOutPage() {
                                                 <TableCell>{doc.sku}</TableCell>
                                                 <TableCell>{doc.barcode}</TableCell>
                                                 <TableCell>{doc.expDate ? format(new Date(doc.expDate), 'dd/MM/yyyy') : '-'}</TableCell>
+                                                <TableCell>{doc.location}</TableCell>
                                                 <TableCell>{doc.qty.toLocaleString()}</TableCell>
                                                 <TableCell>{doc.status}</TableCell>
                                                 <TableCell>{doc.noDocument}</TableCell>
@@ -312,8 +321,8 @@ export default function ProductOutPage() {
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-                                                Belum ada data pengeluaran barang.
+                                            <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                                                No goods issue data available.
                                             </TableCell>
                                         </TableRow>
                                     )}

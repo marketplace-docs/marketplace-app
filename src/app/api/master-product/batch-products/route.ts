@@ -7,17 +7,17 @@ type AggregatedProduct = {
     barcode: string;
     brand: string;
     expDate: string;
+    location: string;
     stock: number;
 };
 
 export async function GET() {
     try {
-        // Fetch all product in (putaway) and product out documents
         const [
             { data: putawayData, error: putawayError },
             { data: productOutData, error: productOutError }
         ] = await Promise.all([
-            supabaseService.from('putaway_documents').select('sku, barcode, brand, expDate, qty'),
+            supabaseService.from('putaway_documents').select('sku, barcode, brand, expDate, location, qty'),
             supabaseService.from('product_out_documents').select('barcode, qty')
         ]);
 
@@ -26,9 +26,7 @@ export async function GET() {
         
         const stockMap = new Map<string, AggregatedProduct>();
 
-        // Process stock in from putaway documents
         putawayData.forEach(doc => {
-            // Using barcode as the unique key for each product batch
             const key = doc.barcode;
             if (stockMap.has(key)) {
                 const existing = stockMap.get(key)!;
@@ -39,12 +37,12 @@ export async function GET() {
                     barcode: doc.barcode,
                     brand: doc.brand,
                     expDate: doc.expDate,
+                    location: doc.location,
                     stock: doc.qty,
                 });
             }
         });
         
-        // Process stock out from product out documents
         productOutData.forEach(doc => {
              const key = doc.barcode;
              if (stockMap.has(key)) {
@@ -52,7 +50,6 @@ export async function GET() {
              }
         });
 
-        // Filter out items with zero or negative stock
         const finalInventory = Array.from(stockMap.values()).filter(p => p.stock > 0);
 
         return NextResponse.json(finalInventory);
