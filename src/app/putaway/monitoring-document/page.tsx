@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
@@ -22,7 +23,7 @@ import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Pencil, Trash2, Loader2, AlertCircle, Upload, Download } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
@@ -45,6 +46,7 @@ export default function MonitoringPutawayPage() {
   
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isUploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState<PutawayDocument | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
@@ -118,21 +120,21 @@ export default function MonitoringPutawayPage() {
   };
   
   const handleExport = () => {
-    if (documents.length === 0) {
+    if (filteredDocuments.length === 0) {
       toast({ variant: "destructive", title: "No Data", description: "There is no data to export." });
       return;
     }
     const headers = ["noDocument", "date", "sku", "barcode", "brand", "expDate", "checkBy", "qty", "status"];
     const csvContent = [
       headers.join(","),
-      ...documents.map(doc => [
-        doc.noDocument,
-        doc.date,
-        doc.sku,
-        doc.barcode,
-        doc.brand,
-        doc.expDate,
-        doc.checkBy,
+      ...filteredDocuments.map(doc => [
+        `"${doc.noDocument.replace(/"/g, '""')}"`,
+        `"${format(new Date(doc.date), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx")}"`,
+        `"${doc.sku.replace(/"/g, '""')}"`,
+        `"${doc.barcode.replace(/"/g, '""')}"`,
+        `"${doc.brand.replace(/"/g, '""')}"`,
+        `"${doc.expDate}"`,
+        `"${doc.checkBy.replace(/"/g, '""')}"`,
         doc.qty,
         doc.status
       ].join(","))
@@ -158,31 +160,26 @@ export default function MonitoringPutawayPage() {
     reader.onload = async (e) => {
       const text = e.target?.result as string;
       try {
-        const lines = text.split('\n').filter(line => line.trim() !== '');
-        const headers = lines.shift()?.split(',').map(h => h.trim()) || [];
+        const lines = text.split('\n').filter(line => line.trim() !== '').slice(1); // Skip header
         
         const newDocs: PutawayDocument[] = lines.map(line => {
           const values = line.split(',');
-          const docData: any = {};
-          headers.forEach((header, index) => {
-            docData[header] = values[index]?.trim();
-          });
-          
           return {
             id: Date.now().toString() + Math.random(),
-            noDocument: docData.noDocument,
+            noDocument: values[0]?.trim().replace(/"/g, '') || '',
             date: new Date().toISOString(),
-            qty: parseInt(docData.qty, 10),
-            status: docData.status,
-            sku: docData.sku,
-            barcode: docData.barcode,
-            brand: docData.brand,
-            expDate: docData.expDate,
-            checkBy: docData.checkBy,
+            sku: values[1]?.trim().replace(/"/g, '') || '',
+            barcode: values[2]?.trim().replace(/"/g, '') || '',
+            brand: values[3]?.trim().replace(/"/g, '') || '',
+            expDate: values[4]?.trim().replace(/"/g, '') || '',
+            checkBy: values[5]?.trim().replace(/"/g, '') || '',
+            qty: parseInt(values[6]?.trim() || '0', 10),
+            status: (values[7]?.trim().replace(/"/g, '') as 'Done' | 'Pending') || 'Pending',
           };
         });
 
-        setDocuments([...documents, ...newDocs]);
+        setDocuments(prevDocs => [...prevDocs, ...newDocs]);
+        setUploadDialogOpen(false);
         toast({ title: "Success", description: `${newDocs.length} documents uploaded locally.` });
       } catch (error) {
         toast({ variant: "destructive", title: "Upload Failed", description: "Could not process CSV file." });
@@ -210,7 +207,7 @@ export default function MonitoringPutawayPage() {
           <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-6">
             <div className="flex-1">
               <CardTitle>Putaway Documents</CardTitle>
-              <CardDescription>A list of all putaway documents.</CardDescription>
+              <CardDescription>A list of all putaway documents (stored locally).</CardDescription>
             </div>
             <div className="flex w-full md:w-auto items-center gap-2">
                 <Input 
@@ -225,10 +222,28 @@ export default function MonitoringPutawayPage() {
                     onChange={(e) => setSearchBarcode(e.target.value)}
                     className="flex-1 md:flex-auto md:w-auto"
                 />
-                 <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
-                <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSubmitting}>
-                    <Upload className="h-4 w-4 mr-2" /> Upload
-                </Button>
+                <Dialog open={isUploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+                    <DialogTrigger asChild>
+                        <Button variant="outline"><Upload className="h-4 w-4 mr-2" />Upload</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Upload CSV</DialogTitle>
+                            <DialogDescription>
+                                Select a CSV file to bulk upload putaway documents. The data will be stored locally in your browser.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="py-4">
+                           <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
+                           <Button onClick={() => fileInputRef.current?.click()} className="w-full" disabled={isSubmitting}>
+                                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Choose File'}
+                           </Button>
+                           <p className="text-xs text-muted-foreground mt-2">
+                                Don't have a template? <a href="/templates/putaway_documents_template.csv" download className="underline text-primary">Download CSV template</a>
+                           </p>
+                        </div>
+                    </DialogContent>
+                </Dialog>
                 <Button variant="outline" onClick={handleExport}>
                     <Download className="h-4 w-4 mr-2" /> Export
                 </Button>

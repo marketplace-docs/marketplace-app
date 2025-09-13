@@ -53,9 +53,10 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { MainLayout } from '@/components/layout/main-layout';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/hooks/use-auth';
+import { format } from 'date-fns';
 
 type BacklogItem = {
   id: number;
@@ -88,6 +89,7 @@ export default function BacklogPage() {
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isUploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<BacklogItem | null>(null);
   const { user } = useAuth();
 
@@ -154,17 +156,21 @@ export default function BacklogPage() {
       });
       return;
     }
-    const headers = ["Store Name", "Payment Accepted", "Marketplace"];
+    const headers = ["store name", "payment accepted", "marketplace"];
     const csvContent = [
         headers.join(","),
-        ...backlogItems.map(item => [item.store_name, item.payment_accepted, item.marketplace].join(","))
+        ...backlogItems.map(item => [
+          `"${item.store_name.replace(/"/g, '""')}"`,
+          item.payment_accepted,
+          `"${item.marketplace.replace(/"/g, '""')}"`
+        ].join(","))
     ].join("\n");
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.href = url;
-    link.download = `backlog_data_${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `backlog_data_${format(new Date(), "yyyyMMdd")}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -172,10 +178,6 @@ export default function BacklogPage() {
     toast({ title: "Success", description: "Backlog data exported as CSV." });
   };
   
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
-  };
-
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !user) return;
@@ -187,7 +189,7 @@ export default function BacklogPage() {
         const lines = text.split('\n').filter(line => line.trim() !== '');
         if (lines.length <= 1) throw new Error("CSV is empty or has only a header.");
 
-        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
         const requiredHeaders = ['store name', 'payment accepted', 'marketplace'];
         if(!requiredHeaders.every(h => headers.includes(h))) {
             throw new Error(`Invalid CSV headers. Required: ${requiredHeaders.join(', ')}`);
@@ -195,9 +197,9 @@ export default function BacklogPage() {
 
         const newItems: Omit<BacklogItem, 'id'>[] = lines.slice(1).map((line) => {
             const values = line.split(',');
-            const store_name = values[headers.indexOf('store name')]?.trim();
+            const store_name = values[headers.indexOf('store name')]?.trim().replace(/"/g, '');
             const payment_accepted = parseInt(values[headers.indexOf('payment accepted')]?.trim(), 10);
-            const marketplace = values[headers.indexOf('marketplace')]?.trim();
+            const marketplace = values[headers.indexOf('marketplace')]?.trim().replace(/"/g, '');
 
             if (store_name && !isNaN(payment_accepted) && marketplace) {
                 return { store_name, payment_accepted, marketplace };
@@ -217,6 +219,7 @@ export default function BacklogPage() {
         }
         
         await fetchBacklogItems();
+        setUploadDialogOpen(false);
         toast({
           title: "Success",
           description: `${newItems.length} items uploaded successfully.`,
@@ -230,10 +233,10 @@ export default function BacklogPage() {
         });
       } finally {
         setIsSubmitting(false);
+        if (event.target) event.target.value = '';
       }
     };
     reader.readAsText(file);
-    if (event.target) event.target.value = '';
   };
 
 
@@ -339,11 +342,30 @@ export default function BacklogPage() {
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold">Backlog Marketplace</h1>
           <div className="flex items-center gap-2">
-              <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
-              <Button variant="outline" onClick={handleUploadClick} disabled={isSubmitting}>
-                  {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Upload className="mr-2 h-4 w-4" />} 
-                  Import
-              </Button>
+              <Dialog open={isUploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+                  <DialogTrigger asChild>
+                      <Button variant="outline" disabled={isSubmitting}>
+                          <Upload className="mr-2 h-4 w-4" /> Import
+                      </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                      <DialogHeader>
+                          <DialogTitle>Upload Backlog CSV</DialogTitle>
+                          <DialogDescription>
+                              Select a CSV file to bulk upload backlog items. The file must contain the headers: store name, payment accepted, marketplace.
+                          </DialogDescription>
+                      </DialogHeader>
+                      <div className="py-4">
+                         <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
+                         <Button onClick={() => fileInputRef.current?.click()} className="w-full" disabled={isSubmitting}>
+                              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Choose File'}
+                         </Button>
+                         <p className="text-xs text-muted-foreground mt-2">
+                              Don't have a template? <a href="/templates/backlog_items_template.csv" download className="underline text-primary">Download CSV template</a>
+                         </p>
+                      </div>
+                  </DialogContent>
+              </Dialog>
               <Button variant="outline" onClick={handleEditToggle} disabled={isSubmitting}>
                 {isEditing ? (isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />) : <Pencil className="mr-2 h-4 w-4" />}
                 {isEditing ? 'Save' : 'Edit'}

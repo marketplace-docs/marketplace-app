@@ -56,7 +56,6 @@ export async function POST(request: Request) {
 
   // Handle single document creation
   const { noDocument, qty, status, sku, barcode, brand, reason, receivedBy } = singleDoc;
-  const { userName, userEmail } = singleDoc;
 
   const { data, error } = await supabaseService
     .from('return_documents')
@@ -68,10 +67,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  if (userName && userEmail) {
+  if (user && user.name && user.email) {
     await logActivity({
-        userName,
-        userEmail,
+        userName: user.name,
+        userEmail: user.email,
         action: 'CREATE',
         details: `Return Document: ${noDocument}`,
     });

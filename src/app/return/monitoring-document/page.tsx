@@ -23,7 +23,7 @@ import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Pencil, Trash2, Loader2, AlertCircle, Upload, Download } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
@@ -48,6 +48,7 @@ export default function MonitoringReturnPage() {
   
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isUploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState<ReturnDocument | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
@@ -208,7 +209,7 @@ export default function MonitoringReturnPage() {
       try {
         const lines = text.split('\n').filter(line => line.trim() !== '');
         const headers = lines.shift()?.split(',').map(h => h.trim().replace(/"/g, '')) || [];
-        const requiredHeaders = ["noDocument", "sku", "barcode", "brand", "reason", "receivedBy", "qty", "status"];
+        const requiredHeaders = ["nodocument", "sku", "barcode", "brand", "reason", "receivedby", "qty", "status"];
         if (!requiredHeaders.every(h => headers.includes(h))) {
             throw new Error(`Invalid CSV headers. Required: ${requiredHeaders.join(', ')}`);
         }
@@ -221,12 +222,12 @@ export default function MonitoringReturnPage() {
           });
           
           return {
-            noDocument: docData.noDocument,
+            noDocument: docData.nodocument,
             sku: docData.sku,
             barcode: docData.barcode,
             brand: docData.brand,
             reason: docData.reason,
-            receivedBy: docData.receivedBy,
+            receivedBy: docData.receivedby,
             qty: parseInt(docData.qty, 10),
             status: docData.status,
           };
@@ -244,6 +245,7 @@ export default function MonitoringReturnPage() {
         }
         
         await fetchDocuments();
+        setUploadDialogOpen(false);
         toast({ title: "Success", description: `${newDocs.length} documents uploaded.` });
       } catch (error: any) {
         toast({ variant: "destructive", title: "Upload Failed", description: error.message });
@@ -285,10 +287,28 @@ export default function MonitoringReturnPage() {
                     onChange={(e) => setSearchBarcode(e.target.value)}
                     className="flex-1 md:flex-auto md:w-auto"
                 />
-                <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
-                <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSubmitting}>
-                    <Upload className="h-4 w-4 mr-2" /> Upload
-                </Button>
+                <Dialog open={isUploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+                    <DialogTrigger asChild>
+                        <Button variant="outline"><Upload className="h-4 w-4 mr-2" />Upload</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Upload CSV</DialogTitle>
+                            <DialogDescription>
+                                Select a CSV file to bulk upload return documents. The file must contain the headers: noDocument, sku, barcode, brand, reason, receivedBy, qty, status.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="py-4">
+                           <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
+                           <Button onClick={() => fileInputRef.current?.click()} className="w-full" disabled={isSubmitting}>
+                                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Choose File'}
+                           </Button>
+                           <p className="text-xs text-muted-foreground mt-2">
+                                Don't have a template? <a href="/templates/return_documents_template.csv" download className="underline text-primary">Download CSV template</a>
+                           </p>
+                        </div>
+                    </DialogContent>
+                </Dialog>
                 <Button variant="outline" onClick={handleExport}>
                     <Download className="h-4 w-4 mr-2" /> Export
                 </Button>

@@ -82,6 +82,7 @@ export default function DailyPerformancePage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     
     const [isAddDialogOpen, setAddDialogOpen] = useState(false);
+    const [isUploadDialogOpen, setUploadDialogOpen] = useState(false);
     const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState<PerformanceData | null>(null);
 
@@ -160,19 +161,19 @@ export default function DailyPerformancePage() {
             });
             return;
         }
-        const headers = ["Date", "Month", "Name", "Task Daily", "Total Items", "Job-Desc", "Shift", "Task Perf.", "Items Perf.", "Result"];
+        const headers = ["date", "month", "name", "task_daily", "total_items", "job_desc", "shift", "task_performance", "items_performance", "result"];
         const csvContent = [
             headers.join(","),
             ...data.map(item => [
                 format(new Date(item.date), "dd MMMM yyyy"),
                 item.month,
-                item.name,
+                `"${item.name}"`,
                 item.task_daily,
                 item.total_items,
                 item.job_desc,
                 item.shift,
-                `${item.task_performance}%`,
-                `${item.items_performance}%`,
+                item.task_performance,
+                item.items_performance,
                 item.result
             ].join(","))
         ].join("\n");
@@ -188,10 +189,6 @@ export default function DailyPerformancePage() {
         toast({ title: "Success", description: "Data has been exported to CSV." });
     };
 
-    const handleUploadClick = () => {
-        fileInputRef.current?.click();
-    };
-
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file || !user) return;
@@ -203,7 +200,7 @@ export default function DailyPerformancePage() {
                 const lines = text.split('\n').filter(line => line.trim() !== '');
                 if (lines.length <= 1) throw new Error("CSV is empty or has only a header.");
 
-                const header = lines[0].split(',').map(h => h.trim().toLowerCase());
+                const header = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
                 const requiredHeaders = ['date', 'name', 'task daily', 'total items', 'job-desc', 'shift'];
                 if (!requiredHeaders.every(h => header.includes(h))) {
                     throw new Error(`Invalid CSV headers. Required: ${requiredHeaders.join(', ')}`);
@@ -212,7 +209,7 @@ export default function DailyPerformancePage() {
                 const newEntries: any[] = lines.slice(1).map(line => {
                     const values = line.split(',');
                     const entry: { [key: string]: string } = {};
-                    header.forEach((h, i) => entry[h] = values[i]?.trim());
+                    header.forEach((h, i) => entry[h] = values[i]?.trim().replace(/"/g, ''));
                     
                     const entryDate = parse(entry.date, 'dd MMMM yyyy', new Date());
                     if (!isValid(entryDate)) {
@@ -242,6 +239,7 @@ export default function DailyPerformancePage() {
                 }
 
                 await fetchPerformanceData();
+                setUploadDialogOpen(false);
                 toast({
                     title: "Success",
                     description: `${newEntries.length} entries uploaded successfully.`,
@@ -255,10 +253,10 @@ export default function DailyPerformancePage() {
                 });
             } finally {
               setIsSubmitting(false);
+              if (event.target) event.target.value = '';
             }
         };
         reader.readAsText(file);
-        if (event.target) event.target.value = '';
     };
 
     const handleEditToggle = async () => {
@@ -403,11 +401,26 @@ export default function DailyPerformancePage() {
                 <div className="flex justify-between items-center">
                     <h1 className="text-2xl font-bold">Performance Report</h1>
                     <div className="flex gap-2">
-                        <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" disabled={isSubmitting} />
-                        <Button variant="outline" onClick={handleUploadClick} disabled={isSubmitting}>
-                            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-                            Upload
-                        </Button>
+                        <Dialog open={isUploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Button variant="outline" disabled={isSubmitting}><Upload className="mr-2 h-4 w-4" />Upload</Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Upload Performance CSV</DialogTitle>
+                                    <DialogDescription>Select a CSV file. The date format must be 'dd MMMM yyyy' (e.g., 24 July 2024).</DialogDescription>
+                                </DialogHeader>
+                                <div className="py-4">
+                                   <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
+                                   <Button onClick={() => fileInputRef.current?.click()} className="w-full" disabled={isSubmitting}>
+                                        {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Choose File'}
+                                   </Button>
+                                   <p className="text-xs text-muted-foreground mt-2">
+                                        Don't have a template? <a href="/templates/daily_performance_template.csv" download className="underline text-primary">Download CSV template</a>
+                                   </p>
+                                </div>
+                            </DialogContent>
+                        </Dialog>
                         <Dialog open={isAddDialogOpen} onOpenChange={setAddDialogOpen}>
                             <DialogTrigger asChild>
                                 <Button variant="outline">
