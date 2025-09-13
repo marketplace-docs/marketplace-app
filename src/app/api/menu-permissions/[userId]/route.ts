@@ -1,5 +1,5 @@
 
-import { supabase } from '@/lib/supabase-client';
+import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 
 export async function GET(request: Request, { params }: { params: { userId: string } }) {
@@ -15,18 +15,12 @@ export async function GET(request: Request, { params }: { params: { userId: stri
   }
 
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseService
       .from('menu_permissions')
       .select('menu_href, is_accessible')
       .eq('user_id', userIdNumber);
 
     if (error) {
-      // Check if the error is due to RLS and not a fatal one
-      if (error.code === 'PGRST200' || error.code === '42501') {
-        console.warn(`RLS warning for user fetching permissions for ${userIdNumber}:`, error.message);
-        // Return empty array if user is not authorized to see, which is expected for non-superadmins
-        return NextResponse.json([]);
-      }
       throw error;
     }
     

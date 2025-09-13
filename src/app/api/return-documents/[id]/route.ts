@@ -1,12 +1,12 @@
 
-import { supabase } from '@/lib/supabase-client';
+import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const { id } = params;
   const { noDocument, qty, status, sku, barcode, brand, reason, receivedBy } = await request.json();
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseService
     .from('return_documents')
     .update({ noDocument, qty, status, sku, barcode, brand, reason, receivedBy })
     .eq('id', id)
@@ -23,7 +23,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   const { id } = params;
 
-  const { error } = await supabase
+  const { error } = await supabaseService
     .from('return_documents')
     .delete()
     .eq('id', id);

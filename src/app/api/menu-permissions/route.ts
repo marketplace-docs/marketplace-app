@@ -1,5 +1,5 @@
 
-import { supabase } from '@/lib/supabase-client';
+import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
@@ -21,19 +21,12 @@ export async function POST(request: Request) {
   }));
 
   try {
-    // Upsert into the database
-    // onConflict specifies what to do if a row with the same user_id and menu_href already exists.
-    // Here we tell it to UPDATE the is_accessible column.
-    const { error } = await supabase
+    const { error } = await supabaseService
       .from('menu_permissions')
       .upsert(records, { onConflict: 'user_id, menu_href' });
 
     if (error) {
       console.error('Supabase upsert error:', error);
-      // Provide a more specific error message to the client
-      if (error.code === '42501') { // RLS violation code
-        return NextResponse.json({ error: "You do not have permission to perform this action." }, { status: 403 });
-      }
       throw error;
     }
 

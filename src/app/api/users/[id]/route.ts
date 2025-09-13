@@ -1,12 +1,12 @@
 
-import { supabase } from '@/lib/supabase-client';
+import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const { id } = params;
   const { name, email, role, status } = await request.json();
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseService
     .from('users')
     .update({ name, email, role, status })
     .eq('id', id)
@@ -23,7 +23,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   const { id } = params;
 
-  const { error } = await supabase
+  const { error } = await supabaseService
     .from('users')
     .delete()
     .eq('id', id);
@@ -34,5 +34,3 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
 
   return NextResponse.json({ message: 'User deleted successfully' }, { status: 200 });
 }
-
-    

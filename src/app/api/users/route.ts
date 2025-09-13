@@ -1,9 +1,9 @@
 
-import { supabase } from '@/lib/supabase-client';
+import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 
 export async function GET() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseService
     .from('users')
     .select('id, name, email, role, status')
     .order('created_at', { ascending: false });
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'All fields are required' }, { status: 400 });
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseService
     .from('users')
     .insert([{ name, email, role, status }])
     .select()
@@ -34,5 +34,3 @@ export async function POST(request: Request) {
 
   return NextResponse.json(data, { status: 201 });
 }
-
-    

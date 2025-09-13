@@ -1,12 +1,12 @@
 
-import { supabase } from '@/lib/supabase-client';
+import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const { id } = params;
   const { marketplace_name, store_name, platform } = await request.json();
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseService
     .from('marketplace_stores')
     .update({ marketplace_name, store_name, platform })
     .eq('id', id)
@@ -24,7 +24,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   const { id } = params;
 
-  const { error } = await supabase
+  const { error } = await supabaseService
     .from('marketplace_stores')
     .delete()
     .eq('id', id);

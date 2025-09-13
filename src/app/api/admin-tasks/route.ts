@@ -1,9 +1,9 @@
 
-import { supabase } from '@/lib/supabase-client';
+import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 
 export async function GET() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseService
     .from('admin_tasks')
     .select('*')
     .order('date', { ascending: false });
@@ -18,7 +18,7 @@ export async function GET() {
 export async function POST(request: Request) {
   const { name, job, shift, status } = await request.json();
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseService
     .from('admin_tasks')
     .insert([{ name, job, shift, status }])
     .select()

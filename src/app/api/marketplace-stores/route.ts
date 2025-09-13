@@ -1,9 +1,9 @@
 
-import { supabase } from '@/lib/supabase-client';
+import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 
 export async function GET() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseService
     .from('marketplace_stores')
     .select('id, marketplace_name, store_name, platform, created_at')
     .order('created_at', { ascending: false });
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'marketplace_name, store_name, and platform are required' }, { status: 400 });
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseService
     .from('marketplace_stores')
     .insert([{ marketplace_name, store_name, platform }])
     .select()
