@@ -20,22 +20,22 @@ type ProductOutStatus = 'Issue - Order' | 'Issue - Internal Transfer' | 'Issue -
 
 type ProductOutDocument = {
     id: string;
-    noDocument: string;
+    no_document: string;
     sku: string;
     barcode: string;
-    expDate: string;
+    exp_date: string;
     location: string;
     qty: number;
     status: ProductOutStatus;
     date: string; // ISO String
-    validatedBy: string;
+    validated_by: string;
 };
 
 type AggregatedProduct = {
     sku: string;
     barcode: string;
     brand: string;
-    expDate: string;
+    exp_date: string;
     location: string;
     stock: number;
 };
@@ -52,10 +52,10 @@ export default function ProductOutPage() {
     const [error, setError] = useState<string|null>(null);
     
     const [newDocument, setNewDocument] = useState({
-        noDocument: '',
+        no_document: '',
         sku: '',
         barcode: '',
-        expDate: '',
+        exp_date: '',
         location: '',
         qty: '',
         status: 'Issue - Order' as ProductOutStatus,
@@ -96,7 +96,7 @@ export default function ProductOutPage() {
             const currentYear = new Date().getFullYear();
             const nextId = (documents.length + 1).toString().padStart(5, '0');
             const newDocNumber = `PB-OUT-${currentYear}-${nextId}`;
-            setNewDocument(prev => ({ ...prev, noDocument: newDocNumber }));
+            setNewDocument(prev => ({ ...prev, no_document: newDocNumber }));
         }
     }, [isAddDialogOpen, documents]);
 
@@ -105,14 +105,14 @@ export default function ProductOutPage() {
             const foundStock = productInStock.find(p => p.barcode === newDocument.barcode);
             if (foundStock) {
                 setAvailableStock(foundStock);
-                setNewDocument(prev => ({ ...prev, sku: foundStock.sku, expDate: foundStock.expDate, location: foundStock.location }));
+                setNewDocument(prev => ({ ...prev, sku: foundStock.sku, exp_date: foundStock.exp_date, location: foundStock.location }));
             } else {
                 setAvailableStock(null);
-                setNewDocument(prev => ({ ...prev, sku: '', expDate: '', location: '' }));
+                setNewDocument(prev => ({ ...prev, sku: '', exp_date: '', location: '' }));
             }
         } else {
             setAvailableStock(null);
-            setNewDocument(prev => ({ ...prev, sku: '', expDate: '', location: '' }));
+            setNewDocument(prev => ({ ...prev, sku: '', exp_date: '', location: '' }));
         }
     }, [newDocument.barcode, productInStock]);
 
@@ -126,7 +126,7 @@ export default function ProductOutPage() {
     };
 
     const resetForm = () => {
-        setNewDocument({ noDocument: '', sku: '', barcode: '', expDate: '', location: '', qty: '', status: 'Issue - Order' });
+        setNewDocument({ no_document: '', sku: '', barcode: '', exp_date: '', location: '', qty: '', status: 'Issue - Order' });
         setAvailableStock(null);
     };
 
@@ -136,7 +136,7 @@ export default function ProductOutPage() {
             toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to perform this action.' });
             return;
         }
-        if (!newDocument.noDocument || !newDocument.barcode || !newDocument.qty || !newDocument.sku) {
+        if (!newDocument.no_document || !newDocument.barcode || !newDocument.qty || !newDocument.sku) {
             toast({
                 variant: 'destructive',
                 title: 'Error',
@@ -175,7 +175,7 @@ export default function ProductOutPage() {
             ...newDocument,
             qty: qtyToTake,
             date: new Date().toISOString(),
-            validatedBy: user.name,
+            validated_by: user.name,
             user: { name: user.name, email: user.email }
         };
 
@@ -234,8 +234,8 @@ export default function ProductOutPage() {
                                 </DialogHeader>
                                 <div className="grid gap-4 py-4">
                                      <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="noDocument" className="text-right">No. Document</Label>
-                                        <Input id="noDocument" name="noDocument" value={newDocument.noDocument} className="col-span-3 bg-muted" readOnly />
+                                        <Label htmlFor="no_document" className="text-right">No. Document</Label>
+                                        <Input id="no_document" name="no_document" value={newDocument.no_document} className="col-span-3 bg-muted" readOnly />
                                     </div>
                                     <div className="grid grid-cols-4 items-center gap-4">
                                         <Label htmlFor="barcode" className="text-right">Barcode</Label>
@@ -246,8 +246,8 @@ export default function ProductOutPage() {
                                         <Input id="sku" name="sku" value={newDocument.sku} className="col-span-3 bg-muted" readOnly />
                                     </div>
                                     <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="expDate" className="text-right">EXP Date</Label>
-                                        <Input id="expDate" name="expDate" value={newDocument.expDate ? format(new Date(newDocument.expDate), 'yyyy-MM-dd') : ''} className="col-span-3 bg-muted" readOnly />
+                                        <Label htmlFor="exp_date" className="text-right">EXP Date</Label>
+                                        <Input id="exp_date" name="exp_date" value={newDocument.exp_date ? format(new Date(newDocument.exp_date), 'yyyy-MM-dd') : ''} className="col-span-3 bg-muted" readOnly />
                                     </div>
                                      <div className="grid grid-cols-4 items-center gap-4">
                                         <Label htmlFor="location" className="text-right">Location</Label>
@@ -311,11 +311,11 @@ export default function ProductOutPage() {
                                              <TableRow key={doc.id}>
                                                 <TableCell>{doc.sku}</TableCell>
                                                 <TableCell>{doc.barcode}</TableCell>
-                                                <TableCell>{doc.expDate ? format(new Date(doc.expDate), 'dd/MM/yyyy') : '-'}</TableCell>
+                                                <TableCell>{doc.exp_date ? format(new Date(doc.exp_date), 'dd/MM/yyyy') : '-'}</TableCell>
                                                 <TableCell>{doc.location}</TableCell>
                                                 <TableCell>{doc.qty.toLocaleString()}</TableCell>
                                                 <TableCell>{doc.status}</TableCell>
-                                                <TableCell>{doc.noDocument}</TableCell>
+                                                <TableCell>{doc.no_document}</TableCell>
                                                 <TableCell>{format(new Date(doc.date), 'dd/MM/yyyy HH:mm')}</TableCell>
                                             </TableRow>
                                         ))

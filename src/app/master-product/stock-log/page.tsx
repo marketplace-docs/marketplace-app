@@ -14,17 +14,17 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 type PutawayDocument = {
-  id: string; noDocument: string; date: string; qty: number; status: 'Done' | 'Pending'; sku: string; barcode: string; brand: string; expDate: string; location: string; checkBy: string;
+  id: string; no_document: string; date: string; qty: number; status: 'Done' | 'Pending'; sku: string; barcode: string; brand: string; exp_date: string; location: string; check_by: string;
 };
 
 type ProductOutDocument = {
-  id: string; noDocument: string; sku: string; barcode: string; expDate: string; qty: number; status: 'Issue - Order' | 'Issue - Internal Transfer' | 'Issue - Adjustment Manual'; date: string; location: string; validatedBy: string;
+  id: string; no_document: string; sku: string; barcode: string; exp_date: string; qty: number; status: 'Issue - Order' | 'Issue - Internal Transfer' | 'Issue - Adjustment Manual'; date: string; location: string; validated_by: string;
 };
 
 type StockLogEntry = {
     id: string;
     date: string;
-    noDocument: string;
+    no_document: string;
     barcode: string;
     location: string;
     qty_before: number;
@@ -89,14 +89,14 @@ export default function StockLogPage() {
                 logEntries.push({
                     id: `in-${putawayDoc.id}`,
                     date: putawayDoc.date,
-                    noDocument: putawayDoc.noDocument,
+                    no_document: putawayDoc.no_document,
                     barcode: barcode,
                     location: putawayDoc.location,
                     qty_before: currentStock,
                     qty_change: change,
                     qty_after: currentStock + change,
                     status: 'Putaway',
-                    validated_by: putawayDoc.checkBy,
+                    validated_by: putawayDoc.check_by,
                     type: 'IN',
                 });
                 stockLevels.set(barcode, currentStock + change);
@@ -105,14 +105,14 @@ export default function StockLogPage() {
                 logEntries.push({
                     id: `out-${outDoc.id}`,
                     date: outDoc.date,
-                    noDocument: outDoc.noDocument,
+                    no_document: outDoc.no_document,
                     barcode: barcode,
                     location: outDoc.location,
                     qty_before: currentStock,
                     qty_change: -change,
                     qty_after: currentStock - change,
                     status: outDoc.status,
-                    validated_by: outDoc.validatedBy,
+                    validated_by: outDoc.validated_by,
                     type: 'OUT',
                 });
                 stockLevels.set(barcode, currentStock - change);
@@ -127,7 +127,7 @@ export default function StockLogPage() {
         if (!searchTerm) return stockLogData;
         return stockLogData.filter(log =>
             log.barcode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            log.noDocument.toLowerCase().includes(searchTerm.toLowerCase())
+            log.no_document.toLowerCase().includes(searchTerm.toLowerCase())
         );
     }, [stockLogData, searchTerm]);
 
@@ -203,7 +203,7 @@ export default function StockLogPage() {
                                         paginatedData.map((log) => (
                                             <TableRow key={log.id}>
                                                 <TableCell>{format(new Date(log.date), 'dd/MM/yyyy HH:mm')}</TableCell>
-                                                <TableCell>{log.noDocument}</TableCell>
+                                                <TableCell>{log.no_document}</TableCell>
                                                 <TableCell className="font-medium">{log.barcode}</TableCell>
                                                 <TableCell>{log.location}</TableCell>
                                                 <TableCell>{log.qty_before.toLocaleString()}</TableCell>

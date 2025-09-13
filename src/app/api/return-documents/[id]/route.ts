@@ -6,11 +6,11 @@ import { logActivity } from '@/lib/logger';
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const { id } = params;
   const body = await request.json();
-  const { noDocument, qty, status, sku, barcode, brand, reason, receivedBy, userName, userEmail } = body;
+  const { no_document, qty, status, sku, barcode, brand, reason, received_by, userName, userEmail } = body;
 
   const { data, error } = await supabaseService
     .from('return_documents')
-    .update({ noDocument, qty, status, sku, barcode, brand, reason, receivedBy })
+    .update({ no_document, qty, status, sku, barcode, brand, reason, received_by })
     .eq('id', id)
     .select()
     .single();

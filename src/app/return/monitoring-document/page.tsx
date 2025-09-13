@@ -82,7 +82,7 @@ export default function MonitoringReturnPage() {
 
   const filteredDocuments = useMemo(() => {
     return documents.filter(doc => 
-      doc.noDocument.toLowerCase().includes(searchDocument.toLowerCase()) &&
+      doc.no_document.toLowerCase().includes(searchDocument.toLowerCase()) &&
       doc.barcode.toLowerCase().includes(searchBarcode.toLowerCase())
     );
   }, [documents, searchDocument, searchBarcode]);
@@ -171,17 +171,17 @@ export default function MonitoringReturnPage() {
       toast({ variant: "destructive", title: "No Data", description: "There is no data to export." });
       return;
     }
-    const headers = ["noDocument", "date", "sku", "barcode", "brand", "reason", "receivedBy", "qty", "status"];
+    const headers = ["no_document", "date", "sku", "barcode", "brand", "reason", "received_by", "qty", "status"];
     const csvContent = [
       headers.join(","),
       ...filteredDocuments.map(doc => [
-        `"${doc.noDocument.replace(/"/g, '""')}"`,
+        `"${doc.no_document.replace(/"/g, '""')}"`,
         `"${format(new Date(doc.date), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx")}"`,
         `"${doc.sku.replace(/"/g, '""')}"`,
         `"${doc.barcode.replace(/"/g, '""')}"`,
         `"${doc.brand.replace(/"/g, '""')}"`,
         `"${doc.reason.replace(/"/g, '""')}"`,
-        `"${doc.receivedBy.replace(/"/g, '""')}"`,
+        `"${doc.received_by.replace(/"/g, '""')}"`,
         doc.qty,
         doc.status
       ].join(","))
@@ -209,7 +209,7 @@ export default function MonitoringReturnPage() {
       try {
         const lines = text.split('\n').filter(line => line.trim() !== '');
         const headers = lines.shift()?.split(',').map(h => h.trim().replace(/"/g, '')) || [];
-        const requiredHeaders = ["nodocument", "sku", "barcode", "brand", "reason", "receivedby", "qty", "status"];
+        const requiredHeaders = ["no_document", "sku", "barcode", "brand", "reason", "received_by", "qty", "status"];
         if (!requiredHeaders.every(h => headers.includes(h))) {
             throw new Error(`Invalid CSV headers. Required: ${requiredHeaders.join(', ')}`);
         }
@@ -222,12 +222,12 @@ export default function MonitoringReturnPage() {
           });
           
           return {
-            noDocument: docData.nodocument,
+            no_document: docData.no_document,
             sku: docData.sku,
             barcode: docData.barcode,
             brand: docData.brand,
             reason: docData.reason,
-            receivedBy: docData.receivedby,
+            received_by: docData.received_by,
             qty: parseInt(docData.qty, 10),
             status: docData.status,
           };
@@ -295,7 +295,7 @@ export default function MonitoringReturnPage() {
                         <DialogHeader>
                             <DialogTitle>Upload CSV</DialogTitle>
                             <DialogDescription>
-                                Select a CSV file to bulk upload return documents. The file must contain the headers: noDocument, sku, barcode, brand, reason, receivedBy, qty, status.
+                                Select a CSV file to bulk upload return documents. The file must contain the headers: no_document, sku, barcode, brand, reason, received_by, qty, status.
                             </DialogDescription>
                         </DialogHeader>
                         <div className="py-4">
@@ -341,13 +341,13 @@ export default function MonitoringReturnPage() {
                   ) : paginatedDocs.length > 0 ? (
                     paginatedDocs.map((doc) => (
                       <TableRow key={doc.id}>
-                        <TableCell className="font-medium">{doc.noDocument}</TableCell>
+                        <TableCell className="font-medium">{doc.no_document}</TableCell>
                         <TableCell>{format(new Date(doc.date), "eee, dd/MMM/yyyy HH:mm")}</TableCell>
                         <TableCell>{doc.sku}</TableCell>
                         <TableCell>{doc.barcode}</TableCell>
                         <TableCell>{doc.brand}</TableCell>
                         <TableCell className="max-w-[200px] truncate">{doc.reason}</TableCell>
-                        <TableCell>{doc.receivedBy}</TableCell>
+                        <TableCell>{doc.received_by}</TableCell>
                         <TableCell>{doc.qty}</TableCell>
                         <TableCell>
                           <Badge variant={statusVariantMap[doc.status] || 'default'}>{doc.status}</Badge>
@@ -438,8 +438,8 @@ export default function MonitoringReturnPage() {
               {selectedDoc && (
                   <div className="grid gap-4 py-4">
                       <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="noDocument" className="text-right">No. Document</Label>
-                          <Input id="noDocument" value={selectedDoc.noDocument} className="col-span-3" onChange={(e) => setSelectedDoc({ ...selectedDoc, noDocument: e.target.value })} />
+                          <Label htmlFor="no_document" className="text-right">No. Document</Label>
+                          <Input id="no_document" value={selectedDoc.no_document} className="col-span-3" onChange={(e) => setSelectedDoc({ ...selectedDoc, no_document: e.target.value })} />
                       </div>
                       <div className="grid grid-cols-4 items-center gap-4">
                           <Label htmlFor="sku" className="text-right">SKU</Label>
@@ -454,8 +454,8 @@ export default function MonitoringReturnPage() {
                           <Input id="brand" value={selectedDoc.brand} className="col-span-3" onChange={(e) => setSelectedDoc({ ...selectedDoc, brand: e.target.value })} />
                       </div>
                       <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="receivedBy" className="text-right">Received By</Label>
-                          <Input id="receivedBy" value={selectedDoc.receivedBy} className="col-span-3" onChange={(e) => setSelectedDoc({ ...selectedDoc, receivedBy: e.target.value })} />
+                          <Label htmlFor="received_by" className="text-right">Received By</Label>
+                          <Input id="received_by" value={selectedDoc.received_by} className="col-span-3" onChange={(e) => setSelectedDoc({ ...selectedDoc, received_by: e.target.value })} />
                       </div>
                       <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="qty" className="text-right">QTY</Label>
@@ -496,7 +496,7 @@ export default function MonitoringReturnPage() {
               <DialogHeader>
                   <DialogTitle>Are you sure?</DialogTitle>
                   <DialogDescription>
-                      This action cannot be undone. This will permanently delete the document <span className="font-semibold">{selectedDoc?.noDocument}</span>.
+                      This action cannot be undone. This will permanently delete the document <span className="font-semibold">{selectedDoc?.no_document}</span>.
                   </DialogDescription>
               </DialogHeader>
               <DialogFooter>

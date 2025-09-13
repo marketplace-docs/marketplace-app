@@ -22,11 +22,11 @@ export async function POST(request: Request) {
   const body = await request.json();
   const { user, ...docData } = body;
 
-  const { noDocument, sku, barcode, expDate, location, qty, status, date, validatedBy } = docData;
+  const { no_document, sku, barcode, exp_date, location, qty, status, date, validated_by } = docData;
 
   const { data, error } = await supabaseService
     .from('product_out_documents')
-    .insert([{ "noDocument": noDocument, sku, barcode, "expDate": expDate, location, qty, status, date, "validatedBy": validatedBy }])
+    .insert([{ no_document, sku, barcode, exp_date, location, qty, status, date, validated_by }])
     .select()
     .single();
 
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
         userName: user.name,
         userEmail: user.email,
         action: 'CREATE',
-        details: `Product Out Document: ${docData.noDocument}`,
+        details: `Product Out Document: ${docData.no_document}`,
     });
   }
 

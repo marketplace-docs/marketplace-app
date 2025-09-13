@@ -1,7 +1,7 @@
 
 export type ReturnDocument = {
   id: string;
-  noDocument: string;
+  no_document: string;
   date: string; // ISO string
   qty: number;
   status: 'Done' | 'Pending' | 'Cancelled';
@@ -9,5 +9,5 @@ export type ReturnDocument = {
   barcode: string;
   brand: string;
   reason: string;
-  receivedBy: string;
+  received_by: string;
 };

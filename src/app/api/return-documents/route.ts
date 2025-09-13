@@ -23,14 +23,14 @@ export async function POST(request: Request) {
   // Handle bulk upload from CSV
   if (Array.isArray(documents)) {
     const docsToInsert = documents.map(doc => ({
-      noDocument: doc.noDocument,
+      no_document: doc.no_document,
       qty: doc.qty,
       status: doc.status,
       sku: doc.sku,
       barcode: doc.barcode,
       brand: doc.brand,
       reason: doc.reason,
-      receivedBy: doc.receivedBy,
+      received_by: doc.received_by,
     }));
 
     const { data, error } = await supabaseService
@@ -55,11 +55,11 @@ export async function POST(request: Request) {
 
 
   // Handle single document creation
-  const { noDocument, qty, status, sku, barcode, brand, reason, receivedBy } = singleDoc;
+  const { no_document, qty, status, sku, barcode, brand, reason, received_by } = singleDoc;
 
   const { data, error } = await supabaseService
     .from('return_documents')
-    .insert([{ noDocument, qty, status, sku, barcode, brand, reason, receivedBy }])
+    .insert([{ no_document, qty, status, sku, barcode, brand, reason, received_by }])
     .select()
     .single();
 
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
         userName: user.name,
         userEmail: user.email,
         action: 'CREATE',
-        details: `Return Document: ${noDocument}`,
+        details: `Return Document: ${no_document}`,
     });
   }
 

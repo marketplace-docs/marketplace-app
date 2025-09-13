@@ -32,14 +32,14 @@ type NewReturnDocument = Omit<ReturnDocument, 'id' | 'date'>;
 
 export default function CreateReturnPage() {
   const [newDocument, setNewDocument] = React.useState<Omit<NewReturnDocument, 'qty'> & { qty: string }>({
-    noDocument: '',
+    no_document: '',
     qty: '',
     status: 'Pending',
     sku: '',
     barcode: '',
     brand: '',
     reason: '',
-    receivedBy: '',
+    received_by: '',
   });
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const { toast } = useToast();
@@ -60,7 +60,7 @@ export default function CreateReturnPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newDocument.noDocument || !newDocument.qty || !newDocument.sku || !newDocument.barcode || !newDocument.brand || !newDocument.receivedBy) {
+    if (!newDocument.no_document || !newDocument.qty || !newDocument.sku || !newDocument.barcode || !newDocument.brand || !newDocument.received_by) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -97,7 +97,7 @@ export default function CreateReturnPage() {
           title: 'Success',
           description: 'New return document has been created.',
       });
-      setNewDocument({ noDocument: '', qty: '', status: 'Pending', sku: '', barcode: '', brand: '', reason: '', receivedBy: '' });
+      setNewDocument({ no_document: '', qty: '', status: 'Pending', sku: '', barcode: '', brand: '', reason: '', received_by: '' });
       router.push('/return/monitoring-document');
 
     } catch (error) {
@@ -126,12 +126,12 @@ export default function CreateReturnPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="noDocument">No. Document</Label>
+                  <Label htmlFor="no_document">No. Document</Label>
                   <Input
-                    id="noDocument"
-                    name="noDocument"
+                    id="no_document"
+                    name="no_document"
                     placeholder="Enter document number"
-                    value={newDocument.noDocument}
+                    value={newDocument.no_document}
                     onChange={handleInputChange}
                   />
                 </div>
@@ -175,12 +175,12 @@ export default function CreateReturnPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="receivedBy">Received By</Label>
+                  <Label htmlFor="received_by">Received By</Label>
                   <Input
-                    id="receivedBy"
-                    name="receivedBy"
+                    id="received_by"
+                    name="received_by"
                     placeholder="Received by name"
-                    value={newDocument.receivedBy}
+                    value={newDocument.received_by}
                     onChange={handleInputChange}
                   />
                 </div>
