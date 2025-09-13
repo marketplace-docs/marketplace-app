@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import {
   Card,
   CardContent,
@@ -26,6 +26,9 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Save,
+  Trash2,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react';
 import {
   Select,
@@ -48,19 +51,19 @@ import {
   Cell,
 } from 'recharts';
 import { useToast } from '@/hooks/use-toast';
-import { initialStores } from '@/lib/data';
 import { Input } from '@/components/ui/input';
 import { MainLayout } from '@/components/layout/main-layout';
-import { useLocalStorage } from '@/hooks/use-local-storage';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 type BacklogItem = {
   id: number;
-  storeName: string;
-  paymentAccepted: number;
+  store_name: string;
+  payment_accepted: number;
   marketplace: string;
 };
 
-type GroupingKey = "storeName" | "marketplace";
+type GroupingKey = "store_name" | "marketplace";
 
 const marketplaceColors: { [key: string]: string } = {
   'Shopee': '#F97316', // Orange
@@ -69,15 +72,41 @@ const marketplaceColors: { [key: string]: string } = {
 };
 
 export default function BacklogPage() {
-  const [backlogItems, setBacklogItems] = useLocalStorage<BacklogItem[]>('backlogItems', []);
+  const [backlogItems, setBacklogItems] = useState<BacklogItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [chartGrouping, setChartGrouping] = useState<GroupingKey>('storeName');
+  const [chartGrouping, setChartGrouping] = useState<GroupingKey>('store_name');
   const { toast } = useToast();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  
   const [isEditing, setIsEditing] = useState(false);
-  const [editedItems, setEditedItems] = useState<Record<number, string>>({});
+  const [editedItems, setEditedItems] = useState<Record<number, Partial<BacklogItem>>>({});
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<BacklogItem | null>(null);
 
+  const fetchBacklogItems = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/backlog-items');
+      if (!response.ok) throw new Error('Failed to fetch backlog items');
+      const data = await response.json();
+      setBacklogItems(data);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchBacklogItems();
+  }, [fetchBacklogItems]);
 
   const totalPages = Math.ceil(backlogItems.length / rowsPerPage);
   const paginatedItems = useMemo(() => {
@@ -93,12 +122,12 @@ export default function BacklogPage() {
         if (!grouped[item.marketplace]) {
             grouped[item.marketplace] = 0;
         }
-        grouped[item.marketplace] += item.paymentAccepted;
+        grouped[item.marketplace] += item.payment_accepted;
     });
-    return Object.entries(grouped).map(([marketplace, paymentAccepted]) => ({
+    return Object.entries(grouped).map(([marketplace, payment_accepted]) => ({
         marketplace,
-        paymentAccepted
-    })).sort((a, b) => b.paymentAccepted - a.paymentAccepted);
+        payment_accepted
+    })).sort((a, b) => b.payment_accepted - a.payment_accepted);
   }, [backlogItems]);
 
 
@@ -125,14 +154,11 @@ export default function BacklogPage() {
     const headers = ["Store Name", "Payment Accepted", "Marketplace"];
     const csvContent = [
         headers.join(","),
-        ...backlogItems.map(item => [item.storeName, item.paymentAccepted, item.marketplace].join(","))
+        ...backlogItems.map(item => [item.store_name, item.payment_accepted, item.marketplace].join(","))
     ].join("\n");
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
-    if (link.href) {
-        URL.revokeObjectURL(link.href);
-    }
     const url = URL.createObjectURL(blob);
     link.href = url;
     link.download = `backlog_data_${new Date().toISOString().split('T')[0]}.csv`;
@@ -147,47 +173,60 @@ export default function BacklogPage() {
     fileInputRef.current?.click();
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
+    setIsSubmitting(true);
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const text = e.target?.result as string;
       try {
         const lines = text.split('\n').filter(line => line.trim() !== '');
-        const newItems: BacklogItem[] = [];
-        let maxId = backlogItems.length > 0 ? Math.max(...backlogItems.map(item => item.id)) : 0;
+        if (lines.length <= 1) throw new Error("CSV is empty or has only a header.");
+
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+        const requiredHeaders = ['store name', 'payment accepted', 'marketplace'];
+        if(!requiredHeaders.every(h => headers.includes(h))) {
+            throw new Error(`Invalid CSV headers. Required: ${requiredHeaders.join(', ')}`);
+        }
+
+        const newItems: Omit<BacklogItem, 'id'>[] = lines.slice(1).map((line) => {
+            const values = line.split(',');
+            const store_name = values[headers.indexOf('store name')]?.trim();
+            const payment_accepted = parseInt(values[headers.indexOf('payment accepted')]?.trim(), 10);
+            const marketplace = values[headers.indexOf('marketplace')]?.trim();
+
+            if (store_name && !isNaN(payment_accepted) && marketplace) {
+                return { store_name, payment_accepted, marketplace };
+            }
+            return null;
+        }).filter((item): item is Omit<BacklogItem, 'id'> => item !== null);
         
-        lines.forEach((line, index) => {
-          if (index === 0 && line.toLowerCase().includes('store name')) return; // Skip header
-
-          const [storeName, paymentAcceptedStr, marketplace] = line.split(',').map(s => s.trim());
-          const paymentAccepted = parseInt(paymentAcceptedStr, 10);
-
-          if (storeName && !isNaN(paymentAccepted) && marketplace) {
-            newItems.push({
-              id: ++maxId,
-              storeName,
-              paymentAccepted,
-              marketplace,
-            });
-          } else {
-            throw new Error(`Invalid CSV format on line ${index + 1}: ${line}`);
-          }
+        const response = await fetch('/api/backlog-items', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newItems)
         });
 
-        setBacklogItems(prev => [...prev, ...newItems]);
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || "Failed to upload data.");
+        }
+        
+        await fetchBacklogItems();
         toast({
           title: "Success",
           description: `${newItems.length} items uploaded successfully.`,
         });
+
       } catch (error: any) {
         toast({
           variant: "destructive",
           title: "Upload Failed",
           description: error.message || "An error occurred while parsing the CSV file.",
         });
+      } finally {
+        setIsSubmitting(false);
       }
     };
     reader.readAsText(file);
@@ -197,13 +236,14 @@ export default function BacklogPage() {
 
   const chartData = useMemo(() => {
     const groupedData: { [key: string]: { value: number; marketplace: string } } = {};
+    const keyToGroup = chartGrouping === 'store_name' ? 'store_name' : 'marketplace';
 
     backlogItems.forEach(item => {
-      const key = item[chartGrouping];
+      const key = item[keyToGroup];
       if (!groupedData[key]) {
         groupedData[key] = { value: 0, marketplace: item.marketplace };
       }
-      groupedData[key].value += item.paymentAccepted;
+      groupedData[key].value += item.payment_accepted;
     });
 
     return Object.entries(groupedData).map(([name, data]) => ({
@@ -214,35 +254,73 @@ export default function BacklogPage() {
   }, [backlogItems, chartGrouping]);
 
   const totalMarketplaceStore = useMemo(() => {
-    const uniqueStores = new Set(backlogItems.map(s => s.storeName));
+    const uniqueStores = new Set(backlogItems.map(s => s.store_name));
     return uniqueStores.size;
   }, [backlogItems]);
 
   const totalPaymentAccepted = useMemo(() => {
-    return backlogItems.reduce((acc, item) => acc + item.paymentAccepted, 0);
+    return backlogItems.reduce((acc, item) => acc + item.payment_accepted, 0);
   }, [backlogItems]);
 
-  const handleEditToggle = () => {
+  const handleEditToggle = async () => {
     if (isEditing) {
-      const updatedBacklogItems = backlogItems.map(item => {
-        const editedValue = editedItems[item.id];
-        if (editedValue !== undefined) {
-          const newPaymentAccepted = parseInt(editedValue, 10);
-          if (!isNaN(newPaymentAccepted)) {
-            return { ...item, paymentAccepted: newPaymentAccepted };
-          }
+        setIsSubmitting(true);
+        try {
+            const updatePromises = Object.entries(editedItems).map(([id, changes]) =>
+              fetch(`/api/backlog-items/${id}`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(changes)
+              })
+            );
+            const responses = await Promise.all(updatePromises);
+            const failedUpdates = responses.filter(res => !res.ok);
+            if (failedUpdates.length > 0) {
+                throw new Error(`${failedUpdates.length} updates failed.`);
+            }
+            await fetchBacklogItems();
+            setEditedItems({});
+            toast({ title: "Success", description: "All changes have been saved." });
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: "Error", description: error.message || "Could not save changes." });
+        } finally {
+            setIsSubmitting(false);
         }
-        return item;
-      });
-      setBacklogItems(updatedBacklogItems);
-      setEditedItems({});
-      toast({ title: "Success", description: "Payment accepted values have been updated." });
     }
     setIsEditing(!isEditing);
   };
 
-  const handleItemChange = (id: number, value: string) => {
-    setEditedItems(prev => ({...prev, [id]: value}));
+  const handleItemChange = (id: number, field: keyof BacklogItem, value: string | number) => {
+    setEditedItems(prev => ({
+        ...prev,
+        [id]: {
+            ...prev[id],
+            [field]: value
+        }
+    }));
+  };
+
+  const handleOpenDeleteDialog = (item: BacklogItem) => {
+    setSelectedItem(item);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteItem = async () => {
+    if (!selectedItem) return;
+    setIsSubmitting(true);
+    try {
+        const response = await fetch(`/api/backlog-items/${selectedItem.id}`, { method: 'DELETE' });
+        if (!response.ok) throw new Error("Failed to delete item.");
+        
+        await fetchBacklogItems();
+        setDeleteDialogOpen(false);
+        setSelectedItem(null);
+        toast({ title: "Success", description: "Item deleted successfully.", variant: 'destructive' });
+    } catch (error: any) {
+        toast({ variant: 'destructive', title: "Error", description: error.message || "Could not delete item." });
+    } finally {
+        setIsSubmitting(false);
+    }
   };
 
   return (
@@ -252,11 +330,12 @@ export default function BacklogPage() {
           <h1 className="text-2xl font-bold">Backlog Marketplace</h1>
           <div className="flex items-center gap-2">
               <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
-              <Button variant="outline" onClick={handleUploadClick}>
-                  <Upload className="mr-2 h-4 w-4" /> Import
+              <Button variant="outline" onClick={handleUploadClick} disabled={isSubmitting}>
+                  {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Upload className="mr-2 h-4 w-4" />} 
+                  Import
               </Button>
-              <Button variant="outline" onClick={handleEditToggle}>
-                {isEditing ? <Save className="mr-2 h-4 w-4" /> : <Pencil className="mr-2 h-4 w-4" />}
+              <Button variant="outline" onClick={handleEditToggle} disabled={isSubmitting}>
+                {isEditing ? (isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />) : <Pencil className="mr-2 h-4 w-4" />}
                 {isEditing ? 'Save' : 'Edit'}
               </Button>
               <Button variant="default" onClick={handleExport}>
@@ -264,13 +343,21 @@ export default function BacklogPage() {
               </Button>
           </div>
         </div>
+
+        {error && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+        )}
         
         <Tabs defaultValue="all-store">
             <TabsList className="bg-gray-200">
                 <TabsTrigger value="all-store" className="data-[state=active]:bg-indigo-600 data-[state=active]:text-white">MP All-Store</TabsTrigger>
                 <TabsTrigger value="detail-store" className="data-[state=active]:bg-indigo-600 data-[state=active]:text-white">MP Detail Store</TabsTrigger>
             </TabsList>
-              <TabsContent value="all-store">
+            <TabsContent value="all-store">
                 <Card className="mt-4">
                     <CardContent className="pt-6">
                     <div className="border rounded-lg">
@@ -280,33 +367,46 @@ export default function BacklogPage() {
                             <TableHead>STORE NAME</TableHead>
                             <TableHead>PAYMENT ACCEPTED</TableHead>
                             <TableHead>MARKETPLACE</TableHead>
+                            <TableHead className="text-right">ACTIONS</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {paginatedItems.length > 0 ? (
+                            {loading ? (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="h-24 text-center">
+                                        <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+                                    </TableCell>
+                                </TableRow>
+                            ) : paginatedItems.length > 0 ? (
                             paginatedItems.map((item) => (
                                 <TableRow key={item.id}>
                                 <TableCell className="font-medium">
-                                  {item.storeName}
+                                  {item.store_name}
                                 </TableCell>
                                 <TableCell>
                                   {isEditing ? (
                                     <Input 
                                       type="number"
-                                      value={editedItems[item.id] ?? item.paymentAccepted} 
-                                      onChange={(e) => handleItemChange(item.id, e.target.value)} 
+                                      value={editedItems[item.id]?.payment_accepted ?? item.payment_accepted} 
+                                      onChange={(e) => handleItemChange(item.id, 'payment_accepted', parseInt(e.target.value, 10) || 0)} 
                                       className="h-8"
                                     />
                                   ) : (
-                                    item.paymentAccepted
+                                    item.payment_accepted
                                   )}
                                 </TableCell>
                                 <TableCell>{item.marketplace}</TableCell>
+                                <TableCell className="text-right">
+                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" onClick={() => handleOpenDeleteDialog(item)}>
+                                        <Trash2 className="h-4 w-4" />
+                                        <span className="sr-only">Delete</span>
+                                    </Button>
+                                </TableCell>
                                 </TableRow>
                             ))
                             ) : (
                             <TableRow>
-                                <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
+                                <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
                                 No backlog data available.
                                 </TableCell>
                             </TableRow>
@@ -373,7 +473,7 @@ export default function BacklogPage() {
                                         detailStoreData.map((item) => (
                                             <TableRow key={item.marketplace}>
                                                 <TableCell className="font-medium">{item.marketplace}</TableCell>
-                                                <TableCell className="text-right">{item.paymentAccepted.toLocaleString()}</TableCell>
+                                                <TableCell className="text-right">{item.payment_accepted.toLocaleString()}</TableCell>
                                             </TableRow>
                                         ))
                                     ) : (
@@ -396,9 +496,9 @@ export default function BacklogPage() {
             <div className="flex justify-between items-start">
               <div>
                 <CardTitle>Grafik Backlog</CardTitle>
-                <Tabs defaultValue="storeName" onValueChange={(value) => setChartGrouping(value as GroupingKey)} className="mt-2">
+                <Tabs defaultValue="store_name" onValueChange={(value) => setChartGrouping(value as GroupingKey)} className="mt-2">
                   <TabsList className="bg-gray-200">
-                    <TabsTrigger value="storeName" className="data-[state=active]:bg-indigo-600 data-[state=active]:text-white">Store Name</TabsTrigger>
+                    <TabsTrigger value="store_name" className="data-[state=active]:bg-indigo-600 data-[state=active]:text-white">Store Name</TabsTrigger>
                     <TabsTrigger value="marketplace" className="data-[state=active]:bg-indigo-600 data-[state=active]:text-white">Marketplace</TabsTrigger>
                   </TabsList>
                 </Tabs>
@@ -472,8 +572,24 @@ export default function BacklogPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent>
+              <DialogHeader>
+                  <DialogTitle>Are you sure?</DialogTitle>
+                  <DialogDescription>
+                      This will permanently delete the backlog for <span className="font-semibold">{selectedItem?.store_name}</span>. This action cannot be undone.
+                  </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                  <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+                  <Button variant="destructive" onClick={handleDeleteItem} disabled={isSubmitting}>
+                      {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Delete
+                  </Button>
+              </DialogFooter>
+          </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }
-
-    
