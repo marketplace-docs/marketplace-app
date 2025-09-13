@@ -27,7 +27,7 @@ const allowedUsers: User[] = [
     { email: 'regina.rifana@marketplace.com', name: 'Regina Rifana', role: 'Captain' }
 ];
 
-const validPassword = 'Marketplace@123!!!';
+const validPassword = 'Marketplace@soco123!!!';
 
 
 export function AuthProvider({ children }: { children: ReactNode }) {
