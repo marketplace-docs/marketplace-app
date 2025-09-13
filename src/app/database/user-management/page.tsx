@@ -183,7 +183,7 @@ export default function DatabaseUserPage() {
             }
 
             // Optimistically update UI or re-fetch
-            setUsers(prevUsers => prevUsers.filter(user => user.id !== selectedUser.id));
+            await fetchUsers();
             
             setDeleteDialogOpen(false);
             setSelectedUser(null);
@@ -455,3 +455,5 @@ export default function DatabaseUserPage() {
       </MainLayout>
     )
 }
+
+    
