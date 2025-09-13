@@ -22,6 +22,7 @@ type ProductOutDocument = {
     qty: number;
     status: 'Issue - Order' | 'Issue - Internal Transfer' | 'Issue - Adjustment Manual';
     date: string;
+    validatedBy: string;
 };
 
 type StockLogEntry = {
@@ -82,7 +83,7 @@ export default function StockLogPage() {
                     qty_change: -change,
                     qty_after: currentStock - change,
                     status: outDoc.status,
-                    validated_by: 'System', // Placeholder for user who actioned this
+                    validated_by: outDoc.validatedBy,
                     type: 'OUT',
                 });
                 stockLevels.set(barcode, currentStock - change);
@@ -238,4 +239,3 @@ export default function StockLogPage() {
         </MainLayout>
     );
 }
-

@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { format } from 'date-fns';
 import type { PutawayDocument } from '@/types/putaway-document';
+import { useAuth } from '@/hooks/use-auth';
 
 type ProductOutStatus = 'Issue - Order' | 'Issue - Internal Transfer' | 'Issue - Adjustment Manual';
 
@@ -26,6 +27,7 @@ type ProductOutDocument = {
     qty: number;
     status: ProductOutStatus;
     date: string; // ISO String
+    validatedBy: string;
 };
 
 type AggregatedProduct = {
@@ -40,6 +42,7 @@ export default function ProductOutPage() {
     const [isAddDialogOpen, setAddDialogOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { toast } = useToast();
+    const { user } = useAuth();
     
     const [documents, setDocuments] = useLocalStorage<ProductOutDocument[]>('product-out-documents', []);
     const [putawayDocs] = useLocalStorage<PutawayDocument[]>('putaway-documents', []);
@@ -113,6 +116,10 @@ export default function ProductOutPage() {
 
     const handleAddDocument = async () => {
         const qtyToTake = parseInt(newDocument.qty, 10);
+        if (!user) {
+            toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to perform this action.' });
+            return;
+        }
         if (!newDocument.barcode || !newDocument.qty || !newDocument.sku) {
             toast({
                 variant: 'destructive',
@@ -154,6 +161,7 @@ export default function ProductOutPage() {
             ...newDocument,
             qty: qtyToTake,
             date: new Date().toISOString(),
+            validatedBy: user.name,
         };
         
         setDocuments([...documents, docToAdd]);
@@ -198,7 +206,7 @@ export default function ProductOutPage() {
                                     </div>
                                     <div className="grid grid-cols-4 items-center gap-4">
                                         <Label htmlFor="expDate" className="text-right">EXP Date</Label>
-                                        <Input id="expDate" name="expDate" type="date" value={newDocument.expDate} className="col-span-3 bg-muted" readOnly />
+                                        <Input id="expDate" name="expDate" value={newDocument.expDate ? format(new Date(newDocument.expDate), 'yyyy-MM-dd') : ''} className="col-span-3 bg-muted" readOnly />
                                     </div>
                                     <div className="grid grid-cols-4 items-center gap-4">
                                         <Label htmlFor="qty" className="text-right">Quantity</Label>
