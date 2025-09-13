@@ -2,6 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { logActivity } from '@/lib/logger';
 
 type User = {
   email: string;
@@ -58,12 +59,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         };
         setUser(loggedInUser);
         localStorage.setItem('user', JSON.stringify(loggedInUser));
+
+        await logActivity({
+            userName: loggedInUser.name,
+            userEmail: loggedInUser.email,
+            action: 'LOGIN',
+            details: 'User logged in successfully.',
+        });
+
         return true;
     }
     return false;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    if (user) {
+        await logActivity({
+            userName: user.name,
+            userEmail: user.email,
+            action: 'LOGOUT',
+            details: 'User logged out.',
+        });
+    }
     setUser(null);
     localStorage.removeItem('user');
   };
