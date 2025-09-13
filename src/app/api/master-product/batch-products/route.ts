@@ -27,7 +27,7 @@ export async function GET() {
             { data: productOutData, error: productOutError }
         ] = await Promise.all([
             supabaseService.from('putaway_documents').select('sku, barcode, brand, exp_date, location, qty'),
-            supabaseService.from('product_out_documents').select('sku, barcode, location, qty') // Corrected: Removed non-existent exp_date
+            supabaseService.from('product_out_documents').select('sku, barcode, location, qty')
         ]);
 
         if (putawayError) throw putawayError;
