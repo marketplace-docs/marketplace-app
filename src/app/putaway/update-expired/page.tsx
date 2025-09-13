@@ -15,11 +15,11 @@ export default function UpdateExpiredPage() {
                 <Card>
                     <CardHeader>
                         <CardTitle>Update Product Information</CardTitle>
-                        <CardDescription>Scan barcode to update the product's location and expiration date.</CardDescription>
+                        <CardDescription>Scan barcode to update the product's location, expiration date, and quantity.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <form className="space-y-4">
-                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="barcode">Barcode</Label>
                                     <Input id="barcode" placeholder="Scan or enter product barcode" />
@@ -31,6 +31,10 @@ export default function UpdateExpiredPage() {
                                 <div className="space-y-2">
                                     <Label htmlFor="exp_date">New Exp Date</Label>
                                     <Input id="exp_date" type="date" placeholder="Enter new expiration date" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="quantity">New Quantity</Label>
+                                    <Input id="quantity" type="number" placeholder="Enter new quantity" />
                                 </div>
                              </div>
                             <div className="pt-2 flex justify-end">
