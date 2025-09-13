@@ -18,7 +18,7 @@ export async function GET() {
             { data: productOutData, error: productOutError }
         ] = await Promise.all([
             supabaseService.from('putaway_documents').select('sku, barcode, brand, expDate, location, qty'),
-            supabaseService.from('product_out_documents').select('barcode, qty')
+            supabaseService.from('product_out_documents').select('barcode, qty, location')
         ]);
 
         if (putawayError) throw putawayError;
@@ -46,7 +46,12 @@ export async function GET() {
         productOutData.forEach(doc => {
              const key = doc.barcode;
              if (stockMap.has(key)) {
-                stockMap.get(key)!.stock -= doc.qty;
+                const existing = stockMap.get(key)!;
+                existing.stock -= doc.qty;
+                // Update location if product_out has a more recent one, assuming it's relevant
+                if (doc.location) {
+                    existing.location = doc.location;
+                }
              }
         });
 
