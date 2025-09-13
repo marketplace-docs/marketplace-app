@@ -11,7 +11,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   const { no_document, qty, status, sku, barcode, brand, exp_date, location, check_by, userName, userEmail } = body;
 
   const { data, error } = await supabaseService
-    .from('putaway_document')
+    .from('putaway_documents')
     .update({ no_document, qty, status, sku, barcode, brand, exp_date, location, check_by })
     .eq('id', id)
     .select()
@@ -42,7 +42,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
   };
 
   const { error } = await supabaseService
-    .from('putaway_document')
+    .from('putaway_documents')
     .delete()
     .eq('id', id);
 
