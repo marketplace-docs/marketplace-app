@@ -1,3 +1,4 @@
+
 'use server';
 
 import { supabaseService } from '@/lib/supabase-service';
@@ -19,15 +20,28 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const body = await request.json();
-  const { user, ...docData } = body;
+  const { user, documents } = body;
 
-  const { nodocument, sku, barcode, location, qty, status, date, validatedby, expdate } = docData;
+  if (!Array.isArray(documents)) {
+    return NextResponse.json({ error: 'Request body must be an array of documents.' }, { status: 400 });
+  }
+
+  const docsToInsert = documents.map(doc => ({
+    nodocument: doc.nodocument,
+    sku: doc.sku,
+    barcode: doc.barcode,
+    location: doc.location,
+    qty: doc.qty,
+    status: doc.status,
+    date: doc.date,
+    validatedby: doc.validatedby,
+    expdate: doc.expdate,
+  }));
 
   const { data, error } = await supabaseService
     .from('product_out_documents')
-    .insert([{ nodocument, sku, barcode, location, qty, status, date, validatedby, expdate }])
-    .select()
-    .single();
+    .insert(docsToInsert)
+    .select();
 
   if (error) {
     console.error('Supabase insert error in product-out-documents:', error);
@@ -39,7 +53,7 @@ export async function POST(request: Request) {
         userName: user.name,
         userEmail: user.email,
         action: 'CREATE',
-        details: `Product Out Document: ${docData.nodocument}`,
+        details: `Created ${documents.length} Product Out Document(s)`,
     });
   }
 

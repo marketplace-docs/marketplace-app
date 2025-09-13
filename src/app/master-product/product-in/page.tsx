@@ -8,10 +8,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight, AlertCircle, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { useToast } from '@/hooks/use-toast';
 
 type PutawayDocument = {
     id: string;
@@ -49,6 +50,7 @@ export default function ProductInPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
+    const { toast } = useToast();
     
     const fetchPutawayDocs = useCallback(async () => {
         setLoading(true);
@@ -119,6 +121,41 @@ export default function ProductInPage() {
     const handlePrevPage = () => {
         setCurrentPage((prev) => (prev > 1 ? prev - 1 : prev));
     };
+    
+    const handleExport = () => {
+        if (filteredData.length === 0) {
+            toast({
+                variant: "destructive",
+                title: "No Data",
+                description: "There is no data to export.",
+            });
+            return;
+        }
+        const headers = ["SKU", "Barcode", "Brand", "EXP Date", "Location", "Quantity", "Status"];
+        const csvContent = [
+            headers.join(","),
+            ...filteredData.map(item => [
+                `"${item.sku.replace(/"/g, '""')}"`,
+                `"${item.barcode.replace(/"/g, '""')}"`,
+                `"${item.brand.replace(/"/g, '""')}"`,
+                `"${format(new Date(item.exp_date), "yyyy-MM-dd")}"`,
+                `"${item.location.replace(/"/g, '""')}"`,
+                item.qty,
+                item.status
+            ].join(","))
+        ].join("\n");
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.href = url;
+        link.setAttribute("download", `goods_receipt_data_${format(new Date(), "yyyyMMdd")}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        toast({ title: "Success", description: "Goods receipt data exported." });
+    };
 
 
     return (
@@ -139,12 +176,18 @@ export default function ProductInPage() {
                                 <CardTitle>Goods Receipt</CardTitle>
                                 <CardDescription>Aggregate stock data of received items from putaway.</CardDescription>
                             </div>
-                             <Input 
-                                placeholder="Search SKU or Barcode..." 
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full md:w-auto md:max-w-sm"
-                            />
+                            <div className="flex items-center gap-2">
+                                <Button variant="outline" onClick={handleExport}>
+                                    <Download className="mr-2 h-4 w-4" />
+                                    Export
+                                </Button>
+                                <Input 
+                                    placeholder="Search SKU or Barcode..." 
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full md:w-auto md:max-w-sm"
+                                />
+                            </div>
                         </div>
                     </CardHeader>
                     <CardContent>

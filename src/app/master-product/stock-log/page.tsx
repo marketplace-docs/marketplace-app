@@ -7,11 +7,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { format } from 'date-fns';
-import { Loader2, ChevronLeft, ChevronRight, ArrowDown, ArrowUp, AlertCircle } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight, ArrowDown, ArrowUp, AlertCircle, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useToast } from '@/hooks/use-toast';
 
 type PutawayDocument = {
   id: string; no_document: string; date: string; qty: number; status: 'Done' | 'Pending'; sku: string; barcode: string; brand: string; exp_date: string; location: string; check_by: string;
@@ -43,6 +44,7 @@ export default function StockLogPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
+    const { toast } = useToast();
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -72,7 +74,7 @@ export default function StockLogPage() {
 
     const stockLogData = useMemo(() => {
         const combinedDocs = [
-            ...putawayDocs.map(doc => ({ ...doc, nodocument: doc.no_document, type: 'IN' as const, originalDate: new Date(doc.date) })),
+            ...putawayDocs.map(doc => ({ ...doc, nodocument: doc.no_document, type: 'IN' as const, originalDate: new Date(doc.date), validatedby: doc.check_by })),
             ...productOutDocs.map(doc => ({ ...doc, type: 'OUT' as const, originalDate: new Date(doc.date) })),
         ].sort((a, b) => a.originalDate.getTime() - b.originalDate.getTime());
 
@@ -148,6 +150,39 @@ export default function StockLogPage() {
     const handlePrevPage = () => {
         setCurrentPage((prev) => (prev > 1 ? prev - 1 : prev));
     };
+    
+    const handleExport = () => {
+        if (filteredData.length === 0) {
+            toast({ variant: "destructive", title: "No Data", description: "There is no data to export." });
+            return;
+        }
+        const headers = ["Date", "No. Document", "Barcode", "Location", "Qty Before", "Qty Change", "Qty After", "Status", "Validate By"];
+        const csvContent = [
+            headers.join(","),
+            ...filteredData.map(log => [
+                `"${format(new Date(log.date), "yyyy-MM-dd HH:mm:ss")}"`,
+                `"${log.no_document}"`,
+                `"${log.barcode}"`,
+                `"${log.location}"`,
+                log.qty_before,
+                log.qty_change,
+                log.qty_after,
+                `"${log.status}"`,
+                `"${log.validated_by}"`
+            ].join(","))
+        ].join("\n");
+    
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.href = url;
+        link.setAttribute("download", `stock_log_data_${format(new Date(), "yyyyMMdd")}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        toast({ title: "Success", description: "Stock log data exported." });
+    };
 
 
     return (
@@ -168,12 +203,18 @@ export default function StockLogPage() {
                                 <CardTitle>Stock History</CardTitle>
                                 <CardDescription>Stores historical data of incoming and outgoing items.</CardDescription>
                             </div>
-                             <Input 
-                                placeholder="Search Barcode or Document No..." 
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full md:w-auto md:max-w-sm"
-                            />
+                            <div className="flex items-center gap-2">
+                                <Button variant="outline" onClick={handleExport}>
+                                    <Download className="mr-2 h-4 w-4" />
+                                    Export
+                                </Button>
+                                <Input 
+                                    placeholder="Search Barcode or Document No..." 
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full md:w-auto md:max-w-sm"
+                                />
+                            </div>
                         </div>
                     </CardHeader>
                     <CardContent>
