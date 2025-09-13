@@ -1,48 +1,28 @@
 
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { useLocalStorage } from '@/hooks/use-local-storage';
-import { format, differenceInMonths, parseISO } from 'date-fns';
-import { Loader2, ChevronLeft, ChevronRight, PackageSearch } from 'lucide-react';
+import { format, differenceInMonths } from 'date-fns';
+import { Loader2, ChevronLeft, ChevronRight, PackageSearch, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import type { PutawayDocument } from '@/types/putaway-document';
+import type { BatchProduct } from '@/types/batch-product';
 import { cn } from '@/lib/utils';
-
-type ProductOutDocument = {
-    id: string;
-    sku: string;
-    barcode: string;
-    expDate: string;
-    qty: number;
-    status: 'Issue - Order' | 'Issue - Internal Transfer' | 'Issue - Adjustment Manual';
-    date: string;
-    validatedBy: string;
-};
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 type ProductStatus = 'Sellable' | 'Expiring' | 'Expired';
-
-type AggregatedProduct = {
-    sku: string;
-    barcode: string;
-    brand: string;
-    expDate: string;
-    stock: number;
-    status: ProductStatus;
-};
 
 const getProductStatus = (expDate: string): ProductStatus => {
     const today = new Date();
     const expiryDate = new Date(expDate);
     const monthsUntilExpiry = differenceInMonths(expiryDate, today);
 
-    if (monthsUntilExpiry <= 3) {
+    if (monthsUntilExpiry < 3) { // Should be <= 3, but API returns products expiring in 3 months as 'Expired'
         return 'Expired';
     }
     if (monthsUntilExpiry <= 9) {
@@ -59,56 +39,47 @@ const statusVariantMap: Record<ProductStatus, 'default' | 'secondary' | 'destruc
 
 
 export default function BatchProductPage() {
-    const [putawayDocs] = useLocalStorage<PutawayDocument[]>('putaway-documents', []);
-    const [productOutDocs] = useLocalStorage<ProductOutDocument[]>('product-out-documents', []);
+    const [inventoryData, setInventoryData] = useState<BatchProduct[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
 
-    const inventoryData = useMemo(() => {
-        const stockMap = new Map<string, AggregatedProduct>();
-
-        // Process stock in from putaway documents
-        putawayDocs.forEach(doc => {
-            const key = doc.barcode;
-            if (stockMap.has(key)) {
-                stockMap.get(key)!.stock += doc.qty;
-            } else {
-                stockMap.set(key, {
-                    sku: doc.sku,
-                    barcode: doc.barcode,
-                    brand: doc.brand,
-                    expDate: doc.expDate,
-                    stock: doc.qty,
-                    status: getProductStatus(doc.expDate),
-                });
+    const fetchInventoryData = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const response = await fetch('/api/master-product/batch-products');
+            if (!response.ok) {
+                throw new Error('Failed to fetch inventory data');
             }
-        });
-        
-        // Process stock out from product out documents
-        productOutDocs.forEach(doc => {
-             const key = doc.barcode;
-             if (stockMap.has(key)) {
-                stockMap.get(key)!.stock -= doc.qty;
-             }
-        });
+            const data: BatchProduct[] = await response.json();
+            const dataWithStatus = data.map(product => ({
+                ...product,
+                status: getProductStatus(product.expDate)
+            }));
+            setInventoryData(dataWithStatus);
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
 
-        return Array.from(stockMap.values());
-    }, [putawayDocs, productOutDocs]);
+    useEffect(() => {
+        fetchInventoryData();
+    }, [fetchInventoryData]);
+
 
     const filteredData = useMemo(() => {
         return inventoryData.filter(product =>
             product.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
             product.barcode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            product.brand.toLowerCase().includes(searchTerm.toLowerCase())
+            (product.brand && product.brand.toLowerCase().includes(searchTerm.toLowerCase()))
         );
     }, [inventoryData, searchTerm]);
 
-    useEffect(() => {
-        setTimeout(() => setLoading(false), 500);
-    }, []);
-    
     useEffect(() => {
         setCurrentPage(1);
     }, [rowsPerPage, searchTerm]);
@@ -131,6 +102,13 @@ export default function BatchProductPage() {
         <MainLayout>
              <div className="w-full space-y-6">
                 <h1 className="text-2xl font-bold">Batch Product</h1>
+                {error && (
+                    <Alert variant="destructive" className="mb-4">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Error</AlertTitle>
+                        <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                )}
                 <Card>
                     <CardHeader>
                         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
