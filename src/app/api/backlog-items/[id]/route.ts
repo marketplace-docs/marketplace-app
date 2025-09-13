@@ -1,10 +1,12 @@
 
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
+import { logActivity } from '@/lib/logger';
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const { id } = params;
-  const { store_name, payment_accepted, marketplace } = await request.json();
+  const body = await request.json();
+  const { store_name, payment_accepted, marketplace, userName, userEmail } = body;
 
   const { data, error } = await supabaseService
     .from('backlog_items')
@@ -17,11 +19,24 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  if (userName && userEmail) {
+    await logActivity({
+        userName,
+        userEmail,
+        action: 'UPDATE',
+        details: `Backlog Item ID: ${id}`,
+    });
+  }
+
   return NextResponse.json(data);
 }
 
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   const { id } = params;
+  const user = { 
+      name: request.headers.get('X-User-Name'), 
+      email: request.headers.get('X-User-Email') 
+  };
 
   const { error } = await supabaseService
     .from('backlog_items')
@@ -30,6 +45,15 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  if (user.name && user.email) {
+    await logActivity({
+        userName: user.name,
+        userEmail: user.email,
+        action: 'DELETE',
+        details: `Backlog Item ID: ${id}`,
+    });
   }
 
   return NextResponse.json({ message: 'Backlog item deleted successfully' }, { status: 200 });

@@ -26,6 +26,7 @@ import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Textarea } from '@/components/ui/textarea';
 import type { ReturnDocument } from '@/types/return-document';
+import { useAuth } from '@/hooks/use-auth';
 
 type NewReturnDocument = Omit<ReturnDocument, 'id' | 'date'>;
 
@@ -43,6 +44,8 @@ export default function CreateReturnPage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const { toast } = useToast();
   const router = useRouter();
+  const { user } = useAuth();
+
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -65,7 +68,11 @@ export default function CreateReturnPage() {
       });
       return;
     }
-    
+    if (!user) {
+        toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to create a document.' });
+        return;
+    }
+
     setIsSubmitting(true);
     
     try {
@@ -76,7 +83,9 @@ export default function CreateReturnPage() {
         },
         body: JSON.stringify({
             ...newDocument,
-            qty: parseInt(newDocument.qty, 10)
+            qty: parseInt(newDocument.qty, 10),
+            userName: user.name,
+            userEmail: user.email,
         }),
       });
 

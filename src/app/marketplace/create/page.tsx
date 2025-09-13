@@ -17,6 +17,7 @@ import { MainLayout } from '@/components/layout/main-layout';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import type { MarketplaceStore } from '@/types/marketplace-store';
+import { useAuth } from '@/hooks/use-auth';
 
 type NewStore = Omit<MarketplaceStore, 'id' | 'created_at'>;
 
@@ -29,6 +30,8 @@ export default function CreateMarketplacePage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const { toast } = useToast();
   const router = useRouter();
+  const { user } = useAuth();
+
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -45,6 +48,10 @@ export default function CreateMarketplacePage() {
       });
       return;
     }
+    if (!user) {
+        toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to create a store.' });
+        return;
+    }
 
     setIsSubmitting(true);
     
@@ -52,7 +59,7 @@ export default function CreateMarketplacePage() {
       const response = await fetch('/api/marketplace-stores', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newStore),
+        body: JSON.stringify({ ...newStore, userName: user.name, userEmail: user.email }),
       });
 
       if (!response.ok) {

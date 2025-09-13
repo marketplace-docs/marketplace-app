@@ -30,6 +30,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useAuth } from '@/hooks/use-auth';
 
 const statusVariantMap: { [key in ReturnDocument['status']]: "default" | "secondary" | "destructive" | "outline" } = {
     'Processed': 'default',
@@ -50,6 +51,8 @@ export default function MonitoringReturnPage() {
   const [selectedDoc, setSelectedDoc] = useState<ReturnDocument | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
+
 
   const [searchDocument, setSearchDocument] = useState('');
   const [searchBarcode, setSearchBarcode] = useState('');
@@ -112,13 +115,13 @@ export default function MonitoringReturnPage() {
   };
 
   const handleSaveChanges = async () => {
-    if (!selectedDoc) return;
+    if (!selectedDoc || !user) return;
     setIsSubmitting(true);
     try {
       const response = await fetch(`/api/return-documents/${selectedDoc.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(selectedDoc)
+        body: JSON.stringify({ ...selectedDoc, userName: user.name, userEmail: user.email })
       });
       if (!response.ok) throw new Error('Failed to update document');
       
@@ -134,11 +137,15 @@ export default function MonitoringReturnPage() {
   };
 
   const handleDeleteDoc = async () => {
-    if (!selectedDoc) return;
+    if (!selectedDoc || !user) return;
     setIsSubmitting(true);
     try {
       const response = await fetch(`/api/return-documents/${selectedDoc.id}`, {
         method: 'DELETE',
+        headers: {
+          'X-User-Name': user.name,
+          'X-User-Email': user.email,
+        }
       });
       if (!response.ok) throw new Error('Failed to delete document');
 

@@ -1,6 +1,7 @@
 
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
+import { logActivity } from '@/lib/logger';
 
 export async function GET() {
   const { data, error } = await supabaseService
@@ -16,7 +17,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const { noDocument, qty, status, sku, barcode, brand, reason, receivedBy } = await request.json();
+  const body = await request.json();
+  const { noDocument, qty, status, sku, barcode, brand, reason, receivedBy, userName, userEmail } = body;
 
   const { data, error } = await supabaseService
     .from('return_documents')
@@ -26,6 +28,15 @@ export async function POST(request: Request) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  if (userName && userEmail) {
+    await logActivity({
+        userName,
+        userEmail,
+        action: 'CREATE',
+        details: `Return Document: ${noDocument}`,
+    });
   }
 
   return NextResponse.json(data, { status: 201 });

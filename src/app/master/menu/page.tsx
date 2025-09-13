@@ -139,7 +139,7 @@ export default function MenuManagementPage() {
     };
     
     const handleSaveChanges = async () => {
-        if (!selectedUserId || !isSuperAdmin) {
+        if (!selectedUserId || !isSuperAdmin || !currentUser) {
             toast({ variant: 'destructive', title: 'Error', description: "No user selected or you don't have permission." });
             return;
         }
@@ -148,7 +148,11 @@ export default function MenuManagementPage() {
             const response = await fetch('/api/menu-permissions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: selectedUserId, permissions: menuPermissions })
+                body: JSON.stringify({ 
+                    userId: selectedUserId, 
+                    permissions: menuPermissions, 
+                    user: { name: currentUser.name, email: currentUser.email }
+                })
             });
 
             if (!response.ok) {

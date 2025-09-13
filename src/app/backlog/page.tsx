@@ -55,6 +55,7 @@ import { Input } from '@/components/ui/input';
 import { MainLayout } from '@/components/layout/main-layout';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { useAuth } from '@/hooks/use-auth';
 
 type BacklogItem = {
   id: number;
@@ -88,6 +89,8 @@ export default function BacklogPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<BacklogItem | null>(null);
+  const { user } = useAuth();
+
 
   const fetchBacklogItems = useCallback(async () => {
     setLoading(true);
@@ -175,7 +178,7 @@ export default function BacklogPage() {
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file || !user) return;
     setIsSubmitting(true);
     const reader = new FileReader();
     reader.onload = async (e) => {
@@ -205,7 +208,7 @@ export default function BacklogPage() {
         const response = await fetch('/api/backlog-items', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newItems)
+          body: JSON.stringify({ items: newItems, user: { name: user.name, email: user.email } })
         });
 
         if (!response.ok) {
@@ -264,13 +267,14 @@ export default function BacklogPage() {
 
   const handleEditToggle = async () => {
     if (isEditing) {
+        if (!user) return;
         setIsSubmitting(true);
         try {
             const updatePromises = Object.entries(editedItems).map(([id, changes]) =>
               fetch(`/api/backlog-items/${id}`, {
                   method: 'PATCH',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(changes)
+                  body: JSON.stringify({ ...changes, userName: user.name, userEmail: user.email })
               })
             );
             const responses = await Promise.all(updatePromises);
@@ -290,7 +294,7 @@ export default function BacklogPage() {
     setIsEditing(!isEditing);
   };
 
-  const handleItemChange = (id: number, field: keyof BacklogItem, value: string | number) => {
+  const handleItemChange = (id: number, field: keyof Omit<BacklogItem, 'id'>, value: string | number) => {
     setEditedItems(prev => ({
         ...prev,
         [id]: {
@@ -306,10 +310,16 @@ export default function BacklogPage() {
   };
 
   const handleDeleteItem = async () => {
-    if (!selectedItem) return;
+    if (!selectedItem || !user) return;
     setIsSubmitting(true);
     try {
-        const response = await fetch(`/api/backlog-items/${selectedItem.id}`, { method: 'DELETE' });
+        const response = await fetch(`/api/backlog-items/${selectedItem.id}`, { 
+          method: 'DELETE',
+          headers: {
+            'X-User-Name': user.name,
+            'X-User-Email': user.email
+          }
+        });
         if (!response.ok) throw new Error("Failed to delete item.");
         
         await fetchBacklogItems();
@@ -381,7 +391,16 @@ export default function BacklogPage() {
                             paginatedItems.map((item) => (
                                 <TableRow key={item.id}>
                                 <TableCell className="font-medium">
-                                  {item.store_name}
+                                  {isEditing ? (
+                                    <Input 
+                                      type="text"
+                                      value={editedItems[item.id]?.store_name ?? item.store_name} 
+                                      onChange={(e) => handleItemChange(item.id, 'store_name', e.target.value)} 
+                                      className="h-8"
+                                    />
+                                  ) : (
+                                    item.store_name
+                                  )}
                                 </TableCell>
                                 <TableCell>
                                   {isEditing ? (
@@ -395,7 +414,18 @@ export default function BacklogPage() {
                                     item.payment_accepted
                                   )}
                                 </TableCell>
-                                <TableCell>{item.marketplace}</TableCell>
+                                <TableCell>
+                                {isEditing ? (
+                                    <Input 
+                                      type="text"
+                                      value={editedItems[item.id]?.marketplace ?? item.marketplace} 
+                                      onChange={(e) => handleItemChange(item.id, 'marketplace', e.target.value)} 
+                                      className="h-8"
+                                    />
+                                  ) : (
+                                    item.marketplace
+                                  )}
+                                </TableCell>
                                 <TableCell className="text-right">
                                     <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" onClick={() => handleOpenDeleteDialog(item)}>
                                         <Trash2 className="h-4 w-4" />

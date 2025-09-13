@@ -28,6 +28,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useAuth } from '@/hooks/use-auth';
 
 export default function MonitoringStorePage() {
   const [stores, setStores] = useState<MarketplaceStore[]>([]);
@@ -42,6 +43,7 @@ export default function MonitoringStorePage() {
   const [selectedStore, setSelectedStore] = useState<MarketplaceStore | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -103,14 +105,14 @@ export default function MonitoringStorePage() {
   };
 
   const handleSaveChanges = async () => {
-    if (!selectedStore) return;
+    if (!selectedStore || !user) return;
     setIsSubmitting(true);
     try {
       const { id, marketplace_name, store_name, platform } = selectedStore;
       const response = await fetch(`/api/marketplace-stores/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ marketplace_name, store_name, platform }),
+        body: JSON.stringify({ marketplace_name, store_name, platform, userName: user.name, userEmail: user.email }),
       });
 
       if (!response.ok) {
@@ -129,11 +131,15 @@ export default function MonitoringStorePage() {
   };
 
   const handleDeleteStore = async () => {
-    if (!selectedStore) return;
+    if (!selectedStore || !user) return;
     setIsSubmitting(true);
     try {
         const response = await fetch(`/api/marketplace-stores/${selectedStore.id}`, {
             method: 'DELETE',
+            headers: {
+              'X-User-Name': user.name,
+              'X-User-Email': user.email
+            }
         });
 
         if(!response.ok) {

@@ -2,6 +2,7 @@
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 import { format } from 'date-fns';
+import { logActivity } from '@/lib/logger';
 
 // Helper function to calculate performance metrics
 const calculateMetrics = (entry: { task_daily: number; total_items: number; }) => {
@@ -44,7 +45,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-    const entries = await request.json();
+    const { entries, user } = await request.json();
 
     if (!Array.isArray(entries)) {
         return NextResponse.json({ error: 'Request body must be an array of performance entries.' }, { status: 400 });
@@ -74,12 +75,21 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    if (user && user.name && user.email) {
+      await logActivity({
+        userName: user.name,
+        userEmail: user.email,
+        action: 'CREATE',
+        details: `Added ${entries.length} daily performance entries`,
+      });
+    }
+
     return NextResponse.json(data, { status: 201 });
 }
 
 
 export async function PATCH(request: Request) {
-    const updates = await request.json();
+    const { updates, user } = await request.json();
 
     if (!Array.isArray(updates)) {
         return NextResponse.json({ error: 'Request body must be an array of updates.' }, { status: 400 });
@@ -88,7 +98,6 @@ export async function PATCH(request: Request) {
     const updatePromises = updates.map(async (update) => {
         const { id, ...fieldsToUpdate } = update;
         
-        // Fetch the existing record to get current values
         const { data: existingData, error: fetchError } = await supabaseService
             .from('daily_performance')
             .select('task_daily, total_items')
@@ -101,20 +110,11 @@ export async function PATCH(request: Request) {
         }
         
         const updatedFields = { ...existingData, ...fieldsToUpdate };
+        const { task_performance, items_performance, result } = calculateMetrics(updatedFields);
 
-        const { target, target_item, task_performance, items_performance, result } = calculateMetrics(updatedFields);
-
-        const finalUpdate = {
-            ...fieldsToUpdate,
-            task_performance,
-            items_performance,
-            result
-        };
+        const finalUpdate = { ...fieldsToUpdate, task_performance, items_performance, result };
         
-        return supabaseService
-            .from('daily_performance')
-            .update(finalUpdate)
-            .eq('id', id);
+        return supabaseService.from('daily_performance').update(finalUpdate).eq('id', id);
     });
 
     const results = await Promise.all(updatePromises);
@@ -124,6 +124,16 @@ export async function PATCH(request: Request) {
         console.error('Some updates failed:', errors);
         return NextResponse.json({ error: `Failed to update ${errors.length} records.`, details: errors.map(e => e.error?.message) }, { status: 500 });
     }
+
+    if (user && user.name && user.email) {
+        await logActivity({
+            userName: user.name,
+            userEmail: user.email,
+            action: 'UPDATE',
+            details: `Updated ${updates.length} daily performance entries. IDs: ${updates.map(u => u.id).join(', ')}`,
+        });
+    }
+
 
     return NextResponse.json({ message: 'Performance data updated successfully.' });
 }

@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useAuth } from '@/hooks/use-auth';
 
 type PerformanceData = {
     id: number;
@@ -60,6 +61,7 @@ type NewPerformanceData = Omit<PerformanceData, 'id' | 'month' | 'target' | 'tar
 
 
 export default function DailyPerformancePage() {
+    const { user } = useAuth();
     const [data, setData] = useState<PerformanceData[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -192,7 +194,7 @@ export default function DailyPerformancePage() {
 
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
-        if (!file) return;
+        if (!file || !user) return;
         setIsSubmitting(true);
         const reader = new FileReader();
         reader.onload = async (e) => {
@@ -231,7 +233,7 @@ export default function DailyPerformancePage() {
                 const response = await fetch('/api/daily-performance', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(newEntries)
+                    body: JSON.stringify({ entries: newEntries, user: { name: user.name, email: user.email } })
                 });
                 
                 if (!response.ok) {
@@ -261,6 +263,7 @@ export default function DailyPerformancePage() {
 
     const handleEditToggle = async () => {
       if (isEditing) {
+          if (!user) return;
           const updates = Object.entries(editedItems).map(([id, changes]) => ({
               id: Number(id),
               ...changes
@@ -277,7 +280,7 @@ export default function DailyPerformancePage() {
               const response = await fetch('/api/daily-performance', {
                   method: 'PATCH',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(updates)
+                  body: JSON.stringify({ updates, user: { name: user.name, email: user.email } })
               });
 
               if (!response.ok) throw new Error('Failed to save changes.');
@@ -318,7 +321,7 @@ export default function DailyPerformancePage() {
     };
     
     const handleAddEntry = async () => {
-        if (!newEntry.name || !newEntryDate) {
+        if (!newEntry.name || !newEntryDate || !user) {
             toast({
                 variant: 'destructive',
                 title: 'Error',
@@ -337,7 +340,7 @@ export default function DailyPerformancePage() {
             const response = await fetch('/api/daily-performance', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify([newPerformanceEntry])
+                body: JSON.stringify({ entries: [newPerformanceEntry], user: { name: user.name, email: user.email } })
             });
 
             if (!response.ok) {
@@ -370,11 +373,15 @@ export default function DailyPerformancePage() {
     };
 
     const handleDeleteItem = async () => {
-        if (!selectedItem) return;
+        if (!selectedItem || !user) return;
         setIsSubmitting(true);
         try {
             const response = await fetch(`/api/daily-performance/${selectedItem.id}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: {
+                  'X-User-Name': user.name,
+                  'X-User-Email': user.email
+                }
             });
             if (!response.ok) throw new Error('Failed to delete entry');
             

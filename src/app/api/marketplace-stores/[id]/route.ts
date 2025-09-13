@@ -1,10 +1,12 @@
 
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
+import { logActivity } from '@/lib/logger';
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const { id } = params;
-  const { marketplace_name, store_name, platform } = await request.json();
+  const body = await request.json();
+  const { marketplace_name, store_name, platform, userName, userEmail } = body;
 
   const { data, error } = await supabaseService
     .from('marketplace_stores')
@@ -18,11 +20,25 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  if (userName && userEmail) {
+    await logActivity({
+        userName,
+        userEmail,
+        action: 'UPDATE',
+        details: `Marketplace Store ID: ${id}`,
+    });
+  }
+
   return NextResponse.json(data);
 }
 
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   const { id } = params;
+  const user = { 
+      name: request.headers.get('X-User-Name'), 
+      email: request.headers.get('X-User-Email') 
+  };
+
 
   const { error } = await supabaseService
     .from('marketplace_stores')
@@ -32,6 +48,15 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
   if (error) {
     console.error('Supabase error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  if (user.name && user.email) {
+    await logActivity({
+        userName: user.name,
+        userEmail: user.email,
+        action: 'DELETE',
+        details: `Marketplace Store ID: ${id}`,
+    });
   }
 
   return NextResponse.json({ message: 'Store deleted successfully' }, { status: 200 });

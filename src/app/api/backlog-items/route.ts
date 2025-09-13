@@ -1,6 +1,7 @@
 
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
+import { logActivity } from '@/lib/logger';
 
 export async function GET() {
   const { data, error } = await supabaseService
@@ -16,7 +17,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const items = await request.json();
+  const { items, user } = await request.json();
   
   if (!Array.isArray(items)) {
     return NextResponse.json({ error: 'Request body must be an array of backlog items.' }, { status: 400 });
@@ -35,6 +36,15 @@ export async function POST(request: Request) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  if (user && user.name && user.email) {
+    await logActivity({
+        userName: user.name,
+        userEmail: user.email,
+        action: 'CREATE',
+        details: `Bulk uploaded ${items.length} backlog items`,
+    });
   }
 
   return NextResponse.json(data, { status: 201 });

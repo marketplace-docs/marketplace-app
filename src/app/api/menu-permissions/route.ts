@@ -1,9 +1,10 @@
 
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
+import { logActivity } from '@/lib/logger';
 
 export async function POST(request: Request) {
-  const { userId, permissions } = await request.json();
+  const { userId, permissions, user } = await request.json();
 
   if (!userId || !permissions) {
     return NextResponse.json({ error: 'userId and permissions are required' }, { status: 400 });
@@ -29,6 +30,16 @@ export async function POST(request: Request) {
       console.error('Supabase upsert error:', error);
       throw error;
     }
+
+    if (user && user.name && user.email) {
+      await logActivity({
+          userName: user.name,
+          userEmail: user.email,
+          action: 'UPDATE',
+          details: `Updated menu permissions for user ID: ${userId}`,
+      });
+    }
+
 
     return NextResponse.json({ message: 'Permissions updated successfully' }, { status: 200 });
 
