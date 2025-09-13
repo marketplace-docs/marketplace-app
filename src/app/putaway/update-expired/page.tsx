@@ -12,24 +12,30 @@ export default function UpdateExpiredPage() {
         <MainLayout>
              <div className="w-full space-y-6">
                 <h1 className="text-2xl font-bold">Update Expired</h1>
-                <Card className="max-w-lg">
+                <Card>
                     <CardHeader>
-                        <CardTitle>Update Product Location</CardTitle>
-                        <CardDescription>Scan barcode and update the product's location.</CardDescription>
+                        <CardTitle>Update Product Information</CardTitle>
+                        <CardDescription>Scan barcode to update the product's location and expiration date.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <form className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="barcode">Barcode</Label>
-                                <Input id="barcode" placeholder="Scan or enter product barcode" />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="location">New Location</Label>
-                                <Input id="location" placeholder="Scan or enter new location" />
-                            </div>
-                            <div className="pt-2">
-                                <Button type="submit" className="w-full">
-                                    Update Location
+                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="barcode">Barcode</Label>
+                                    <Input id="barcode" placeholder="Scan or enter product barcode" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="location">New Location</Label>
+                                    <Input id="location" placeholder="Scan or enter new location" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="exp_date">New Exp Date</Label>
+                                    <Input id="exp_date" type="date" placeholder="Enter new expiration date" />
+                                </div>
+                             </div>
+                            <div className="pt-2 flex justify-end">
+                                <Button type="submit">
+                                    Update Information
                                 </Button>
                             </div>
                         </form>
