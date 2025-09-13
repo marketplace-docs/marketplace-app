@@ -18,7 +18,7 @@ type PutawayDocument = {
 };
 
 type ProductOutDocument = {
-  id: string; no_document: string; sku: string; barcode: string; exp_date: string; qty: number; status: 'Issue - Order' | 'Issue - Internal Transfer' | 'Issue - Adjustment Manual'; date: string; location: string; validated_by: string;
+  id: string; nodocument: string; sku: string; barcode: string; expdate: string; qty: number; status: 'Issue - Order' | 'Issue - Internal Transfer' | 'Issue - Adjustment Manual'; date: string; location: string; validatedby: string;
 };
 
 type StockLogEntry = {
@@ -72,7 +72,7 @@ export default function StockLogPage() {
 
     const stockLogData = useMemo(() => {
         const combinedDocs = [
-            ...putawayDocs.map(doc => ({ ...doc, type: 'IN' as const, originalDate: new Date(doc.date) })),
+            ...putawayDocs.map(doc => ({ ...doc, nodocument: doc.no_document, type: 'IN' as const, originalDate: new Date(doc.date) })),
             ...productOutDocs.map(doc => ({ ...doc, type: 'OUT' as const, originalDate: new Date(doc.date) })),
         ].sort((a, b) => a.originalDate.getTime() - b.originalDate.getTime());
 
@@ -85,7 +85,7 @@ export default function StockLogPage() {
             const change = doc.qty;
 
             if (doc.type === 'IN') {
-                const putawayDoc = doc as PutawayDocument;
+                const putawayDoc = doc as PutawayDocument & { no_document: string };
                 logEntries.push({
                     id: `in-${putawayDoc.id}`,
                     date: putawayDoc.date,
@@ -105,14 +105,14 @@ export default function StockLogPage() {
                 logEntries.push({
                     id: `out-${outDoc.id}`,
                     date: outDoc.date,
-                    no_document: outDoc.no_document,
+                    no_document: outDoc.nodocument,
                     barcode: barcode,
                     location: outDoc.location,
                     qty_before: currentStock,
                     qty_change: -change,
                     qty_after: currentStock - change,
                     status: outDoc.status,
-                    validated_by: outDoc.validated_by,
+                    validated_by: outDoc.validatedby,
                     type: 'OUT',
                 });
                 stockLevels.set(barcode, currentStock - change);
