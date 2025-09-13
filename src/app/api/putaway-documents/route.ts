@@ -8,7 +8,7 @@ import { logActivity } from '@/lib/logger';
 export async function GET() {
   // Always select snake_case columns
   const { data, error } = await supabaseService
-    .from('putaway_documents')
+    .from('putaway_document')
     .select('id, no_document, date, qty, status, sku, barcode, brand, exp_date, location, check_by, created_at')
     .order('date', { ascending: false });
 
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     }));
 
     const { data, error } = await supabaseService
-      .from('putaway_documents')
+      .from('putaway_document')
       .insert(docsToInsert)
       .select();
 
@@ -65,8 +65,8 @@ export async function POST(request: Request) {
   const { no_document, qty, status, sku, barcode, brand, exp_date, location, check_by } = singleDoc;
 
   const { data, error } = await supabaseService
-    .from('putaway_documents')
-    .insert([{ no_document, qty, status, sku, barcode, brand, exp_date, location, check_by }])
+    .from('putaway_document')
+    .insert([{ no_document, date: new Date().toISOString(), qty, status, sku, barcode, brand, exp_date, location, check_by }])
     .select()
     .single();
 

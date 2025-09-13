@@ -26,7 +26,7 @@ export async function GET() {
             { data: putawayData, error: putawayError },
             { data: productOutData, error: productOutError }
         ] = await Promise.all([
-            supabaseService.from('putaway_documents').select('sku, barcode, brand, exp_date, location, qty'),
+            supabaseService.from('putaway_document').select('sku, barcode, brand, exp_date, location, qty'),
             supabaseService.from('product_out_documents').select('sku, barcode, exp_date, location, qty')
         ]);
 
@@ -35,7 +35,7 @@ export async function GET() {
         
         const stockMap = new Map<string, AggregatedProduct>();
 
-        // Process incoming stock from putaway_documents
+        // Process incoming stock from putaway_document
         (putawayData as ProductDoc[]).forEach(doc => {
             const key = doc.barcode;
             if (stockMap.has(key)) {
