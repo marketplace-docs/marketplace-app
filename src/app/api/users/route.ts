@@ -1,6 +1,7 @@
 
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
+import { logActivity } from '@/lib/logger';
 
 export async function GET() {
   const { data, error } = await supabaseService
@@ -16,7 +17,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const { name, email, role, status } = await request.json();
+  const body = await request.json();
+  const { name, email, role, status } = body;
+  const user = { name: body.userName, email: body.userEmail };
 
   if (!name || !email || !role || !status) {
     return NextResponse.json({ error: 'All fields are required' }, { status: 400 });
@@ -30,6 +33,15 @@ export async function POST(request: Request) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+  
+  if (user.name && user.email) {
+      await logActivity({
+          userName: user.name,
+          userEmail: user.email,
+          action: 'CREATE',
+          details: `User: ${email} (Role: ${role})`,
+      });
   }
 
   return NextResponse.json(data, { status: 201 });

@@ -1,6 +1,7 @@
 
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
+import { logActivity } from '@/lib/logger';
 
 export async function GET() {
   const { data, error } = await supabaseService
@@ -16,7 +17,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const { name, job, shift, status } = await request.json();
+  const body = await request.json();
+  const { name, job, shift, status } = body;
+  const user = { name: body.userName, email: body.userEmail }; // Assuming user info is passed in body
 
   const { data, error } = await supabaseService
     .from('admin_tasks')
@@ -27,6 +30,16 @@ export async function POST(request: Request) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  if (user.name && user.email) {
+    await logActivity({
+        userName: user.name,
+        userEmail: user.email,
+        action: 'CREATE',
+        details: `Admin Task: ${name} (Job: ${job})`,
+    });
+  }
+
 
   return NextResponse.json(data, { status: 201 });
 }

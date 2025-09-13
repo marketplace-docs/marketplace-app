@@ -24,6 +24,7 @@ import { MainLayout } from '@/components/layout/main-layout';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import type { AdminTask } from '@/types/admin-task';
+import { useAuth } from '@/hooks/use-auth';
 
 type NewAdminTask = Omit<AdminTask, 'id' | 'date'>;
 
@@ -37,6 +38,7 @@ export default function CreateTaskPage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const { toast } = useToast();
   const router = useRouter();
+  const { user } = useAuth();
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement>
@@ -60,6 +62,11 @@ export default function CreateTaskPage() {
       });
       return;
     }
+
+    if (!user) {
+        toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to create a task.' });
+        return;
+    }
     
     setIsSubmitting(true);
     
@@ -69,7 +76,11 @@ export default function CreateTaskPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(newTask),
+        body: JSON.stringify({
+            ...newTask,
+            userName: user.name,
+            userEmail: user.email,
+        }),
       });
 
       if (!response.ok) {

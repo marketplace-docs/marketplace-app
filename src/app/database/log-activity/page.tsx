@@ -12,8 +12,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import React, { useState } from "react";
+import { ChevronLeft, ChevronRight, Loader2, AlertCircle } from "lucide-react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Select,
   SelectContent,
@@ -21,22 +21,45 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { format } from 'date-fns';
 
 type LogEntry = {
     id: number;
-    user: string;
-    email: string;
+    user_name: string;
+    user_email: string;
     action: string;
-    date: string;
+    created_at: string;
     details: string;
 };
 
-const initialLogs: LogEntry[] = [];
-
 export default function LogActivityPage() {
-    const [logs] = useState<LogEntry[]>(initialLogs);
+    const [logs, setLogs] = useState<LogEntry[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
     const [currentPage, setCurrentPage] = useState(1);
-    const [rowsPerPage, setRowsPerPage] = useState(5);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
+
+    const fetchLogs = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const response = await fetch('/api/log-activity');
+            if (!response.ok) throw new Error('Failed to fetch logs');
+            const data = await response.json();
+            setLogs(data);
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchLogs();
+    }, [fetchLogs]);
+
 
     const totalPages = Math.ceil(logs.length / rowsPerPage);
     const paginatedLogs = logs.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
@@ -53,6 +76,13 @@ export default function LogActivityPage() {
     <MainLayout>
       <div className="w-full">
         <h1 className="text-3xl font-bold mb-6">Log Activity</h1>
+         {error && (
+            <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+            </Alert>
+        )}
         <Card>
             <CardHeader>
                 <CardTitle>Activity Log</CardTitle>
@@ -72,13 +102,19 @@ export default function LogActivityPage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {paginatedLogs.length > 0 ? (
+                        {loading ? (
+                             <TableRow>
+                                <TableCell colSpan={5} className="h-24 text-center">
+                                    <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+                                </TableCell>
+                            </TableRow>
+                        ) : paginatedLogs.length > 0 ? (
                             paginatedLogs.map((log) => (
                                 <TableRow key={log.id}>
-                                    <TableCell className="font-medium">{log.user}</TableCell>
-                                    <TableCell>{log.email}</TableCell>
+                                    <TableCell className="font-medium">{log.user_name}</TableCell>
+                                    <TableCell>{log.user_email}</TableCell>
                                     <TableCell>{log.action}</TableCell>
-                                    <TableCell>{log.date}</TableCell>
+                                    <TableCell>{format(new Date(log.created_at), "eee, dd/MMM/yyyy HH:mm")}</TableCell>
                                     <TableCell>{log.details}</TableCell>
                                 </TableRow>
                             ))
@@ -110,7 +146,7 @@ export default function LogActivityPage() {
                         <SelectValue placeholder={rowsPerPage} />
                     </SelectTrigger>
                     <SelectContent side="top">
-                        {[5, 10, 20].map((pageSize) => (
+                        {[10, 20, 50].map((pageSize) => (
                             <SelectItem key={pageSize} value={`${pageSize}`}>
                                 {pageSize}
                             </SelectItem>

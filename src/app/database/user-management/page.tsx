@@ -121,17 +121,21 @@ export default function DatabaseUserPage() {
     };
 
     const handleSaveChanges = async () => {
-        if (!selectedUser) return;
+        if (!selectedUser || !currentUser) return;
         setIsSubmitting(true);
         try {
             const response = await fetch(`/api/users/${selectedUser.id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(selectedUser)
+                body: JSON.stringify({
+                    ...selectedUser,
+                    userName: currentUser.name,
+                    userEmail: currentUser.email,
+                })
             });
             if (!response.ok) throw new Error('Failed to update user');
             
-            await fetchUsers(); // Re-fetch all users to get the latest state
+            await fetchUsers();
             setEditDialogOpen(false);
             setSelectedUser(null);
             toast({ title: "Success", description: "User has been updated successfully." });
@@ -147,19 +151,25 @@ export default function DatabaseUserPage() {
             toast({ variant: "destructive", title: "Add Failed", description: "Name and Email cannot be empty." });
             return;
         }
+        if (!currentUser) return;
+
         setIsSubmitting(true);
         try {
             const response = await fetch('/api/users', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newUser)
+                body: JSON.stringify({
+                    ...newUser,
+                    userName: currentUser.name,
+                    userEmail: currentUser.email,
+                })
             });
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.error || 'Failed to add user');
             };
             
-            await fetchUsers(); // Re-fetch to include the new user
+            await fetchUsers();
             setAddDialogOpen(false);
             setNewUser({ name: '', email: '', status: 'Reguler', role: 'Admin' });
             toast({ title: "Success", description: "New user added." });
@@ -171,25 +181,27 @@ export default function DatabaseUserPage() {
     };
 
     const handleDeleteUser = async () => {
-        if (!selectedUser) return;
+        if (!selectedUser || !currentUser) return;
         setIsSubmitting(true);
         try {
              const response = await fetch(`/api/users/${selectedUser.id}`, {
                 method: 'DELETE',
+                headers: {
+                    'X-User-Name': currentUser.name,
+                    'X-User-Email': currentUser.email,
+                }
             });
             if (!response.ok) {
                  const errorData = await response.json();
                 throw new Error(errorData.error || 'Failed to delete user');
             }
 
-            // Optimistically update UI or re-fetch
             await fetchUsers();
             
             setDeleteDialogOpen(false);
             setSelectedUser(null);
             toast({ title: "Success", description: "User has been deleted.", variant: "destructive" });
 
-            // Adjust current page if the last item on a page was deleted
             if (paginatedUsers.length === 1 && currentPage > 1) {
                 setCurrentPage(currentPage - 1);
             }

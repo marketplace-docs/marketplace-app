@@ -28,6 +28,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useAuth } from '@/hooks/use-auth';
 
 export default function MonitoringManpowerPage() {
   const [tasks, setTasks] = useState<AdminTask[]>([]);
@@ -42,6 +43,7 @@ export default function MonitoringManpowerPage() {
   const [selectedTask, setSelectedTask] = useState<AdminTask | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
   
   const fetchTasks = useCallback(async () => {
     setLoading(true);
@@ -93,13 +95,17 @@ export default function MonitoringManpowerPage() {
   };
 
   const handleSaveChanges = async () => {
-    if (!selectedTask) return;
+    if (!selectedTask || !user) return;
     setIsSubmitting(true);
     try {
       const response = await fetch(`/api/admin-tasks/${selectedTask.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(selectedTask)
+        body: JSON.stringify({
+            ...selectedTask,
+            userName: user.name,
+            userEmail: user.email,
+        })
       });
       if (!response.ok) throw new Error('Failed to update task');
       
@@ -115,11 +121,15 @@ export default function MonitoringManpowerPage() {
   };
 
   const handleDeleteTask = async () => {
-    if (!selectedTask) return;
+    if (!selectedTask || !user) return;
     setIsSubmitting(true);
     try {
       const response = await fetch(`/api/admin-tasks/${selectedTask.id}`, {
         method: 'DELETE',
+        headers: {
+            'X-User-Name': user.name,
+            'X-User-Email': user.email
+        }
       });
       if (!response.ok) throw new Error('Failed to delete task');
 
