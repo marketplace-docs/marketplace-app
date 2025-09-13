@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -136,7 +135,7 @@ export default function ProductOutPage() {
             toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to perform this action.' });
             return;
         }
-        if (!newDocument.no_document || !newDocument.barcode || !newDocument.qty || !newDocument.sku) {
+        if (!newDocument.no_document || !newDocument.barcode || !newDocument.qty) {
             toast({
                 variant: 'destructive',
                 title: 'Error',
