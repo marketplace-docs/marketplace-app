@@ -21,6 +21,7 @@ type ProductOutStatus = 'Issue - Order' | 'Issue - Internal Transfer' | 'Issue -
 
 type ProductOutDocument = {
     id: string;
+    noDocument: string;
     sku: string;
     barcode: string;
     expDate: string;
@@ -48,6 +49,7 @@ export default function ProductOutPage() {
     const [putawayDocs] = useLocalStorage<PutawayDocument[]>('putaway-documents', []);
 
     const [newDocument, setNewDocument] = useState({
+        noDocument: '',
         sku: '',
         barcode: '',
         expDate: '',
@@ -110,7 +112,7 @@ export default function ProductOutPage() {
     };
 
     const resetForm = () => {
-        setNewDocument({ sku: '', barcode: '', expDate: '', qty: '', status: 'Issue - Order' });
+        setNewDocument({ noDocument: '', sku: '', barcode: '', expDate: '', qty: '', status: 'Issue - Order' });
         setAvailableStock(null);
     };
 
@@ -120,11 +122,11 @@ export default function ProductOutPage() {
             toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to perform this action.' });
             return;
         }
-        if (!newDocument.barcode || !newDocument.qty || !newDocument.sku) {
+        if (!newDocument.noDocument || !newDocument.barcode || !newDocument.qty || !newDocument.sku) {
             toast({
                 variant: 'destructive',
                 title: 'Error',
-                description: 'Barcode and Quantity are required.',
+                description: 'Document No, Barcode and Quantity are required.',
             });
             return;
         }
@@ -196,6 +198,10 @@ export default function ProductOutPage() {
                                     <DialogTitle>Add Product Out</DialogTitle>
                                 </DialogHeader>
                                 <div className="grid gap-4 py-4">
+                                     <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="noDocument" className="text-right">No. Document</Label>
+                                        <Input id="noDocument" name="noDocument" value={newDocument.noDocument} onChange={handleInputChange} className="col-span-3" placeholder="Enter document number" />
+                                    </div>
                                     <div className="grid grid-cols-4 items-center gap-4">
                                         <Label htmlFor="barcode" className="text-right">Barcode</Label>
                                         <Input id="barcode" name="barcode" value={newDocument.barcode} onChange={handleInputChange} className="col-span-3" placeholder="Scan or enter barcode" />
@@ -249,6 +255,7 @@ export default function ProductOutPage() {
                                         <TableHead>EXP Date</TableHead>
                                         <TableHead>Quantity</TableHead>
                                         <TableHead>Status</TableHead>
+                                        <TableHead>Document</TableHead>
                                         <TableHead>Date</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -261,12 +268,13 @@ export default function ProductOutPage() {
                                                 <TableCell>{doc.expDate ? format(new Date(doc.expDate), 'dd/MM/yyyy') : '-'}</TableCell>
                                                 <TableCell>{doc.qty.toLocaleString()}</TableCell>
                                                 <TableCell>{doc.status}</TableCell>
+                                                <TableCell>{doc.noDocument || doc.id}</TableCell>
                                                 <TableCell>{format(new Date(doc.date), 'dd/MM/yyyy HH:mm')}</TableCell>
                                             </TableRow>
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                                            <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                                                 Belum ada data pengeluaran barang.
                                             </TableCell>
                                         </TableRow>
