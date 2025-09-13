@@ -133,8 +133,8 @@ export default function ProductInPage() {
                     <CardHeader>
                         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                             <div className="flex-1">
-                                <CardTitle>Penerimaan Barang</CardTitle>
-                                <CardDescription>Data stok barang masuk agregat dari hasil putaway.</CardDescription>
+                                <CardTitle>Goods Receipt</CardTitle>
+                                <CardDescription>Aggregate stock data of received items from putaway.</CardDescription>
                             </div>
                              <Input 
                                 placeholder="Cari SKU atau Barcode..." 

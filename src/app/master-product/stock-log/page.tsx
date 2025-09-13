@@ -162,8 +162,8 @@ export default function StockLogPage() {
                     <CardHeader>
                         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                             <div className="flex-1">
-                                <CardTitle>Histori Stok</CardTitle>
-                                <CardDescription>Menampung data histori barang masuk dan keluar.</CardDescription>
+                                <CardTitle>Stock History</CardTitle>
+                                <CardDescription>Stores historical data of incoming and outgoing items.</CardDescription>
                             </div>
                              <Input 
                                 placeholder="Cari Barcode atau No. Dokumen..." 

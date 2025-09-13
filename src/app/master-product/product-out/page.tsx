@@ -216,8 +216,8 @@ export default function ProductOutPage() {
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between">
                         <div>
-                            <CardTitle>Pengeluaran Barang</CardTitle>
-                            <CardDescription>Data stok barang keluar. Fitur ini akan memotong stok dari Product In.</CardDescription>
+                            <CardTitle>Goods Issue</CardTitle>
+                            <CardDescription>Stock data of issued items. This feature deducts stock from Product In.</CardDescription>
                         </div>
                         <Dialog open={isAddDialogOpen} onOpenChange={(open) => { setAddDialogOpen(open); if(!open) resetForm(); }}>
                             <DialogTrigger asChild>
