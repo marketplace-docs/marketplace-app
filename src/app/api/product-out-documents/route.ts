@@ -20,15 +20,13 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const body = await request.json();
-  // We extract user and the rest is docData
   const { user, ...docData } = body;
 
-  // We must ensure location is part of the data sent to Supabase
   const { noDocument, sku, barcode, expDate, location, qty, status, date, validatedBy } = docData;
 
   const { data, error } = await supabaseService
     .from('product_out_documents')
-    .insert([{ noDocument, sku, barcode, expDate, location, qty, status, date, validatedBy }])
+    .insert([{ "noDocument": noDocument, sku, barcode, "expDate": expDate, location, qty, status, date, "validatedBy": validatedBy }])
     .select()
     .single();
 

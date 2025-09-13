@@ -12,7 +12,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
   const { data, error } = await supabaseService
     .from('putaway_documents')
-    .update({ noDocument, qty, status, sku, barcode, brand, expDate, location, checkBy })
+    .update({ "noDocument": noDocument, qty, status, sku, barcode, brand, "expDate": expDate, location, "checkBy": checkBy })
     .eq('id', id)
     .select()
     .single();

@@ -8,30 +8,14 @@ import { logActivity } from '@/lib/logger';
 export async function GET() {
   const { data, error } = await supabaseService
     .from('putaway_documents')
-    .select('id, noDocument, date, qty, status, sku, barcode, brand, expDate, location, checkBy, created_at')
+    .select('id, "noDocument", date, qty, status, sku, barcode, brand, "expDate", location, "checkBy", created_at')
     .order('date', { ascending: false });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
   
-  // Map snake_case to camelCase
-  const mappedData = data.map(item => ({
-    id: item.id,
-    noDocument: item.noDocument,
-    date: item.date,
-    qty: item.qty,
-    status: item.status,
-    sku: item.sku,
-    barcode: item.barcode,
-    brand: item.brand,
-    expDate: item.expDate,
-    location: item.location,
-    checkBy: item.checkBy,
-    created_at: item.created_at
-  }));
-
-  return NextResponse.json(mappedData);
+  return NextResponse.json(data);
 }
 
 export async function POST(request: Request) {
@@ -79,7 +63,7 @@ export async function POST(request: Request) {
 
   const { data, error } = await supabaseService
     .from('putaway_documents')
-    .insert([{ noDocument, qty, status, sku, barcode, brand, expDate, location, checkBy }])
+    .insert([{ "noDocument": noDocument, qty, status, sku, barcode, brand, "expDate": expDate, location, "checkBy": checkBy }])
     .select()
     .single();
 
