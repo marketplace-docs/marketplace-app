@@ -1,6 +1,7 @@
 
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
+import { format } from 'date-fns';
 
 type ProductDoc = {
     sku: string;
@@ -20,6 +21,13 @@ type AggregatedProduct = {
     stock: number;
 };
 
+// Helper function to create a consistent key for grouping
+const createStockKey = (barcode: string, location: string, exp_date: string): string => {
+    const formattedExpDate = exp_date ? format(new Date(exp_date), 'yyyy-MM-dd') : 'no-exp-date';
+    return `${barcode}|${location}|${formattedExpDate}`;
+};
+
+
 export async function GET() {
     try {
         const [
@@ -27,7 +35,7 @@ export async function GET() {
             { data: productOutData, error: productOutError }
         ] = await Promise.all([
             supabaseService.from('putaway_documents').select('sku, barcode, brand, exp_date, location, qty'),
-            supabaseService.from('product_out_documents').select('sku, barcode, location, qty')
+            supabaseService.from('product_out_documents').select('sku, barcode, location, qty, expdate')
         ]);
 
         if (putawayError) throw putawayError;
@@ -37,13 +45,12 @@ export async function GET() {
 
         // Process incoming stock from putaway_documents
         (putawayData as ProductDoc[]).forEach(doc => {
-            const key = doc.barcode;
+            if (!doc.barcode || !doc.location || !doc.exp_date) return; // Skip incomplete records
+            const key = createStockKey(doc.barcode, doc.location, doc.exp_date);
+
             if (stockMap.has(key)) {
                 const existing = stockMap.get(key)!;
                 existing.stock += doc.qty;
-                if (doc.location) {
-                    existing.location = doc.location;
-                }
             } else {
                 stockMap.set(key, {
                     sku: doc.sku,
@@ -57,22 +64,17 @@ export async function GET() {
         });
         
         // Process outgoing stock from product_out_documents
-        (productOutData as Omit<ProductDoc, 'brand' | 'exp_date'>[]).forEach((doc: any) => {
-             const key = doc.barcode;
+        (productOutData as any[]).forEach((doc: any) => {
+             if (!doc.barcode || !doc.location || !doc.expdate) return; // Skip incomplete records
+             const key = createStockKey(doc.barcode, doc.location, doc.expdate);
              if (stockMap.has(key)) {
                 const existing = stockMap.get(key)!;
                 existing.stock -= doc.qty;
              } else {
-                // This case should ideally not happen if inventory is managed properly
-                // But as a fallback, we create an entry with negative stock. Exp_date will be missing.
-                 stockMap.set(key, {
-                    sku: doc.sku,
-                    barcode: doc.barcode,
-                    brand: '', 
-                    exp_date: new Date().toISOString(), // Fallback to current date
-                    location: doc.location,
-                    stock: -doc.qty,
-                });
+                // This case handles stock going out that might not have a matching putaway doc (e.g., initial stock)
+                // For accurate aggregation, we mainly rely on putaway docs as the source of truth for batch details.
+                // Creating a negative entry here could be confusing. We will assume product_out reduces existing stock.
+                console.warn(`Outgoing stock for barcode ${doc.barcode} has no matching incoming batch. This may lead to inaccurate stock counts.`);
              }
         });
 
