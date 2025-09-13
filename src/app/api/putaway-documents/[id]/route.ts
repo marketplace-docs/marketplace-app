@@ -8,30 +8,88 @@ import { logActivity } from '@/lib/logger';
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const { id } = params;
   const body = await request.json();
-  const { no_document, qty, status, sku, barcode, brand, exp_date, location, check_by, userName, userEmail } = body;
+  const { userName, userEmail } = body;
 
-  const { data, error } = await supabaseService
-    .from('putaway_documents')
-    .update({ no_document, qty, status, sku, barcode, brand, exp_date, location, check_by })
-    .eq('id', id)
-    .select()
-    .single();
+  // Check for the new stock splitting logic
+  if (body.originalDoc && body.update) {
+    const { originalDoc, update } = body;
+    const { qty: originalQty } = originalDoc;
+    const { qty: qtyToUpdate, location: newLocation, exp_date: newExpDate } = update;
 
-  if (error) {
-    console.error("Supabase PATCH error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+    const newOriginalQty = originalQty - qtyToUpdate;
 
-  if (userName && userEmail) {
-    await logActivity({
+    // 1. Update the original document to reduce its quantity
+    const { error: updateError } = await supabaseService
+      .from('putaway_documents')
+      .update({ qty: newOriginalQty })
+      .eq('id', originalDoc.id);
+
+    if (updateError) {
+      console.error("Supabase PATCH (update original) error:", updateError);
+      return NextResponse.json({ error: "Failed to update original document: " + updateError.message }, { status: 500 });
+    }
+
+    // 2. Create a new document for the split-off quantity
+    const { error: insertError } = await supabaseService
+      .from('putaway_documents')
+      .insert({
+        ...originalDoc,
+        id: undefined, // Let Supabase generate a new ID
+        created_at: undefined,
+        no_document: `${originalDoc.no_document}-SPLIT`, // Mark as a split document
+        qty: qtyToUpdate,
+        location: newLocation,
+        exp_date: newExpDate,
+        status: 'Done', // Assume the split batch is confirmed
+        check_by: userName,
+        date: new Date().toISOString(),
+      });
+    
+    if (insertError) {
+      console.error("Supabase PATCH (insert new) error:", insertError);
+      // Potentially roll back the update here if needed, though it's complex.
+      // For now, we'll just report the error.
+      return NextResponse.json({ error: "Failed to create new split document: " + insertError.message }, { status: 500 });
+    }
+    
+    if (userName && userEmail) {
+      await logActivity({
         userName,
         userEmail,
-        action: 'UPDATE',
-        details: `Putaway Document ID: ${id}`,
-    });
-  }
+        action: 'SPLIT',
+        details: `Split Putaway Document ID: ${originalDoc.id}. Moved ${qtyToUpdate} items.`,
+      });
+    }
 
-  return NextResponse.json(data);
+    return NextResponse.json({ message: 'Stock split successful' });
+
+  } else {
+    // Fallback to the original simple update logic
+    const { no_document, qty, status, sku, barcode, brand, exp_date, location, check_by } = body;
+
+    const { data, error } = await supabaseService
+      .from('putaway_documents')
+      .update({ no_document, qty, status, sku, barcode, brand, exp_date, location, check_by })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Supabase PATCH error:", error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    if (userName && userEmail) {
+      await logActivity({
+          userName,
+          userEmail,
+          action: 'UPDATE',
+          details: `Putaway Document ID: ${id}`,
+      });
+    }
+
+    return NextResponse.json(data);
+  }
 }
 
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {

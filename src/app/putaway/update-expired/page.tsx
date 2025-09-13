@@ -37,7 +37,7 @@ export default function UpdateExpiredPage() {
         const fetchProductData = async () => {
             if (!barcode) {
                 setOriginalDoc(null);
-                setUpdateFields({ location: '', exp_date: '', qty: '' });
+                 setUpdateFields({ location: '', exp_date: '', qty: '' });
                 return;
             }
             setIsLoading(true);
@@ -57,7 +57,7 @@ export default function UpdateExpiredPage() {
                 setUpdateFields({
                     location: data.location || '',
                     exp_date: data.exp_date ? format(new Date(data.exp_date), 'yyyy-MM-dd') : '',
-                    qty: data.qty.toString(),
+                    qty: data.qty.toString(), // The quantity to be moved/updated
                 });
             } catch (error: any) {
                 toast({ variant: "destructive", title: "Error", description: error.message });
@@ -86,12 +86,31 @@ export default function UpdateExpiredPage() {
             return;
         }
 
+        const qtyToUpdate = parseInt(updateFields.qty, 10);
+        if (isNaN(qtyToUpdate) || qtyToUpdate <= 0) {
+            toast({ variant: "destructive", title: "Error", description: "Please enter a valid quantity to update." });
+            return;
+        }
+
+        if (qtyToUpdate > originalDoc.qty) {
+            toast({ variant: "destructive", title: "Error", description: `Quantity to update cannot exceed the original stock of ${originalDoc.qty}.` });
+            return;
+        }
+
+
         setIsSubmitting(true);
         try {
             const payload = {
-                ...originalDoc,
-                ...updateFields,
-                qty: parseInt(updateFields.qty, 10),
+                // Original document info for reference
+                originalDoc: {
+                    ...originalDoc
+                },
+                // New values for the split-off batch
+                update: {
+                    location: updateFields.location,
+                    exp_date: updateFields.exp_date,
+                    qty: qtyToUpdate,
+                },
                 userName: user.name,
                 userEmail: user.email,
             };
@@ -103,7 +122,8 @@ export default function UpdateExpiredPage() {
             });
 
             if (!response.ok) {
-                throw new Error('Failed to update product information.');
+                 const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to update product information.');
             }
             
             toast({ title: "Success", description: "Product information has been updated." });
@@ -123,7 +143,7 @@ export default function UpdateExpiredPage() {
                 <Card>
                     <CardHeader>
                         <CardTitle>Update Product Information</CardTitle>
-                        <CardDescription>Scan barcode to find and update a product's location, expiration date, and quantity.</CardDescription>
+                        <CardDescription>Scan barcode to find a product. You can split a batch by updating the quantity, location, or expiration date. This will create a new entry for the specified quantity and reduce the original stock.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={handleSubmit} className="space-y-4">
@@ -135,6 +155,13 @@ export default function UpdateExpiredPage() {
                                         {isLoading && <Loader2 className="absolute right-2 top-2 h-5 w-5 animate-spin text-muted-foreground" />}
                                     </div>
                                 </div>
+                                {originalDoc && (
+                                    <div className="text-sm text-muted-foreground bg-muted p-3 rounded-md md:col-span-2">
+                                        <p><strong>Original Stock:</strong> {originalDoc.qty.toLocaleString()} pcs</p>
+                                        <p><strong>Location:</strong> {originalDoc.location}</p>
+                                        <p><strong>Exp Date:</strong> {format(new Date(originalDoc.exp_date), 'dd/MM/yyyy')}</p>
+                                    </div>
+                                )}
                              </div>
 
                              <div className="border-t pt-4 mt-4 grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -147,8 +174,8 @@ export default function UpdateExpiredPage() {
                                     <Input id="exp_date" name="exp_date" type="date" placeholder="Enter new expiration date" value={updateFields.exp_date} onChange={handleFieldChange} disabled={!originalDoc || isSubmitting} />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="qty">New Quantity</Label>
-                                    <Input id="qty" name="qty" type="number" placeholder="Enter new quantity" value={updateFields.qty} onChange={handleFieldChange} disabled={!originalDoc || isSubmitting} />
+                                    <Label htmlFor="qty">Quantity to Update</Label>
+                                    <Input id="qty" name="qty" type="number" placeholder="Quantity to move" value={updateFields.qty} onChange={handleFieldChange} disabled={!originalDoc || isSubmitting} />
                                 </div>
                              </div>
                             <div className="pt-2 flex justify-end">
