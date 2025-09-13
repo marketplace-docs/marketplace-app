@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -14,6 +14,7 @@ import { Plus, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { format } from 'date-fns';
+import type { PutawayDocument } from '@/types/putaway-document';
 
 type ProductOutStatus = 'Issue - Order' | 'Issue - Internal Transfer' | 'Issue - Adjustment Manual';
 
@@ -27,12 +28,22 @@ type ProductOutDocument = {
     date: string; // ISO String
 };
 
+type AggregatedProduct = {
+    sku: string;
+    barcode: string;
+    brand: string;
+    expDate: string;
+    qty: number;
+};
+
 export default function ProductOutPage() {
     const [isAddDialogOpen, setAddDialogOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { toast } = useToast();
     
     const [documents, setDocuments] = useLocalStorage<ProductOutDocument[]>('product-out-documents', []);
+    const [putawayDocs] = useLocalStorage<PutawayDocument[]>('putaway-documents', []);
+
     const [newDocument, setNewDocument] = useState({
         sku: '',
         barcode: '',
@@ -40,6 +51,51 @@ export default function ProductOutPage() {
         qty: '',
         status: 'Issue - Order' as ProductOutStatus,
     });
+    const [availableStock, setAvailableStock] = useState<AggregatedProduct | null>(null);
+
+    const productInStock = useMemo(() => {
+        const productMap = new Map<string, AggregatedProduct>();
+        
+        [...putawayDocs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+            .forEach(doc => {
+                const key = doc.barcode; // Use barcode as the key for lookup
+                if (productMap.has(key)) {
+                    productMap.get(key)!.qty += doc.qty;
+                } else {
+                    productMap.set(key, {
+                        sku: doc.sku,
+                        barcode: doc.barcode,
+                        brand: doc.brand,
+                        expDate: doc.expDate,
+                        qty: doc.qty,
+                    });
+                }
+            });
+        
+        documents.forEach(outDoc => {
+            if(productMap.has(outDoc.barcode)) {
+                productMap.get(outDoc.barcode)!.qty -= outDoc.qty;
+            }
+        });
+
+        return Array.from(productMap.values());
+    }, [putawayDocs, documents]);
+
+    useEffect(() => {
+        if (newDocument.barcode) {
+            const foundStock = productInStock.find(p => p.barcode === newDocument.barcode);
+            if (foundStock) {
+                setAvailableStock(foundStock);
+                setNewDocument(prev => ({ ...prev, sku: foundStock.sku, expDate: foundStock.expDate }));
+            } else {
+                setAvailableStock(null);
+                setNewDocument(prev => ({ ...prev, sku: '' }));
+            }
+        } else {
+            setAvailableStock(null);
+            setNewDocument(prev => ({ ...prev, sku: '' }));
+        }
+    }, [newDocument.barcode, productInStock]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -50,23 +106,53 @@ export default function ProductOutPage() {
         setNewDocument(prev => ({ ...prev, status: value }));
     };
 
+    const resetForm = () => {
+        setNewDocument({ sku: '', barcode: '', expDate: '', qty: '', status: 'Issue - Order' });
+        setAvailableStock(null);
+    };
+
     const handleAddDocument = async () => {
-        if (!newDocument.sku || !newDocument.barcode || !newDocument.qty) {
+        const qtyToTake = parseInt(newDocument.qty, 10);
+        if (!newDocument.barcode || !newDocument.qty || !newDocument.sku) {
             toast({
                 variant: 'destructive',
                 title: 'Error',
-                description: 'SKU, Barcode, and Quantity are required.',
+                description: 'Barcode and Quantity are required.',
+            });
+            return;
+        }
+        if (!availableStock) {
+             toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: 'Product not found in stock.',
+            });
+            return;
+        }
+        if (qtyToTake <= 0) {
+             toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: 'Quantity must be greater than zero.',
+            });
+            return;
+        }
+         if (qtyToTake > availableStock.qty) {
+            toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: `Quantity exceeds available stock of ${availableStock.qty}.`,
             });
             return;
         }
 
         setIsSubmitting(true);
-        await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call
+        await new Promise(resolve => setTimeout(resolve, 500)); 
 
         const docToAdd: ProductOutDocument = {
             id: Date.now().toString(),
             ...newDocument,
-            qty: parseInt(newDocument.qty, 10),
+            qty: qtyToTake,
             date: new Date().toISOString(),
         };
         
@@ -74,7 +160,7 @@ export default function ProductOutPage() {
 
         setIsSubmitting(false);
         setAddDialogOpen(false);
-        setNewDocument({ sku: '', barcode: '', expDate: '', qty: '', status: 'Issue - Order' });
+        resetForm();
         toast({
             title: 'Success',
             description: 'Product out document has been created locally.',
@@ -91,7 +177,7 @@ export default function ProductOutPage() {
                             <CardTitle>Pengeluaran Barang</CardTitle>
                             <CardDescription>Data stok barang keluar. Fitur ini akan memotong stok dari Product In.</CardDescription>
                         </div>
-                        <Dialog open={isAddDialogOpen} onOpenChange={setAddDialogOpen}>
+                        <Dialog open={isAddDialogOpen} onOpenChange={(open) => { setAddDialogOpen(open); if(!open) resetForm(); }}>
                             <DialogTrigger asChild>
                                 <Button>
                                     <Plus className="mr-2 h-4 w-4" /> Add Product Out
@@ -103,12 +189,12 @@ export default function ProductOutPage() {
                                 </DialogHeader>
                                 <div className="grid gap-4 py-4">
                                     <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="sku" className="text-right">SKU</Label>
-                                        <Input id="sku" name="sku" value={newDocument.sku} onChange={handleInputChange} className="col-span-3" />
+                                        <Label htmlFor="barcode" className="text-right">Barcode</Label>
+                                        <Input id="barcode" name="barcode" value={newDocument.barcode} onChange={handleInputChange} className="col-span-3" placeholder="Scan or enter barcode" />
                                     </div>
                                     <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="barcode" className="text-right">Barcode</Label>
-                                        <Input id="barcode" name="barcode" value={newDocument.barcode} onChange={handleInputChange} className="col-span-3" />
+                                        <Label htmlFor="sku" className="text-right">SKU</Label>
+                                        <Input id="sku" name="sku" value={newDocument.sku} className="col-span-3 bg-muted" readOnly />
                                     </div>
                                     <div className="grid grid-cols-4 items-center gap-4">
                                         <Label htmlFor="expDate" className="text-right">EXP Date</Label>
@@ -116,7 +202,10 @@ export default function ProductOutPage() {
                                     </div>
                                     <div className="grid grid-cols-4 items-center gap-4">
                                         <Label htmlFor="qty" className="text-right">Quantity</Label>
-                                        <Input id="qty" name="qty" type="number" value={newDocument.qty} onChange={handleInputChange} className="col-span-3" />
+                                        <div className="col-span-3">
+                                            <Input id="qty" name="qty" type="number" value={newDocument.qty} onChange={handleInputChange} placeholder="0" />
+                                            {availableStock && <p className="text-xs text-muted-foreground mt-1">Available Stock: {availableStock.qty.toLocaleString()}</p>}
+                                        </div>
                                     </div>
                                     <div className="grid grid-cols-4 items-center gap-4">
                                         <Label htmlFor="status" className="text-right">Status</Label>
@@ -133,7 +222,7 @@ export default function ProductOutPage() {
                                     </div>
                                 </div>
                                 <DialogFooter>
-                                    <Button variant="outline" onClick={() => setAddDialogOpen(false)}>Cancel</Button>
+                                    <Button variant="outline" onClick={() => { setAddDialogOpen(false); resetForm(); }}>Cancel</Button>
                                     <Button onClick={handleAddDocument} disabled={isSubmitting}>
                                         {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                         Submit
@@ -152,6 +241,7 @@ export default function ProductOutPage() {
                                         <TableHead>EXP Date</TableHead>
                                         <TableHead>Quantity</TableHead>
                                         <TableHead>Status</TableHead>
+                                        <TableHead>Date</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -163,11 +253,12 @@ export default function ProductOutPage() {
                                                 <TableCell>{doc.expDate ? format(new Date(doc.expDate), 'dd/MM/yyyy') : '-'}</TableCell>
                                                 <TableCell>{doc.qty.toLocaleString()}</TableCell>
                                                 <TableCell>{doc.status}</TableCell>
+                                                <TableCell>{format(new Date(doc.date), 'dd/MM/yyyy HH:mm')}</TableCell>
                                             </TableRow>
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                                            <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                                                 Belum ada data pengeluaran barang.
                                             </TableCell>
                                         </TableRow>
