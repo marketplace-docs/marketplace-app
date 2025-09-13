@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -9,16 +9,33 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DateRange } from "react-day-picker";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Download, Smile, Frown, Pencil, Save, Plus, Upload } from "lucide-react";
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Download, Smile, Frown, Pencil, Save, Plus, Upload, Trash2, Loader2, AlertCircle } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
-import { format, addDays, differenceInDays, parse } from "date-fns";
+import { format, addDays, differenceInDays, parse, isValid } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { performanceData as initialPerformanceData, PerformanceData } from '@/lib/daily-performance-data';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+
+type PerformanceData = {
+    id: number;
+    date: string;
+    month: string;
+    name: string;
+    task_daily: number;
+    total_items: number;
+    job_desc: 'Picker' | 'Packer' | 'Putaway' | 'Interco' | 'Admin';
+    shift: 'PAGI' | 'SORE';
+    target: number;
+    target_item: number;
+    task_performance: number;
+    items_performance: number;
+    result: 'BERHASIL' | 'GAGAL';
+};
+
 
 const jobDescriptions = ["All", "Picker", "Packer", "Putaway", "Interco", "Admin"];
 
@@ -27,7 +44,7 @@ const ResultBadge = ({ result }: { result: 'BERHASIL' | 'GAGAL' }) => {
   return (
     <Badge
       className={cn(
-        'flex items-center justify-center text-white',
+        'flex items-center justify-center text-white w-24',
         isSuccess ? 'bg-green-500' : 'bg-red-500'
       )}
     >
@@ -37,66 +54,85 @@ const ResultBadge = ({ result }: { result: 'BERHASIL' | 'GAGAL' }) => {
   );
 };
 
-type NewPerformanceData = Omit<PerformanceData, 'id' | 'month' | 'target' | 'targetItem' | 'taskPerformance' | 'itemsPerformance' | 'result'> & {
+type NewPerformanceData = Omit<PerformanceData, 'id' | 'month' | 'target' | 'target_item' | 'task_performance' | 'items_performance' | 'result'> & {
   date: string;
 };
 
 
 export default function DailyPerformancePage() {
-    const [data, setData] = useState<PerformanceData[]>(initialPerformanceData);
+    const [data, setData] = useState<PerformanceData[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
     const [dateRange, setDateRange] = useState<DateRange | undefined>({
-        from: new Date(2025, 0, 2),
-        to: new Date(2025, 0, 2),
+        from: new Date(),
+        to: new Date(),
     });
     const [jobFilter, setJobFilter] = useState<string>("All");
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const { toast } = useToast();
-    const [isEditing, setIsEditing] = useState(false);
-    const [editedItems, setEditedItems] = useState<Record<number, Partial<Pick<PerformanceData, 'taskDaily' | 'totalItems'>>>>({});
     const fileInputRef = React.useRef<HTMLInputElement>(null);
+    
+    const [isEditing, setIsEditing] = useState(false);
+    const [editedItems, setEditedItems] = useState<Record<number, Partial<Pick<PerformanceData, 'task_daily' | 'total_items'>>>>({});
 
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    
     const [isAddDialogOpen, setAddDialogOpen] = useState(false);
-    const [newEntry, setNewEntry] = useState<NewPerformanceData>({
-        date: format(new Date(), 'yyyy-MM-dd'),
+    const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [selectedItem, setSelectedItem] = useState<PerformanceData | null>(null);
+
+    const [newEntry, setNewEntry] = useState<Omit<NewPerformanceData, 'date'>>({
         name: '',
-        taskDaily: 0,
-        totalItems: 0,
-        jobDesc: 'Picker',
+        task_daily: 0,
+        total_items: 0,
+        job_desc: 'Picker',
         shift: 'PAGI',
     });
+    const [newEntryDate, setNewEntryDate] = useState<Date | undefined>(new Date());
 
-    const filteredData = useMemo(() => {
-        let filtered = data;
-        if (dateRange?.from && dateRange?.to) {
-            filtered = filtered.filter(item => {
-                const itemDate = new Date(item.date);
-                return itemDate >= dateRange.from! && itemDate <= dateRange.to!;
-            });
-        }
-        if (jobFilter !== "All") {
-            filtered = filtered.filter(item => item.jobDesc === jobFilter);
-        }
-        return filtered;
-    }, [data, dateRange, jobFilter]);
+    const fetchPerformanceData = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const params = new URLSearchParams();
+            if (dateRange?.from) params.append('from', format(dateRange.from, 'yyyy-MM-dd'));
+            if (dateRange?.to) params.append('to', format(dateRange.to, 'yyyy-MM-dd'));
+            if (jobFilter !== 'All') params.append('job_desc', jobFilter);
 
-    const totalPages = Math.ceil(filteredData.length / rowsPerPage);
-    const paginatedData = filteredData.slice(
+            const response = await fetch(`/api/daily-performance?${params.toString()}`);
+            if (!response.ok) throw new Error('Failed to fetch performance data');
+            const result = await response.json();
+            setData(result);
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    }, [dateRange, jobFilter]);
+
+    useEffect(() => {
+        fetchPerformanceData();
+    }, [fetchPerformanceData]);
+
+    const totalPages = Math.ceil(data.length / rowsPerPage);
+    const paginatedData = data.slice(
         (currentPage - 1) * rowsPerPage,
         currentPage * rowsPerPage
     );
     
     useEffect(() => {
         setCurrentPage(1);
-    }, [rowsPerPage, dateRange, jobFilter]);
+    }, [rowsPerPage]);
 
     const handleDateChange = (range: DateRange | undefined) => {
         if (range?.from && range?.to) {
-            if (differenceInDays(range.to, range.from) > 6) {
+            if (differenceInDays(range.to, range.from) > 30) {
                  toast({
                     variant: 'destructive',
                     title: 'Date Range Too Large',
-                    description: 'Please select a date range of 7 days or less.',
+                    description: 'Please select a date range of 31 days or less.',
                 });
                 return;
             }
@@ -117,16 +153,16 @@ export default function DailyPerformancePage() {
         const headers = ["Date", "Month", "Name", "Task Daily", "Total Items", "Job-Desc", "Shift", "Task Perf.", "Items Perf.", "Result"];
         const csvContent = [
             headers.join(","),
-            ...filteredData.map(item => [
+            ...data.map(item => [
                 format(new Date(item.date), "dd MMMM yyyy"),
                 item.month,
                 item.name,
-                item.taskDaily,
-                item.totalItems,
-                item.jobDesc,
+                item.task_daily,
+                item.total_items,
+                item.job_desc,
                 item.shift,
-                `${item.taskPerformance}%`,
-                `${item.itemsPerformance}%`,
+                `${item.task_performance}%`,
+                `${item.items_performance}%`,
                 item.result
             ].join(","))
         ].join("\n");
@@ -134,7 +170,6 @@ export default function DailyPerformancePage() {
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         const url = URL.createObjectURL(blob);
-        link.href = url;
         link.setAttribute("download", `daily_performance_${format(new Date(), "yyyyMMdd")}.csv`);
         document.body.appendChild(link);
         link.click();
@@ -147,63 +182,56 @@ export default function DailyPerformancePage() {
         fileInputRef.current?.click();
     };
 
-    const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
-
+        setIsSubmitting(true);
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             const text = e.target?.result as string;
             try {
                 const lines = text.split('\n').filter(line => line.trim() !== '');
-                const newEntries: PerformanceData[] = [];
-                let maxId = data.length > 0 ? Math.max(...data.map(item => item.id)) : 0;
-                
+                if (lines.length <= 1) throw new Error("CSV is empty or has only a header.");
+
                 const header = lines[0].split(',').map(h => h.trim().toLowerCase());
                 const requiredHeaders = ['date', 'name', 'task daily', 'total items', 'job-desc', 'shift'];
-                if(!requiredHeaders.every(h => header.includes(h))) {
+                if (!requiredHeaders.every(h => header.includes(h))) {
                     throw new Error(`Invalid CSV headers. Required: ${requiredHeaders.join(', ')}`);
                 }
-
-                lines.slice(1).forEach((line, index) => {
+                
+                const newEntries: any[] = lines.slice(1).map(line => {
                     const values = line.split(',');
                     const entry: { [key: string]: string } = {};
                     header.forEach((h, i) => entry[h] = values[i]?.trim());
                     
                     const entryDate = parse(entry.date, 'dd MMMM yyyy', new Date());
-                    if (isNaN(entryDate.getTime())) {
+                    if (!isValid(entryDate)) {
                         console.warn(`Skipping line with invalid date: ${line}`);
-                        return;
+                        return null;
                     }
+                    
+                    return {
+                        date: format(entryDate, 'yyyy-MM-dd'),
+                        name: entry.name,
+                        task_daily: parseInt(entry['task daily'], 10),
+                        total_items: parseInt(entry['total items'], 10),
+                        job_desc: entry['job-desc'],
+                        shift: entry.shift,
+                    };
+                }).filter(Boolean);
 
-                    const taskDaily = parseInt(entry['task daily'], 10);
-                    const totalItems = parseInt(entry['total items'], 10);
-
-                    if (entry.name && !isNaN(taskDaily) && !isNaN(totalItems) && entry['job-desc'] && entry.shift) {
-                        const target = 400; // Mock target
-                        const targetItem = 1000; // Mock target item
-                        const taskPerformance = target > 0 ? Math.round((taskDaily / target) * 100) : 0;
-                        const itemsPerformance = targetItem > 0 ? Math.round((totalItems / targetItem) * 100) : 0;
-
-                        newEntries.push({
-                            id: ++maxId,
-                            date: entryDate.toISOString(),
-                            month: format(entryDate, 'MMMM - yy'),
-                            name: entry.name,
-                            taskDaily: taskDaily,
-                            totalItems: totalItems,
-                            jobDesc: entry['job-desc'] as any,
-                            shift: entry.shift as any,
-                            target: target,
-                            targetItem: targetItem,
-                            taskPerformance: taskPerformance,
-                            itemsPerformance: itemsPerformance,
-                            result: taskPerformance >= 100 ? 'BERHASIL' : 'GAGAL',
-                        });
-                    }
+                const response = await fetch('/api/daily-performance', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newEntries)
                 });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to upload data');
+                }
 
-                setData(prev => [...prev, ...newEntries]);
+                await fetchPerformanceData();
                 toast({
                     title: "Success",
                     description: `${newEntries.length} entries uploaded successfully.`,
@@ -213,45 +241,49 @@ export default function DailyPerformancePage() {
                 toast({
                     variant: "destructive",
                     title: "Upload Failed",
-                    description: error.message || "Failed to parse CSV file.",
+                    description: error.message || "Failed to parse or upload CSV file.",
                 });
+            } finally {
+              setIsSubmitting(false);
             }
         };
         reader.readAsText(file);
         if (event.target) event.target.value = '';
     };
 
-
-    const handleEditToggle = () => {
+    const handleEditToggle = async () => {
       if (isEditing) {
-          const updatedData = data.map(item => {
-              const editedItem = editedItems[item.id];
-              if (editedItem) {
-                  const newTaskDaily = editedItem.taskDaily ?? item.taskDaily;
-                  const newTotalItems = editedItem.totalItems ?? item.totalItems;
-                  
-                  const taskPerformance = item.target > 0 ? Math.round((newTaskDaily / item.target) * 100) : 0;
-                  const itemsPerformance = item.targetItem > 0 ? Math.round((newTotalItems / item.targetItem) * 100) : 0;
-
-                  return {
-                      ...item,
-                      taskDaily: newTaskDaily,
-                      totalItems: newTotalItems,
-                      taskPerformance: taskPerformance,
-                      itemsPerformance: itemsPerformance,
-                      result: taskPerformance >= 100 ? 'BERHASIL' : 'GAGAL',
-                  };
+          setIsSubmitting(true);
+          try {
+              const updates = Object.entries(editedItems).map(([id, changes]) => ({
+                  id: Number(id),
+                  ...changes
+              }));
+              if(updates.length === 0) {
+                 toast({ title: "No Changes", description: "No changes to save." });
+                 return;
               }
-              return item;
-          });
-          setData(updatedData);
-          setEditedItems({});
-          toast({ title: "Success", description: "Performance data has been updated." });
+              const response = await fetch('/api/daily-performance', {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(updates)
+              });
+
+              if (!response.ok) throw new Error('Failed to save changes.');
+              
+              await fetchPerformanceData();
+              setEditedItems({});
+              toast({ title: "Success", description: "Performance data has been updated." });
+          } catch(err: any) {
+              toast({ variant: "destructive", title: "Save Failed", description: err.message });
+          } finally {
+              setIsSubmitting(false);
+          }
       }
       setIsEditing(!isEditing);
     };
 
-    const handleItemChange = (id: number, field: 'taskDaily' | 'totalItems', value: string) => {
+    const handleItemChange = (id: number, field: 'task_daily' | 'total_items', value: string) => {
         const numericValue = parseInt(value, 10);
         if (!isNaN(numericValue)) {
             setEditedItems(prev => ({
@@ -272,8 +304,8 @@ export default function DailyPerformancePage() {
         }
     };
     
-    const handleAddEntry = () => {
-        if (!newEntry.name || !newEntry.date) {
+    const handleAddEntry = async () => {
+        if (!newEntry.name || !newEntryDate) {
             toast({
                 variant: 'destructive',
                 title: 'Error',
@@ -281,45 +313,69 @@ export default function DailyPerformancePage() {
             });
             return;
         }
+        setIsSubmitting(true);
 
-        const newId = data.length > 0 ? Math.max(...data.map(d => d.id)) + 1 : 1;
-        const entryDate = new Date(newEntry.date);
-        
-        // Mock targets, this should be based on your business logic
-        const target = 400;
-        const targetItem = 1000;
-        
-        const taskPerformance = target > 0 ? Math.round((newEntry.taskDaily / target) * 100) : 0;
-        const itemsPerformance = targetItem > 0 ? Math.round((newEntry.totalItems / targetItem) * 100) : 0;
-
-        const newPerformanceEntry: PerformanceData = {
-            id: newId,
-            date: entryDate.toISOString(),
-            month: format(entryDate, 'MMMM - yy'),
-            name: newEntry.name,
-            taskDaily: newEntry.taskDaily,
-            totalItems: newEntry.totalItems,
-            jobDesc: newEntry.jobDesc,
-            shift: newEntry.shift,
-            target: target,
-            targetItem: targetItem,
-            taskPerformance: taskPerformance,
-            itemsPerformance: itemsPerformance,
-            result: taskPerformance >= 100 ? 'BERHASIL' : 'GAGAL',
+        const newPerformanceEntry = {
+            date: format(newEntryDate, 'yyyy-MM-dd'),
+            ...newEntry
         };
+        
+        try {
+            const response = await fetch('/api/daily-performance', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify([newPerformanceEntry])
+            });
 
-        setData(prevData => [...prevData, newPerformanceEntry]);
-        setAddDialogOpen(false);
-        setNewEntry({
-          date: format(new Date(), 'yyyy-MM-dd'),
-          name: '',
-          taskDaily: 0,
-          totalItems: 0,
-          jobDesc: 'Picker',
-          shift: 'PAGI',
-        });
-        toast({ title: 'Success', description: 'New performance entry added.' });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to add entry');
+            }
+
+            await fetchPerformanceData();
+            setAddDialogOpen(false);
+            setNewEntry({
+              name: '',
+              task_daily: 0,
+              total_items: 0,
+              job_desc: 'Picker',
+              shift: 'PAGI',
+            });
+            setNewEntryDate(new Date());
+            toast({ title: 'Success', description: 'New performance entry added.' });
+
+        } catch (err: any) {
+             toast({ variant: 'destructive', title: 'Add Failed', description: err.message });
+        } finally {
+            setIsSubmitting(false);
+        }
     };
+    
+    const handleOpenDeleteDialog = (item: PerformanceData) => {
+        setSelectedItem(item);
+        setDeleteDialogOpen(true);
+    };
+
+    const handleDeleteItem = async () => {
+        if (!selectedItem) return;
+        setIsSubmitting(true);
+        try {
+            const response = await fetch(`/api/daily-performance/${selectedItem.id}`, {
+                method: 'DELETE'
+            });
+            if (!response.ok) throw new Error('Failed to delete entry');
+            
+            await fetchPerformanceData();
+            setDeleteDialogOpen(false);
+            setSelectedItem(null);
+            toast({ title: 'Success', description: 'Entry deleted.', variant: 'destructive'});
+        } catch (err: any) {
+            toast({ variant: 'destructive', title: 'Delete Failed', description: err.message });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
 
     return (
         <MainLayout>
@@ -327,9 +383,9 @@ export default function DailyPerformancePage() {
                 <div className="flex justify-between items-center">
                     <h1 className="text-2xl font-bold">Performance Report</h1>
                     <div className="flex gap-2">
-                        <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
-                        <Button variant="outline" onClick={handleUploadClick}>
-                            <Upload className="mr-2 h-4 w-4" />
+                        <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" disabled={isSubmitting} />
+                        <Button variant="outline" onClick={handleUploadClick} disabled={isSubmitting}>
+                            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
                             Upload
                         </Button>
                         <Dialog open={isAddDialogOpen} onOpenChange={setAddDialogOpen}>
@@ -350,11 +406,21 @@ export default function DailyPerformancePage() {
                                     </div>
                                     <div className="grid grid-cols-4 items-center gap-4">
                                         <Label htmlFor="new-date" className="text-right">Date</Label>
-                                        <Input id="new-date" type="date" value={newEntry.date} onChange={(e) => setNewEntry({...newEntry, date: e.target.value})} className="col-span-3" />
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <Button variant="outline" className={cn("col-span-3 justify-start text-left font-normal", !newEntryDate && "text-muted-foreground")}>
+                                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                                    {newEntryDate ? format(newEntryDate, 'PPP') : <span>Pick a date</span>}
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0">
+                                                <Calendar mode="single" selected={newEntryDate} onSelect={setNewEntryDate} initialFocus/>
+                                            </PopoverContent>
+                                        </Popover>
                                     </div>
                                     <div className="grid grid-cols-4 items-center gap-4">
                                         <Label htmlFor="new-job" className="text-right">Job Desc</Label>
-                                        <Select value={newEntry.jobDesc} onValueChange={(val: PerformanceData['jobDesc']) => setNewEntry({...newEntry, jobDesc: val})}>
+                                        <Select value={newEntry.job_desc} onValueChange={(val: PerformanceData['job_desc']) => setNewEntry({...newEntry, job_desc: val})}>
                                             <SelectTrigger className="col-span-3">
                                                 <SelectValue placeholder="Select job" />
                                             </SelectTrigger>
@@ -380,17 +446,20 @@ export default function DailyPerformancePage() {
                                         </Select>
                                     </div>
                                     <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="new-taskDaily" className="text-right">Task Daily</Label>
-                                        <Input id="new-taskDaily" type="number" value={newEntry.taskDaily} onChange={(e) => setNewEntry({...newEntry, taskDaily: parseInt(e.target.value) || 0})} className="col-span-3" />
+                                        <Label htmlFor="new-task_daily" className="text-right">Task Daily</Label>
+                                        <Input id="new-task_daily" type="number" value={newEntry.task_daily} onChange={(e) => setNewEntry({...newEntry, task_daily: parseInt(e.target.value) || 0})} className="col-span-3" />
                                     </div>
                                     <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="new-totalItems" className="text-right">Total Items</Label>
-                                        <Input id="new-totalItems" type="number" value={newEntry.totalItems} onChange={(e) => setNewEntry({...newEntry, totalItems: parseInt(e.target.value) || 0})} className="col-span-3" />
+                                        <Label htmlFor="new-total_items" className="text-right">Total Items</Label>
+                                        <Input id="new-total_items" type="number" value={newEntry.total_items} onChange={(e) => setNewEntry({...newEntry, total_items: parseInt(e.target.value) || 0})} className="col-span-3" />
                                     </div>
                                 </div>
                                 <DialogFooter>
                                     <Button variant="outline" onClick={() => setAddDialogOpen(false)}>Cancel</Button>
-                                    <Button onClick={handleAddEntry}>Submit</Button>
+                                    <Button onClick={handleAddEntry} disabled={isSubmitting}>
+                                      {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                      Submit
+                                    </Button>
                                 </DialogFooter>
                             </DialogContent>
                         </Dialog>
@@ -401,6 +470,14 @@ export default function DailyPerformancePage() {
                     </div>
                 </div>
                 
+                 {error && (
+                    <Alert variant="destructive" className="mb-4">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Error</AlertTitle>
+                    <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                )}
+
                 <Card>
                     <CardHeader>
                         <div className="flex justify-between items-center pb-4">
@@ -408,8 +485,8 @@ export default function DailyPerformancePage() {
                                 <CardTitle>Performance Report</CardTitle>
                                 <CardDescription>Detailed daily performance metrics of team members.</CardDescription>
                             </div>
-                            <Button variant="outline" onClick={handleEditToggle}>
-                                {isEditing ? <Save className="mr-2 h-4 w-4" /> : <Pencil className="mr-2 h-4 w-4" />}
+                             <Button variant="outline" onClick={handleEditToggle} disabled={isSubmitting}>
+                                {isEditing ? (isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />) : <Pencil className="mr-2 h-4 w-4" />}
                                 {isEditing ? 'Save' : 'Edit'}
                             </Button>
                         </div>
@@ -477,10 +554,17 @@ export default function DailyPerformancePage() {
                                         <TableHead>Task Perf.</TableHead>
                                         <TableHead>Items Perf.</TableHead>
                                         <TableHead className='text-center'>Result</TableHead>
+                                        <TableHead className='text-right'>Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {paginatedData.length > 0 ? (
+                                   {loading ? (
+                                        <TableRow>
+                                            <TableCell colSpan={11} className="h-24 text-center">
+                                                <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : paginatedData.length > 0 ? (
                                         paginatedData.map((item) => (
                                             <TableRow key={item.id}>
                                                 <TableCell>{format(new Date(item.date), "d MMM yyyy")}</TableCell>
@@ -490,34 +574,40 @@ export default function DailyPerformancePage() {
                                                     {isEditing ? (
                                                         <Input 
                                                           type="number"
-                                                          value={editedItems[item.id]?.taskDaily ?? item.taskDaily}
-                                                          onChange={(e) => handleItemChange(item.id, 'taskDaily', e.target.value)}
+                                                          value={editedItems[item.id]?.task_daily ?? item.task_daily}
+                                                          onChange={(e) => handleItemChange(item.id, 'task_daily', e.target.value)}
                                                           className="h-8 w-24"
                                                         />
-                                                    ) : item.taskDaily.toLocaleString()}
+                                                    ) : item.task_daily.toLocaleString()}
                                                 </TableCell>
                                                 <TableCell>
                                                     {isEditing ? (
                                                         <Input 
                                                           type="number"
-                                                          value={editedItems[item.id]?.totalItems ?? item.totalItems}
-                                                          onChange={(e) => handleItemChange(item.id, 'totalItems', e.target.value)}
+                                                          value={editedItems[item.id]?.total_items ?? item.total_items}
+                                                          onChange={(e) => handleItemChange(item.id, 'total_items', e.target.value)}
                                                           className="h-8 w-24"
                                                         />
-                                                    ) : item.totalItems.toLocaleString()}
+                                                    ) : item.total_items.toLocaleString()}
                                                 </TableCell>
-                                                <TableCell><Badge variant="secondary">{item.jobDesc}</Badge></TableCell>
+                                                <TableCell><Badge variant="secondary">{item.job_desc}</Badge></TableCell>
                                                 <TableCell>{item.shift}</TableCell>
-                                                <TableCell>{item.taskPerformance}%</TableCell>
-                                                <TableCell>{item.itemsPerformance}%</TableCell>
+                                                <TableCell>{item.task_performance}%</TableCell>
+                                                <TableCell>{item.items_performance}%</TableCell>
                                                 <TableCell className="text-center">
                                                     <ResultBadge result={item.result} />
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" onClick={() => handleOpenDeleteDialog(item)}>
+                                                        <Trash2 className="h-4 w-4" />
+                                                        <span className="sr-only">Delete</span>
+                                                    </Button>
                                                 </TableCell>
                                             </TableRow>
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
+                                            <TableCell colSpan={11} className="h-24 text-center text-muted-foreground">
                                                 No data found for the selected filters.
                                             </TableCell>
                                         </TableRow>
@@ -527,7 +617,7 @@ export default function DailyPerformancePage() {
                         </div>
                         <div className="flex items-center justify-end space-x-2 py-4">
                             <div className="flex-1 text-sm text-muted-foreground">
-                                Page {filteredData.length > 0 ? currentPage : 0} of {totalPages}
+                                Page {data.length > 0 ? currentPage : 0} of {totalPages}
                             </div>
                             <div className="flex items-center space-x-2">
                                 <span className="text-sm text-muted-foreground">Rows per page:</span>
@@ -567,7 +657,23 @@ export default function DailyPerformancePage() {
                     </CardContent>
                 </Card>
             </div>
+             <Dialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Are you sure?</DialogTitle>
+                        <DialogDescription>
+                            This will permanently delete the performance entry for <span className="font-semibold">{selectedItem?.name}</span> on <span className="font-semibold">{selectedItem ? format(new Date(selectedItem.date), 'd MMM yyyy') : ''}</span>. This action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+                        <Button variant="destructive" onClick={handleDeleteItem} disabled={isSubmitting}>
+                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Delete
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </MainLayout>
     );
 }
-
