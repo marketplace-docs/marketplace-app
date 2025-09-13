@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import {
   Card,
   CardContent,
@@ -21,14 +21,15 @@ import { MainLayout } from '@/components/layout/main-layout';
 import type { MarketplaceStore } from '@/types/marketplace-store';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Pencil, Trash2, Loader2, AlertCircle, Download } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pencil, Trash2, Loader2, AlertCircle, Download, Upload } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuth } from '@/hooks/use-auth';
+import Link from 'next/link';
 
 export default function MonitoringStorePage() {
   const [stores, setStores] = useState<MarketplaceStore[]>([]);
@@ -40,10 +41,12 @@ export default function MonitoringStorePage() {
   
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isUploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [selectedStore, setSelectedStore] = useState<MarketplaceStore | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -166,14 +169,13 @@ export default function MonitoringStorePage() {
       });
       return;
     }
-    const headers = ["Marketplace Name", "Store Name", "Platform", "Created At"];
+    const headers = ["marketplace_name", "store_name", "platform"];
     const csvContent = [
         headers.join(","),
         ...filteredStores.map(item => [
             `"${item.marketplace_name?.replace(/"/g, '""') || ''}"`,
             `"${item.store_name?.replace(/"/g, '""') || ''}"`,
-            `"${item.platform?.replace(/"/g, '""') || ''}"`,
-            `"${format(new Date(item.created_at), "yyyy-MM-dd HH:mm:ss")}"`
+            `"${item.platform?.replace(/"/g, '""') || ''}"`
         ].join(","))
     ].join("\n");
 
@@ -187,6 +189,59 @@ export default function MonitoringStorePage() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
     toast({ title: "Success", description: "Data has been exported to CSV." });
+  };
+  
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+    setIsSubmitting(true);
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        const text = e.target?.result as string;
+        try {
+            const lines = text.split('\n').filter(line => line.trim() !== '');
+            if (lines.length <= 1) throw new Error("CSV is empty or has only a header.");
+
+            const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
+            const requiredHeaders = ['marketplace_name', 'store_name', 'platform'];
+             if (!requiredHeaders.every(h => headers.includes(h))) {
+                throw new Error(`Invalid CSV headers. Required: ${requiredHeaders.join(', ')}`);
+            }
+
+            const newStores = lines.slice(1).map(line => {
+                const values = line.split(',');
+                const marketplace_name = values[headers.indexOf('marketplace_name')]?.trim().replace(/"/g, '');
+                const store_name = values[headers.indexOf('store_name')]?.trim().replace(/"/g, '');
+                const platform = values[headers.indexOf('platform')]?.trim().replace(/"/g, '');
+                if (marketplace_name && store_name && platform) {
+                    return { marketplace_name, store_name, platform };
+                }
+                return null;
+            }).filter(Boolean);
+
+             const response = await fetch('/api/marketplace-stores', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ stores: newStores, user: { name: user.name, email: user.email } }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "Failed to upload stores.");
+            }
+
+            await fetchStores();
+            setUploadDialogOpen(false);
+            toast({ title: 'Success', description: `${newStores.length} stores uploaded.` });
+
+        } catch (error: any) {
+             toast({ variant: 'destructive', title: 'Upload Failed', description: error.message });
+        } finally {
+            setIsSubmitting(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+    reader.readAsText(file);
   };
 
 
@@ -214,6 +269,28 @@ export default function MonitoringStorePage() {
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="flex-1 md:flex-auto md:w-auto"
                 />
+                 <Dialog open={isUploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+                    <DialogTrigger asChild>
+                        <Button variant="outline"><Upload className="h-4 w-4 mr-2" />Upload</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Upload CSV</DialogTitle>
+                            <DialogDescription>
+                                Select a CSV file to bulk upload marketplace stores. The file must contain the headers: marketplace_name, store_name, platform.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="py-4">
+                           <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
+                           <Button onClick={() => fileInputRef.current?.click()} className="w-full" disabled={isSubmitting}>
+                                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Choose File'}
+                           </Button>
+                           <p className="text-xs text-muted-foreground mt-2">
+                                Don't have a template? <a href="/templates/marketplace_stores_template.csv" download className="underline text-primary">Download CSV template</a>
+                           </p>
+                        </div>
+                    </DialogContent>
+                </Dialog>
                 <Button variant="outline" onClick={handleExport}>
                     <Download className="h-4 w-4 mr-2" />
                     Export
