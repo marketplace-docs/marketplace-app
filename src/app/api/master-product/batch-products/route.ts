@@ -2,12 +2,16 @@
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 
-type AggregatedProduct = {
+type ProductDoc = {
     sku: string;
     barcode: string;
     brand: string;
     expDate: string;
     location: string;
+    qty: number;
+};
+
+type AggregatedProduct = ProductDoc & {
     stock: number;
 };
 
@@ -18,7 +22,7 @@ export async function GET() {
             { data: productOutData, error: productOutError }
         ] = await Promise.all([
             supabaseService.from('putaway_documents').select('sku, barcode, brand, expDate, location, qty'),
-            supabaseService.from('product_out_documents').select('barcode, qty, location')
+            supabaseService.from('product_out_documents').select('sku, barcode, brand, expDate, location, qty')
         ]);
 
         if (putawayError) throw putawayError;
@@ -26,35 +30,36 @@ export async function GET() {
         
         const stockMap = new Map<string, AggregatedProduct>();
 
-        putawayData.forEach(doc => {
+        // Process incoming stock
+        (putawayData as ProductDoc[]).forEach(doc => {
             const key = doc.barcode;
             if (stockMap.has(key)) {
                 const existing = stockMap.get(key)!;
                 existing.stock += doc.qty;
-                 if (doc.location) {
+                if (doc.location) {
                     existing.location = doc.location;
                 }
             } else {
                 stockMap.set(key, {
-                    sku: doc.sku,
-                    barcode: doc.barcode,
-                    brand: doc.brand,
-                    expDate: doc.expDate,
-                    location: doc.location,
+                    ...doc,
                     stock: doc.qty,
                 });
             }
         });
         
-        productOutData.forEach(doc => {
+        // Process outgoing stock
+        (productOutData as ProductDoc[]).forEach(doc => {
              const key = doc.barcode;
              if (stockMap.has(key)) {
                 const existing = stockMap.get(key)!;
                 existing.stock -= doc.qty;
-                // Update location if product_out has a more recent one, assuming it's relevant
-                if (doc.location) {
-                    existing.location = doc.location;
-                }
+             } else {
+                // This case handles items that are out but never in (data inconsistency)
+                // We'll add them with negative stock to highlight the issue.
+                 stockMap.set(key, {
+                    ...doc,
+                    stock: -doc.qty,
+                });
              }
         });
 
