@@ -27,7 +27,7 @@ export async function GET() {
             { data: productOutData, error: productOutError }
         ] = await Promise.all([
             supabaseService.from('putaway_documents').select('sku, barcode, brand, exp_date, location, qty'),
-            supabaseService.from('product_out_documents').select('sku, barcode, expDate, location, qty')
+            supabaseService.from('product_out_documents').select('sku, barcode, exp_date, location, qty')
         ]);
 
         if (putawayError) throw putawayError;
@@ -69,7 +69,7 @@ export async function GET() {
                     sku: doc.sku,
                     barcode: doc.barcode,
                     brand: '', // Brand is not in product_out, so we leave it empty
-                    exp_date: doc.expDate, // Use expDate from product_out_documents
+                    exp_date: doc.exp_date, // Use exp_date from product_out_documents
                     location: doc.location,
                     stock: -doc.qty,
                 });
