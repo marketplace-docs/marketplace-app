@@ -54,10 +54,13 @@ export async function GET() {
                 const existing = stockMap.get(key)!;
                 existing.stock -= doc.qty;
              } else {
-                // This case handles items that are out but never in (data inconsistency)
-                // We'll add them with negative stock to highlight the issue.
                  stockMap.set(key, {
-                    ...doc,
+                    sku: doc.sku,
+                    barcode: doc.barcode,
+                    brand: doc.brand,
+                    expDate: doc.expDate,
+                    location: doc.location,
+                    qty: doc.qty,
                     stock: -doc.qty,
                 });
              }

@@ -57,7 +57,7 @@ export default function BatchProductPage() {
             const data: Omit<BatchProduct, 'status'>[] = await response.json();
             const dataWithStatus = data.map(product => ({
                 ...product,
-                status: getProductStatus(product.exp_date)
+                status: getProductStatus(product.expDate)
             }));
             setInventoryData(dataWithStatus);
         } catch (err: any) {
@@ -151,7 +151,7 @@ export default function BatchProductPage() {
                                                 <TableCell className="font-medium">{product.sku}</TableCell>
                                                 <TableCell>{product.barcode}</TableCell>
                                                 <TableCell>{product.brand}</TableCell>
-                                                <TableCell>{format(new Date(product.exp_date), 'dd/MM/yyyy')}</TableCell>
+                                                <TableCell>{format(new Date(product.expDate), 'dd/MM/yyyy')}</TableCell>
                                                 <TableCell>{product.location}</TableCell>
                                                 <TableCell>
                                                      <Badge variant={product.stock > 0 ? 'default' : 'destructive'} className="font-semibold">
