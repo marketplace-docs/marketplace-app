@@ -15,23 +15,23 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 type PutawayDocument = {
     id: string;
-    noDocument: string;
+    no_document: string;
     date: string;
     qty: number;
     status: 'Done' | 'Pending';
     sku: string;
     barcode: string;
     brand: string;
-    expDate: string;
+    exp_date: string;
     location: string;
-    checkBy: string;
+    check_by: string;
 };
 
 type AggregatedProduct = {
     sku: string;
     barcode: string;
     brand: string;
-    expDate: string;
+    exp_date: string;
     location: string;
     qty: number;
     status: 'Done' | 'Pending';
@@ -84,7 +84,7 @@ export default function ProductInPage() {
                     sku: doc.sku,
                     barcode: doc.barcode,
                     brand: doc.brand,
-                    expDate: doc.expDate,
+                    exp_date: doc.exp_date,
                     location: doc.location,
                     qty: doc.qty,
                     status: doc.status,
@@ -124,7 +124,7 @@ export default function ProductInPage() {
     return (
         <MainLayout>
              <div className="w-full space-y-6">
-                <h1 className="text-2xl font-bold">Product In</h1>
+                <h1 className="text-2xl font-bold">Goods Receipt</h1>
                  {error && (
                     <Alert variant="destructive" className="mb-4">
                         <AlertCircle className="h-4 w-4" />
@@ -174,7 +174,7 @@ export default function ProductInPage() {
                                                 <TableCell className="font-medium">{product.sku}</TableCell>
                                                 <TableCell>{product.barcode}</TableCell>
                                                 <TableCell>{product.brand}</TableCell>
-                                                <TableCell>{format(new Date(product.expDate), 'dd/MM/yyyy')}</TableCell>
+                                                <TableCell>{format(new Date(product.exp_date), 'dd/MM/yyyy')}</TableCell>
                                                 <TableCell>{product.location}</TableCell>
                                                 <TableCell>{product.qty.toLocaleString()}</TableCell>
                                                 <TableCell>

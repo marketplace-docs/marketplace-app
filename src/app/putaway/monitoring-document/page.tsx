@@ -32,16 +32,16 @@ import { useAuth } from '@/hooks/use-auth';
 
 type PutawayDocument = {
   id: string;
-  noDocument: string;
+  no_document: string;
   date: string; // ISO string
   qty: number;
   status: 'Done' | 'Pending';
   sku: string;
   barcode: string;
   brand: string;
-  expDate: string;
+  exp_date: string;
   location: string;
-  checkBy: string;
+  check_by: string;
 };
 
 const statusVariantMap: { [key in PutawayDocument['status']]: "default" | "secondary" } = {
@@ -90,7 +90,7 @@ export default function MonitoringPutawayPage() {
 
   const filteredDocuments = useMemo(() => {
     return documents.filter(doc => 
-      doc.noDocument.toLowerCase().includes(searchDocument.toLowerCase()) &&
+      doc.no_document.toLowerCase().includes(searchDocument.toLowerCase()) &&
       doc.barcode.toLowerCase().includes(searchBarcode.toLowerCase())
     );
   }, [documents, searchDocument, searchBarcode]);
@@ -117,7 +117,7 @@ export default function MonitoringPutawayPage() {
   const handleOpenEditDialog = (doc: PutawayDocument) => {
     const formattedDoc = {
         ...doc,
-        expDate: doc.expDate ? format(new Date(doc.expDate), 'yyyy-MM-dd') : ''
+        exp_date: doc.exp_date ? format(new Date(doc.exp_date), 'yyyy-MM-dd') : ''
     };
     setSelectedDoc(formattedDoc);
     setEditDialogOpen(true);
@@ -176,18 +176,18 @@ export default function MonitoringPutawayPage() {
       toast({ variant: "destructive", title: "No Data", description: "There is no data to export." });
       return;
     }
-    const headers = ["noDocument", "date", "sku", "barcode", "brand", "expDate", "location", "checkBy", "qty", "status"];
+    const headers = ["no_document", "date", "sku", "barcode", "brand", "exp_date", "location", "check_by", "qty", "status"];
     const csvContent = [
       headers.join(","),
       ...filteredDocuments.map(doc => [
-        `"${doc.noDocument.replace(/"/g, '""')}"`,
+        `"${doc.no_document.replace(/"/g, '""')}"`,
         `"${format(new Date(doc.date), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx")}"`,
         `"${doc.sku.replace(/"/g, '""')}"`,
         `"${doc.barcode.replace(/"/g, '""')}"`,
         `"${doc.brand.replace(/"/g, '""')}"`,
-        `"${doc.expDate}"`,
+        `"${doc.exp_date}"`,
         `"${doc.location ? doc.location.replace(/"/g, '""') : ''}"`,
-        `"${doc.checkBy.replace(/"/g, '""')}"`,
+        `"${doc.check_by.replace(/"/g, '""')}"`,
         doc.qty,
         doc.status
       ].join(","))
@@ -218,13 +218,13 @@ export default function MonitoringPutawayPage() {
         const newDocs: Omit<PutawayDocument, 'id'|'date'>[] = lines.map(line => {
           const values = line.split(',');
           return {
-            noDocument: values[0]?.trim().replace(/"/g, '') || '',
+            no_document: values[0]?.trim().replace(/"/g, '') || '',
             sku: values[2]?.trim().replace(/"/g, '') || '',
             barcode: values[3]?.trim().replace(/"/g, '') || '',
             brand: values[4]?.trim().replace(/"/g, '') || '',
-            expDate: values[5]?.trim().replace(/"/g, '') || '',
+            exp_date: values[5]?.trim().replace(/"/g, '') || '',
             location: values[6]?.trim().replace(/"/g, '') || '',
-            checkBy: values[7]?.trim().replace(/"/g, '') || '',
+            check_by: values[7]?.trim().replace(/"/g, '') || '',
             qty: parseInt(values[8]?.trim() || '0', 10),
             status: (values[9]?.trim().replace(/"/g, '') as 'Done' | 'Pending') || 'Pending',
           };
@@ -336,14 +336,14 @@ export default function MonitoringPutawayPage() {
                   ) : paginatedDocs.length > 0 ? (
                     paginatedDocs.map((doc) => (
                       <TableRow key={doc.id}>
-                        <TableCell className="font-medium">{doc.noDocument}</TableCell>
+                        <TableCell className="font-medium">{doc.no_document}</TableCell>
                         <TableCell>{format(new Date(doc.date), "eee, dd/MMM/yyyy HH:mm")}</TableCell>
                         <TableCell>{doc.sku}</TableCell>
                         <TableCell>{doc.barcode}</TableCell>
                         <TableCell>{doc.brand}</TableCell>
-                        <TableCell>{format(new Date(doc.expDate), 'dd/MM/yyyy')}</TableCell>
+                        <TableCell>{format(new Date(doc.exp_date), 'dd/MM/yyyy')}</TableCell>
                         <TableCell>{doc.location}</TableCell>
-                        <TableCell>{doc.checkBy}</TableCell>
+                        <TableCell>{doc.check_by}</TableCell>
                         <TableCell>{doc.qty}</TableCell>
                         <TableCell>
                           <Badge variant={statusVariantMap[doc.status] || 'default'}>{doc.status}</Badge>
@@ -434,8 +434,8 @@ export default function MonitoringPutawayPage() {
               {selectedDoc && (
                   <div className="grid gap-4 py-4">
                       <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="noDocument" className="text-right">No. Document</Label>
-                          <Input id="noDocument" value={selectedDoc.noDocument} className="col-span-3" onChange={(e) => setSelectedDoc({ ...selectedDoc, noDocument: e.target.value })} />
+                          <Label htmlFor="no_document" className="text-right">No. Document</Label>
+                          <Input id="no_document" value={selectedDoc.no_document} className="col-span-3" onChange={(e) => setSelectedDoc({ ...selectedDoc, no_document: e.target.value })} />
                       </div>
                       <div className="grid grid-cols-4 items-center gap-4">
                           <Label htmlFor="sku" className="text-right">SKU</Label>
@@ -450,16 +450,16 @@ export default function MonitoringPutawayPage() {
                           <Input id="brand" value={selectedDoc.brand} className="col-span-3" onChange={(e) => setSelectedDoc({ ...selectedDoc, brand: e.target.value })} />
                       </div>
                       <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="expDate" className="text-right">EXP Date</Label>
-                          <Input id="expDate" type="date" value={selectedDoc.expDate} className="col-span-3" onChange={(e) => setSelectedDoc({ ...selectedDoc, expDate: e.target.value })} />
+                          <Label htmlFor="exp_date" className="text-right">EXP Date</Label>
+                          <Input id="exp_date" type="date" value={selectedDoc.exp_date} className="col-span-3" onChange={(e) => setSelectedDoc({ ...selectedDoc, exp_date: e.target.value })} />
                       </div>
                       <div className="grid grid-cols-4 items-center gap-4">
                           <Label htmlFor="location" className="text-right">Location</Label>
                           <Input id="location" value={selectedDoc.location || ''} className="col-span-3" onChange={(e) => setSelectedDoc({ ...selectedDoc, location: e.target.value })} />
                       </div>
                       <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="checkBy" className="text-right">Check By</Label>
-                          <Input id="checkBy" value={selectedDoc.checkBy} className="col-span-3" onChange={(e) => setSelectedDoc({ ...selectedDoc, checkBy: e.target.value })} />
+                          <Label htmlFor="check_by" className="text-right">Check By</Label>
+                          <Input id="check_by" value={selectedDoc.check_by} className="col-span-3" onChange={(e) => setSelectedDoc({ ...selectedDoc, check_by: e.target.value })} />
                       </div>
                       <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="qty" className="text-right">QTY</Label>
@@ -495,7 +495,7 @@ export default function MonitoringPutawayPage() {
               <DialogHeader>
                   <DialogTitle>Are you sure?</DialogTitle>
                   <DialogDescription>
-                      This action cannot be undone. This will permanently delete the document <span className="font-semibold">{selectedDoc?.noDocument}</span>.
+                      This action cannot be undone. This will permanently delete the document <span className="font-semibold">{selectedDoc?.no_document}</span>.
                   </DialogDescription>
               </DialogHeader>
               <DialogFooter>

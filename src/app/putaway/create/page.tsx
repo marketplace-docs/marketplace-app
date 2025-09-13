@@ -27,29 +27,29 @@ import { format } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth';
 
 type NewPutawayDocument = {
-    noDocument: string;
+    no_document: string;
     qty: string;
     status: 'Done' | 'Pending';
     sku: string;
     barcode: string;
     brand: string;
-    expDate: string;
+    exp_date: string;
     location: string;
-    checkBy: string;
+    check_by: string;
 };
 
 export default function CreatePutawayPage() {
   const { user } = useAuth();
   const [newDocument, setNewDocument] = React.useState<NewPutawayDocument>({
-    noDocument: '',
+    no_document: '',
     qty: '',
     status: 'Pending',
     sku: '',
     barcode: '',
     brand: '',
-    expDate: '',
+    exp_date: '',
     location: '',
-    checkBy: '',
+    check_by: '',
   });
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const { toast } = useToast();
@@ -68,7 +68,7 @@ export default function CreatePutawayPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newDocument.noDocument || !newDocument.qty || !newDocument.sku || !newDocument.barcode || !newDocument.brand || !newDocument.expDate || !newDocument.checkBy || !newDocument.location) {
+    if (!newDocument.no_document || !newDocument.qty || !newDocument.sku || !newDocument.barcode || !newDocument.brand || !newDocument.exp_date || !newDocument.check_by || !newDocument.location) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -130,12 +130,12 @@ export default function CreatePutawayPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="noDocument">No. Document</Label>
+                  <Label htmlFor="no_document">No. Document</Label>
                   <Input
-                    id="noDocument"
-                    name="noDocument"
+                    id="no_document"
+                    name="no_document"
                     placeholder="Enter document number"
-                    value={newDocument.noDocument}
+                    value={newDocument.no_document}
                     onChange={handleInputChange}
                   />
                 </div>
@@ -179,12 +179,12 @@ export default function CreatePutawayPage() {
                   />
                 </div>
                  <div className="space-y-2">
-                  <Label htmlFor="expDate">EXP Date</Label>
+                  <Label htmlFor="exp_date">EXP Date</Label>
                   <Input
-                    id="expDate"
-                    name="expDate"
+                    id="exp_date"
+                    name="exp_date"
                     type="date"
-                    value={newDocument.expDate}
+                    value={newDocument.exp_date}
                     onChange={handleInputChange}
                   />
                 </div>
@@ -199,12 +199,12 @@ export default function CreatePutawayPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="checkBy">Check By</Label>
+                  <Label htmlFor="check_by">Check By</Label>
                   <Input
-                    id="checkBy"
-                    name="checkBy"
+                    id="check_by"
+                    name="check_by"
                     placeholder="Checked by name"
-                    value={newDocument.checkBy}
+                    value={newDocument.check_by}
                     onChange={handleInputChange}
                   />
                 </div>

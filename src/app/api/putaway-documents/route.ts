@@ -25,16 +25,16 @@ export async function POST(request: Request) {
   // Handle bulk upload from CSV
   if (Array.isArray(documents)) {
     const docsToInsert = documents.map(doc => ({
-      noDocument: doc.noDocument,
+      no_document: doc.no_document,
       date: new Date().toISOString(),
       qty: doc.qty,
       status: doc.status,
       sku: doc.sku,
       barcode: doc.barcode,
       brand: doc.brand,
-      expDate: doc.expDate,
+      exp_date: doc.exp_date,
       location: doc.location,
-      checkBy: doc.checkBy,
+      check_by: doc.check_by,
     }));
 
     const { data, error } = await supabaseService
@@ -57,12 +57,13 @@ export async function POST(request: Request) {
     return NextResponse.json(data, { status: 201 });
   }
 
+
   // Handle single document creation
-  const { noDocument, qty, status, sku, barcode, brand, expDate, location, checkBy } = singleDoc;
+  const { no_document, qty, status, sku, barcode, brand, exp_date, location, check_by } = singleDoc;
 
   const { data, error } = await supabaseService
     .from('putaway_documents')
-    .insert([{ noDocument, qty, status, sku, barcode, brand, expDate, location, checkBy }])
+    .insert([{ no_document, qty, status, sku, barcode, brand, exp_date, location, check_by }])
     .select()
     .single();
 
@@ -75,7 +76,7 @@ export async function POST(request: Request) {
         userName: user.name,
         userEmail: user.email,
         action: 'CREATE',
-        details: `Putaway Document: ${noDocument}`,
+        details: `Putaway Document: ${no_document}`,
     });
   }
 
