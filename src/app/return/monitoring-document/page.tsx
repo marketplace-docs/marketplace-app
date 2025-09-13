@@ -33,9 +33,9 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuth } from '@/hooks/use-auth';
 
 const statusVariantMap: { [key in ReturnDocument['status']]: "default" | "secondary" | "destructive" | "outline" } = {
-    'Processed': 'default',
+    'Done': 'default',
     'Pending': 'secondary',
-    'Canceled': 'destructive',
+    'Cancelled': 'destructive',
 };
 
 export default function MonitoringReturnPage() {
@@ -463,14 +463,14 @@ export default function MonitoringReturnPage() {
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="status" className="text-right">Status</Label>
-                            <Select value={selectedDoc.status} onValueChange={(value: 'Processed' | 'Pending' | 'Canceled') => setSelectedDoc({ ...selectedDoc, status: value })}>
+                            <Select value={selectedDoc.status} onValueChange={(value: 'Done' | 'Pending' | 'Cancelled') => setSelectedDoc({ ...selectedDoc, status: value })}>
                                 <SelectTrigger id="status" className="col-span-3">
                                     <SelectValue placeholder="Select Status" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="Processed">Processed</SelectItem>
+                                    <SelectItem value="Done">Done</SelectItem>
                                     <SelectItem value="Pending">Pending</SelectItem>
-                                    <SelectItem value="Canceled">Canceled</SelectItem>
+                                    <SelectItem value="Cancelled">Cancelled</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>

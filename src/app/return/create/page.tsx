@@ -55,7 +55,7 @@ export default function CreateReturnPage() {
   };
   
   const handleSelectChange = (name: string, value: string) => {
-    setNewDocument(prev => ({ ...prev, [name]: value as 'Processed' | 'Pending' | 'Canceled' }));
+    setNewDocument(prev => ({ ...prev, [name]: value as 'Done' | 'Pending' | 'Cancelled' }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -202,9 +202,9 @@ export default function CreateReturnPage() {
                       <SelectValue placeholder="Select Status" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Processed">Processed</SelectItem>
+                      <SelectItem value="Done">Done</SelectItem>
                       <SelectItem value="Pending">Pending</SelectItem>
-                      <SelectItem value="Canceled">Canceled</SelectItem>
+                      <SelectItem value="Cancelled">Cancelled</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
