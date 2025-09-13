@@ -9,21 +9,30 @@ export async function GET(request: Request, { params }: { params: { userId: stri
     return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
   }
 
-  // Convert userId to a number, as it comes as a string from params
   const userIdNumber = parseInt(userId, 10);
   if (isNaN(userIdNumber)) {
     return NextResponse.json({ error: 'Invalid User ID format' }, { status: 400 });
   }
 
-  const { data, error } = await supabase
-    .from('menu_permissions')
-    .select('menu_href, is_accessible')
-    .eq('user_id', userIdNumber);
+  try {
+    const { data, error } = await supabase
+      .from('menu_permissions')
+      .select('menu_href, is_accessible')
+      .eq('user_id', userIdNumber);
 
-  if (error) {
-    console.error('Supabase fetch error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      // Check if the error is due to RLS and not a fatal one
+      if (error.code === 'PGRST200' || error.code === '42501') {
+        console.warn(`RLS warning for user fetching permissions for ${userIdNumber}:`, error.message);
+        // Return empty array if user is not authorized to see, which is expected for non-superadmins
+        return NextResponse.json([]);
+      }
+      throw error;
+    }
+    
+    return NextResponse.json(data);
+  } catch (error: any) {
+     console.error('Supabase fetch error:', error);
+     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-
-  return NextResponse.json(data);
 }

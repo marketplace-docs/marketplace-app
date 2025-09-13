@@ -1,8 +1,7 @@
 
-
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -13,9 +12,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { NAV_LINKS, type NavLink } from "@/lib/constants";
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle } from 'lucide-react';
 
 type User = {
     id: number;
@@ -29,6 +27,24 @@ type MenuPermissions = {
   [menuHref: string]: boolean;
 };
 
+// Function to generate a flat list of all possible menu hrefs and group identifiers
+const getAllMenuHrefs = (links: NavLink[]): string[] => {
+    const hrefs: string[] = [];
+    const traverse = (navLinks: NavLink[]) => {
+        navLinks.forEach(link => {
+            const effectiveHref = link.children ? `group-${link.label}` : link.href;
+            hrefs.push(effectiveHref);
+            if (link.children) {
+                traverse(link.children);
+            }
+        });
+    };
+    traverse(links);
+    return hrefs;
+};
+
+const allMenuHrefs = getAllMenuHrefs(NAV_LINKS);
+
 export default function MenuManagementPage() {
     const { user: currentUser } = useAuth();
     const [users, setUsers] = useState<User[]>([]);
@@ -39,11 +55,13 @@ export default function MenuManagementPage() {
     const [fetchError, setFetchError] = useState<string | null>(null);
     const { toast } = useToast();
 
-    const isSuperAdmin = currentUser?.role === 'Super Admin';
-
+    const isSuperAdmin = useMemo(() => currentUser?.role === 'Super Admin', [currentUser]);
+    
+    // Fetch all users if the current user is a Super Admin
     useEffect(() => {
         if (isSuperAdmin) {
             setFetchError(null);
+            setIsLoading(true);
             fetch('/api/users')
                 .then(res => {
                     if (!res.ok) {
@@ -54,25 +72,13 @@ export default function MenuManagementPage() {
                 .then(data => setUsers(data))
                 .catch(err => {
                     setFetchError(err.message);
-                });
+                    toast({ variant: 'destructive', title: 'Error', description: err.message });
+                })
+                .finally(() => setIsLoading(false));
         }
-    }, [isSuperAdmin]);
+    }, [isSuperAdmin, toast]);
 
-    const initializePermissions = (links: NavLink[]): MenuPermissions => {
-        const perms: MenuPermissions = {};
-        const traverse = (navLinks: NavLink[]) => {
-            navLinks.forEach(link => {
-                const effectiveHref = link.children ? `group-${link.label}` : link.href;
-                perms[effectiveHref] = true; // Default to accessible
-                if (link.children) {
-                    traverse(link.children);
-                }
-            });
-        };
-        traverse(links);
-        return perms;
-    };
-
+    // Function to fetch permissions for the selected user
     const fetchPermissions = useCallback(async (userId: string) => {
         if (!userId) return;
         setIsLoading(true);
@@ -82,35 +88,50 @@ export default function MenuManagementPage() {
                 const errorData = await response.json();
                 throw new Error(errorData.error || 'Failed to fetch menu permissions.');
             }
-            const data = await response.json();
+            const savedPermissions: { menu_href: string, is_accessible: boolean }[] = await response.json();
             
-            const initialPerms = initializePermissions(NAV_LINKS);
-            
-            if (data && data.length > 0) {
-                data.forEach((p: { menu_href: string, is_accessible: boolean }) => {
-                    initialPerms[p.menu_href] = p.is_accessible;
+            // Initialize all permissions to true (default)
+            const initialPerms: MenuPermissions = allMenuHrefs.reduce((acc, href) => {
+                acc[href] = true;
+                return acc;
+            }, {} as MenuPermissions);
+
+            // Override with saved permissions from the database
+            if (savedPermissions.length > 0) {
+                 savedPermissions.forEach(p => {
+                    if (p.menu_href in initialPerms) {
+                        initialPerms[p.menu_href] = p.is_accessible;
+                    }
                 });
             }
             
             setMenuPermissions(initialPerms);
         } catch (error: any) {
-            toast({ variant: 'destructive', title: 'Error', description: error.message || 'An unknown error occurred.' });
+            toast({ variant: 'destructive', title: 'Error Fetching Permissions', description: error.message });
         } finally {
             setIsLoading(false);
         }
     }, [toast]);
 
+    // Effect to trigger permission fetch when a user is selected
     useEffect(() => {
-        if (selectedUserId) {
+        // If the logged-in user is not a super admin, show their own permissions
+        if (!isSuperAdmin && currentUser) {
+            const self = users.find(u => u.email === currentUser.email);
+            if(self) {
+              setSelectedUserId(self.id.toString());
+              fetchPermissions(self.id.toString());
+            }
+        } else if (selectedUserId) { // For super admin selecting a user
             fetchPermissions(selectedUserId);
         } else {
-            setMenuPermissions({});
+            setMenuPermissions({}); // Clear permissions if no user is selected
         }
-    }, [selectedUserId, fetchPermissions]);
+    }, [selectedUserId, isSuperAdmin, currentUser, fetchPermissions, users]);
 
 
     const handlePermissionChange = (menuHref: string, checked: boolean) => {
-        if (!selectedUserId || !isSuperAdmin) return;
+        if (!isSuperAdmin || !selectedUserId) return;
         setMenuPermissions(prev => ({
             ...prev,
             [menuHref]: checked,
@@ -118,7 +139,10 @@ export default function MenuManagementPage() {
     };
     
     const handleSaveChanges = async () => {
-        if (!selectedUserId) return;
+        if (!selectedUserId || !isSuperAdmin) {
+            toast({ variant: 'destructive', title: 'Error', description: "No user selected or you don't have permission." });
+            return;
+        }
         setIsSaving(true);
         try {
             const response = await fetch('/api/menu-permissions', {
@@ -137,31 +161,36 @@ export default function MenuManagementPage() {
                 description: `Menu permissions for ${users.find(u => u.id.toString() === selectedUserId)?.name || 'user'} have been saved.`
             });
         } catch (error: any) {
-            toast({ variant: 'destructive', title: 'Error', description: error.message });
+            toast({ variant: 'destructive', title: 'Save Failed', description: error.message });
         } finally {
             setIsSaving(false);
         }
     }
 
+    // Recursive function to render menu rows in the table
     const renderMenuRows = (links: NavLink[], isSubmenu = false) => {
         return links.flatMap(link => {
             const effectiveHref = link.children ? `group-${link.label}` : link.href;
             const rows = [(
-                <TableRow key={`${link.href}-${link.label}`} className={isSubmenu ? 'bg-muted/50' : ''}>
+                <TableRow key={effectiveHref} className={isSubmenu ? 'bg-muted/50' : ''}>
                     <TableCell className={`font-medium ${isSubmenu ? 'pl-10' : ''}`}>
                        {link.label}
                     </TableCell>
                     <TableCell className="text-right">
                         <Switch
-                            disabled={!selectedUserId || !isSuperAdmin || isLoading}
+                            disabled={!isSuperAdmin || !selectedUserId || isLoading || isSaving}
                             checked={menuPermissions[effectiveHref] ?? false}
                             onCheckedChange={(checked) => handlePermissionChange(effectiveHref, checked)}
+                            aria-label={`Toggle access for ${link.label}`}
                         />
                     </TableCell>
                 </TableRow>
             )];
             if (link.children) {
-                rows.push(...renderMenuRows(link.children, true));
+                // If parent is disabled, its children should also appear disabled/unchecked in the UI.
+                if(menuPermissions[effectiveHref] === true){
+                   rows.push(...renderMenuRows(link.children, true));
+                }
             }
             return rows;
         });
@@ -175,7 +204,7 @@ export default function MenuManagementPage() {
                 {fetchError && (
                     <Alert variant="destructive">
                         <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>Failed to load data</AlertTitle>
+                        <AlertTitle>Failed to load user data</AlertTitle>
                         <AlertDescription>{fetchError}</AlertDescription>
                     </Alert>
                 )}
@@ -184,35 +213,39 @@ export default function MenuManagementPage() {
                     <CardHeader>
                         <CardTitle>System Menu Control</CardTitle>
                         <CardDescription>
-                            As a Super Admin, you can enable or disable menu access for each user. Select a user to begin.
+                            {isSuperAdmin 
+                                ? "Select a user to manage their menu access. Unchecking a main menu will hide all its sub-menus."
+                                : "You are viewing your own menu permissions. Contact a Super Admin to make changes."}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-4">
-                            <div className="flex items-center gap-4">
-                                <Label htmlFor="user-select" className="w-24">Select User:</Label>
-                                <Select onValueChange={setSelectedUserId} value={selectedUserId} disabled={!isSuperAdmin || fetchError !== null}>
-                                    <SelectTrigger id="user-select" className="w-[250px]">
-                                        <SelectValue placeholder={isSuperAdmin ? "Select a user to manage" : "Permission denied"} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {users.map(user => (
-                                            <SelectItem key={user.id} value={user.id.toString()}>
-                                                {user.name} ({user.role})
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            
-                            {!isSuperAdmin && (
-                                <p className="text-sm text-destructive">You do not have permission to manage menus.</p>
+                            {isSuperAdmin && (
+                                <div className="flex items-center gap-4">
+                                    <Label htmlFor="user-select" className="w-24">Select User:</Label>
+                                    <Select onValueChange={setSelectedUserId} value={selectedUserId} disabled={isLoading || fetchError !== null}>
+                                        <SelectTrigger id="user-select" className="w-[250px]">
+                                            <SelectValue placeholder="Select a user to manage" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {users.map(user => (
+                                                <SelectItem key={user.id} value={user.id.toString()}>
+                                                    {user.name} ({user.role})
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             )}
-
-                            <div className="border rounded-lg relative">
-                                {isLoading && (
-                                    <div className="absolute inset-0 bg-background/50 flex items-center justify-center z-10">
-                                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                            
+                            <div className="border rounded-lg relative min-h-[300px]">
+                                {(isLoading || (isSuperAdmin && !selectedUserId)) && (
+                                    <div className="absolute inset-0 bg-background/50 flex items-center justify-center z-10 rounded-lg">
+                                        {isLoading ? (
+                                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                                        ) : (
+                                            <p className="text-muted-foreground">Please select a user to manage permissions.</p>
+                                        )}
                                     </div>
                                 )}
                                 <Table>
@@ -223,22 +256,26 @@ export default function MenuManagementPage() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {selectedUserId ? renderMenuRows(NAV_LINKS) : (
-                                            <TableRow>
-                                                <TableCell colSpan={2} className="h-24 text-center text-muted-foreground">
-                                                    {isSuperAdmin ? "Please select a user to see menu permissions." : "You do not have permission."}
-                                                </TableCell>
-                                            </TableRow>
+                                        {(selectedUserId || !isSuperAdmin) ? renderMenuRows(NAV_LINKS) : (
+                                             !isLoading && (
+                                                <TableRow>
+                                                    <TableCell colSpan={2} className="h-24 text-center text-muted-foreground">
+                                                         {isSuperAdmin ? "Select a user to see menu permissions." : "You do not have permission to manage."}
+                                                    </TableCell>
+                                                </TableRow>
+                                            )
                                         )}
                                     </TableBody>
                                 </Table>
                             </div>
-                            <div className="flex justify-end">
-                                <Button onClick={handleSaveChanges} disabled={!selectedUserId || !isSuperAdmin || isLoading || isSaving}>
-                                    {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Save Changes
-                                </Button>
-                            </div>
+                            {isSuperAdmin && (
+                                <div className="flex justify-end">
+                                    <Button onClick={handleSaveChanges} disabled={!selectedUserId || isLoading || isSaving}>
+                                        {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                        Save Changes
+                                    </Button>
+                                </div>
+                            )}
                         </div>
                     </CardContent>
                 </Card>
