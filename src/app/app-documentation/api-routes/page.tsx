@@ -5,6 +5,82 @@ import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
+const apiRoutes = [
+    {
+        category: "Manajemen Pengguna (Users)",
+        endpoints: [
+            { method: "GET", path: "/api/users", description: "Mengambil daftar semua pengguna." },
+            { method: "POST", path: "/api/users", description: "Membuat pengguna baru." },
+            { method: "PATCH", path: "/api/users/[id]", description: "Memperbarui pengguna yang ada." },
+            { method: "DELETE", path: "/api/users/[id]", description: "Menghapus pengguna." },
+        ]
+    },
+    {
+        category: "Tugas Admin (Admin Tasks)",
+        endpoints: [
+            { method: "GET", path: "/api/admin-tasks", description: "Mengambil semua tugas admin." },
+            { method: "POST", path: "/api/admin-tasks", description: "Membuat tugas admin baru." },
+            { method: "PATCH", path: "/api/admin-tasks/[id]", description: "Memperbarui tugas admin." },
+            { method: "DELETE", path: "/api/admin-tasks/[id]", description: "Menghapus tugas admin." },
+        ]
+    },
+    {
+        category: "Backlog Marketplace",
+        endpoints: [
+            { method: "GET", path: "/api/backlog-items", description: "Mengambil semua item backlog." },
+            { method: "POST", path: "/api/backlog-items", description: "Membuat item backlog baru (tunggal atau massal)." },
+            { method: "PATCH", path: "/api/backlog-items/[id]", description: "Memperbarui item backlog." },
+            { method: "DELETE", path: "/api/backlog-items/[id]", description: "Menghapus item backlog." },
+        ]
+    },
+    {
+        category: "Kinerja Harian (Daily Performance)",
+        endpoints: [
+            { method: "GET", path: "/api/daily-performance", description: "Mengambil data kinerja dengan filter." },
+            { method: "POST", path: "/api/daily-performance", description: "Membuat entri kinerja baru (tunggal atau massal)." },
+            { method: "PATCH", path: "/api/daily-performance", description: "Memperbarui beberapa entri kinerja sekaligus." },
+            { method: "DELETE", path: "/api/daily-performance/[id]", description: "Menghapus entri kinerja." },
+        ]
+    },
+    {
+        category: "Toko Marketplace (Marketplace Stores)",
+        endpoints: [
+            { method: "GET", path: "/api/marketplace-stores", description: "Mengambil semua toko marketplace." },
+            { method: "POST", path: "/api/marketplace-stores", description: "Membuat toko baru (tunggal atau massal)." },
+            { method: "PATCH", path: "/api/marketplace-stores/[id]", description: "Memperbarui toko." },
+            { method: "DELETE", path: "/api/marketplace-stores/[id]", description: "Menghapus toko." },
+        ]
+    },
+     {
+        category: "Dokumen Retur (Return Documents)",
+        endpoints: [
+            { method: "GET", path: "/api/return-documents", description: "Mengambil semua dokumen retur." },
+            { method: "POST", path: "/api/return-documents", description: "Membuat dokumen retur baru (tunggal atau massal)." },
+            { method: "PATCH", path: "/api/return-documents/[id]", description: "Memperbarui dokumen retur." },
+            { method: "DELETE", path: "/api/return-documents/[id]", description: "Menghapus dokumen retur." },
+        ]
+    },
+    {
+        category: "Manajemen Akses & Log",
+        endpoints: [
+            { method: "GET", path: "/api/menu-permissions/[userId]", description: "Mengambil hak akses menu untuk pengguna tertentu." },
+            { method: "POST", path: "/api/menu-permissions", description: "Menyimpan atau memperbarui hak akses menu pengguna." },
+            { method: "GET", path: "/api/log-activity", description: "Mengambil semua catatan aktivitas sistem." },
+        ]
+    },
+];
+
+const getMethodVariant = (method: string) => {
+    switch (method) {
+        case 'GET': return 'bg-blue-600 hover:bg-blue-600/90';
+        case 'POST': return 'bg-green-600 hover:bg-green-600/90';
+        case 'PATCH': return 'bg-yellow-500 hover:bg-yellow-500/90';
+        case 'DELETE': return 'bg-red-600 hover:bg-red-600/90';
+        default: return 'bg-gray-500 hover:bg-gray-500/90';
+    }
+}
+
+
 export default function ApiRoutesPage() {
     return (
         <MainLayout>
@@ -18,36 +94,31 @@ export default function ApiRoutesPage() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <p>API ini memungkinkan Anda untuk mengelola sumber daya secara terprogram. Gunakan endpoint di bawah ini untuk membuat, membaca, memperbarui, dan menghapus data.</p>
-                        <p>Semua respons API dikembalikan dalam format JSON.</p>
-                        <div>
-                            <h4 className="font-semibold mb-2">Panduan Penggunaan Database (Supabase)</h4>
-                            <p className="text-sm text-muted-foreground">
-                                Aplikasi ini menggunakan Supabase sebagai backend database. Untuk informasi lebih lanjut tentang cara berinteraksi dengan API Supabase, kunjungi dokumentasi resmi mereka.
-                            </p>
-                        </div>
+                        <p>Semua respons API dikembalikan dalam format JSON. Setiap permintaan yang mengubah data (POST, PATCH, DELETE) akan secara otomatis dicatat dalam Log Aktivitas.</p>
                     </CardContent>
                 </Card>
 
                 <Card>
                     <CardHeader>
                         <CardTitle>Daftar Rute API</CardTitle>
-                        <CardDescription>Endpoint yang tersedia saat ini.</CardDescription>
+                        <CardDescription>Endpoint yang tersedia saat ini, dikelompokkan berdasarkan sumber daya.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="space-y-4">
-                           <div className="border-b pb-4">
-                                <h3 className="font-semibold">Manajemen Pengguna</h3>
-                                <div className="flex items-center gap-2 mt-2">
-                                     <Badge variant="default" className="bg-blue-600">GET</Badge>
-                                     <code>/api/users</code>
-                                     <span className="text-sm text-muted-foreground">- Mengambil daftar semua pengguna.</span>
-                                </div>
-                                <div className="flex items-center gap-2 mt-2">
-                                     <Badge variant="default" className="bg-green-600">POST</Badge>
-                                     <code>/api/users</code>
-                                     <span className="text-sm text-muted-foreground">- Membuat pengguna baru.</span>
-                                </div>
-                           </div>
+                        <div className="space-y-6">
+                           {apiRoutes.map(category => (
+                               <div key={category.category} className="border-b pb-4 last:border-b-0">
+                                    <h3 className="text-lg font-semibold mb-3">{category.category}</h3>
+                                    <div className="space-y-2">
+                                    {category.endpoints.map(endpoint => (
+                                        <div key={`${endpoint.method}-${endpoint.path}`} className="flex items-center gap-3">
+                                            <Badge variant="default" className={getMethodVariant(endpoint.method)}>{endpoint.method}</Badge>
+                                            <code className="text-sm bg-muted px-2 py-1 rounded">{endpoint.path}</code>
+                                            <span className="text-sm text-muted-foreground">- {endpoint.description}</span>
+                                        </div>
+                                    ))}
+                                    </div>
+                               </div>
+                           ))}
                             <p className="text-sm text-muted-foreground text-center pt-4">Dokumentasi API akan diperbarui seiring dengan pengembangan fitur.</p>
                         </div>
                     </CardContent>

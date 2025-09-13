@@ -8,7 +8,7 @@ import { NAV_LINKS } from "@/lib/constants";
 import Link from "next/link";
 import { Route } from "lucide-react";
 
-const techStack = ["Next.js", "React", "TypeScript", "Tailwind CSS", "ShadCN UI", "Genkit", "Firebase"];
+const techStack = ["Next.js", "React", "TypeScript", "Tailwind CSS", "ShadCN UI", "Genkit", "Firebase", "Supabase"];
 
 export default function AppDocumentationPage() {
     return (
