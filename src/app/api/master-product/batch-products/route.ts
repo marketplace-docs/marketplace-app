@@ -31,6 +31,9 @@ export async function GET() {
             if (stockMap.has(key)) {
                 const existing = stockMap.get(key)!;
                 existing.stock += doc.qty;
+                 if (doc.location) {
+                    existing.location = doc.location;
+                }
             } else {
                 stockMap.set(key, {
                     sku: doc.sku,
