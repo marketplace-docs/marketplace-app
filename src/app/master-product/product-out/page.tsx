@@ -171,8 +171,13 @@ export default function ProductOutPage() {
         setIsSubmitting(true);
         
         const docToAdd = {
-            ...newDocument,
+            nodocument: newDocument.nodocument,
+            sku: newDocument.sku,
+            barcode: newDocument.barcode,
+            expdate: newDocument.expdate,
+            location: newDocument.location,
             qty: qtyToTake,
+            status: newDocument.status,
             date: new Date().toISOString(),
             validatedby: user.name,
             user: { name: user.name, email: user.email }
@@ -288,39 +293,41 @@ export default function ProductOutPage() {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
+                                        <TableHead>Document</TableHead>
+                                        <TableHead>Date</TableHead>
                                         <TableHead>SKU</TableHead>
                                         <TableHead>Barcode</TableHead>
                                         <TableHead>EXP Date</TableHead>
                                         <TableHead>Location</TableHead>
                                         <TableHead>Quantity</TableHead>
                                         <TableHead>Status</TableHead>
-                                        <TableHead>Document</TableHead>
-                                        <TableHead>Date</TableHead>
+                                        <TableHead>Validate By</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {loading ? (
                                         <TableRow>
-                                            <TableCell colSpan={8} className="h-24 text-center">
+                                            <TableCell colSpan={9} className="h-24 text-center">
                                                 <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                                             </TableCell>
                                         </TableRow>
                                     ) : documents.length > 0 ? (
                                         documents.map((doc) => (
                                              <TableRow key={doc.id}>
+                                                <TableCell>{doc.nodocument}</TableCell>
+                                                <TableCell>{format(new Date(doc.date), 'dd/MM/yyyy HH:mm')}</TableCell>
                                                 <TableCell>{doc.sku}</TableCell>
                                                 <TableCell>{doc.barcode}</TableCell>
                                                 <TableCell>{doc.expdate ? format(new Date(doc.expdate), 'dd/MM/yyyy') : '-'}</TableCell>
                                                 <TableCell>{doc.location}</TableCell>
                                                 <TableCell>{doc.qty.toLocaleString()}</TableCell>
                                                 <TableCell>{doc.status}</TableCell>
-                                                <TableCell>{doc.nodocument}</TableCell>
-                                                <TableCell>{format(new Date(doc.date), 'dd/MM/yyyy HH:mm')}</TableCell>
+                                                <TableCell>{doc.validatedby}</TableCell>
                                             </TableRow>
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                                            <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
                                                 No goods issue data available.
                                             </TableCell>
                                         </TableRow>
