@@ -7,12 +7,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { useLocalStorage } from '@/hooks/use-local-storage';
-import { format } from 'date-fns';
+import { format, differenceInMonths, parseISO } from 'date-fns';
 import { Loader2, ChevronLeft, ChevronRight, PackageSearch } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import type { PutawayDocument } from '@/types/putaway-document';
+import { cn } from '@/lib/utils';
 
 type ProductOutDocument = {
     id: string;
@@ -25,13 +26,37 @@ type ProductOutDocument = {
     validatedBy: string;
 };
 
+type ProductStatus = 'Sellable' | 'Expiring' | 'Expired';
+
 type AggregatedProduct = {
     sku: string;
     barcode: string;
     brand: string;
     expDate: string;
     stock: number;
+    status: ProductStatus;
 };
+
+const getProductStatus = (expDate: string): ProductStatus => {
+    const today = new Date();
+    const expiryDate = new Date(expDate);
+    const monthsUntilExpiry = differenceInMonths(expiryDate, today);
+
+    if (monthsUntilExpiry <= 3) {
+        return 'Expired';
+    }
+    if (monthsUntilExpiry <= 9) {
+        return 'Expiring';
+    }
+    return 'Sellable';
+};
+
+const statusVariantMap: Record<ProductStatus, 'default' | 'secondary' | 'destructive'> = {
+    'Sellable': 'default',
+    'Expiring': 'secondary',
+    'Expired': 'destructive',
+};
+
 
 export default function BatchProductPage() {
     const [putawayDocs] = useLocalStorage<PutawayDocument[]>('putaway-documents', []);
@@ -56,6 +81,7 @@ export default function BatchProductPage() {
                     brand: doc.brand,
                     expDate: doc.expDate,
                     stock: doc.qty,
+                    status: getProductStatus(doc.expDate),
                 });
             }
         });
@@ -130,12 +156,13 @@ export default function BatchProductPage() {
                                         <TableHead>Brand</TableHead>
                                         <TableHead>EXP Date</TableHead>
                                         <TableHead>Stock</TableHead>
+                                        <TableHead>Status</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {loading ? (
                                         <TableRow>
-                                            <TableCell colSpan={5} className="h-24 text-center">
+                                            <TableCell colSpan={6} className="h-24 text-center">
                                                 <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                                             </TableCell>
                                         </TableRow>
@@ -151,11 +178,21 @@ export default function BatchProductPage() {
                                                         {product.stock.toLocaleString()}
                                                     </Badge>
                                                 </TableCell>
+                                                <TableCell>
+                                                    <Badge variant={statusVariantMap[product.status]}
+                                                        className={cn({
+                                                            'bg-green-500 hover:bg-green-500/80': product.status === 'Sellable',
+                                                            'bg-yellow-500 hover:bg-yellow-500/80 text-black': product.status === 'Expiring',
+                                                        })}
+                                                    >
+                                                        {product.status}
+                                                    </Badge>
+                                                </TableCell>
                                             </TableRow>
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                                            <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                                                 <div className="flex flex-col items-center justify-center gap-2">
                                                     <PackageSearch className="h-8 w-8" />
                                                     <span>No inventory data found.</span>
