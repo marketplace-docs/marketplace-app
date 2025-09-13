@@ -2,6 +2,8 @@
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 
+// This endpoint is now OBSOLETE as the logic has moved to /api/master-product/batch-products/[barcode]
+// It is kept for now to avoid breaking changes if it's being called elsewhere, but should be removed in the future.
 export async function GET(request: Request, { params }: { params: { barcode: string } }) {
   const { barcode } = params;
 
