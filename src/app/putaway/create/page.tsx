@@ -34,6 +34,7 @@ type NewPutawayDocument = {
     barcode: string;
     brand: string;
     expDate: string;
+    location: string;
     checkBy: string;
 };
 
@@ -47,6 +48,7 @@ export default function CreatePutawayPage() {
     barcode: '',
     brand: '',
     expDate: '',
+    location: '',
     checkBy: '',
   });
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -66,7 +68,7 @@ export default function CreatePutawayPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newDocument.noDocument || !newDocument.qty || !newDocument.sku || !newDocument.barcode || !newDocument.brand || !newDocument.expDate || !newDocument.checkBy) {
+    if (!newDocument.noDocument || !newDocument.qty || !newDocument.sku || !newDocument.barcode || !newDocument.brand || !newDocument.expDate || !newDocument.checkBy || !newDocument.location) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -183,6 +185,16 @@ export default function CreatePutawayPage() {
                     name="expDate"
                     type="date"
                     value={newDocument.expDate}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                 <div className="space-y-2">
+                  <Label htmlFor="location">Location</Label>
+                  <Input
+                    id="location"
+                    name="location"
+                    placeholder="Enter location"
+                    value={newDocument.location}
                     onChange={handleInputChange}
                   />
                 </div>

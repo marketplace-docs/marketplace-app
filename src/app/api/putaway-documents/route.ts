@@ -33,6 +33,7 @@ export async function POST(request: Request) {
       barcode: doc.barcode,
       brand: doc.brand,
       expDate: doc.expDate,
+      location: doc.location,
       checkBy: doc.checkBy,
     }));
 
@@ -57,11 +58,11 @@ export async function POST(request: Request) {
   }
 
   // Handle single document creation
-  const { noDocument, qty, status, sku, barcode, brand, expDate, checkBy } = singleDoc;
+  const { noDocument, qty, status, sku, barcode, brand, expDate, location, checkBy } = singleDoc;
 
   const { data, error } = await supabaseService
     .from('putaway_documents')
-    .insert([{ noDocument, qty, status, sku, barcode, brand, expDate, checkBy }])
+    .insert([{ noDocument, qty, status, sku, barcode, brand, expDate, location, checkBy }])
     .select()
     .single();
 

@@ -40,6 +40,7 @@ type PutawayDocument = {
   barcode: string;
   brand: string;
   expDate: string;
+  location: string;
   checkBy: string;
 };
 
@@ -175,7 +176,7 @@ export default function MonitoringPutawayPage() {
       toast({ variant: "destructive", title: "No Data", description: "There is no data to export." });
       return;
     }
-    const headers = ["noDocument", "date", "sku", "barcode", "brand", "expDate", "checkBy", "qty", "status"];
+    const headers = ["noDocument", "date", "sku", "barcode", "brand", "expDate", "location", "checkBy", "qty", "status"];
     const csvContent = [
       headers.join(","),
       ...filteredDocuments.map(doc => [
@@ -185,6 +186,7 @@ export default function MonitoringPutawayPage() {
         `"${doc.barcode.replace(/"/g, '""')}"`,
         `"${doc.brand.replace(/"/g, '""')}"`,
         `"${doc.expDate}"`,
+        `"${doc.location ? doc.location.replace(/"/g, '""') : ''}"`,
         `"${doc.checkBy.replace(/"/g, '""')}"`,
         doc.qty,
         doc.status
@@ -221,9 +223,10 @@ export default function MonitoringPutawayPage() {
             barcode: values[3]?.trim().replace(/"/g, '') || '',
             brand: values[4]?.trim().replace(/"/g, '') || '',
             expDate: values[5]?.trim().replace(/"/g, '') || '',
-            checkBy: values[6]?.trim().replace(/"/g, '') || '',
-            qty: parseInt(values[7]?.trim() || '0', 10),
-            status: (values[8]?.trim().replace(/"/g, '') as 'Done' | 'Pending') || 'Pending',
+            location: values[6]?.trim().replace(/"/g, '') || '',
+            checkBy: values[7]?.trim().replace(/"/g, '') || '',
+            qty: parseInt(values[8]?.trim() || '0', 10),
+            status: (values[9]?.trim().replace(/"/g, '') as 'Done' | 'Pending') || 'Pending',
           };
         });
 
@@ -316,6 +319,7 @@ export default function MonitoringPutawayPage() {
                     <TableHead>Barcode</TableHead>
                     <TableHead>Brand</TableHead>
                     <TableHead>EXP Date</TableHead>
+                    <TableHead>Location</TableHead>
                     <TableHead>Check By</TableHead>
                     <TableHead>QTY</TableHead>
                     <TableHead>Status</TableHead>
@@ -325,7 +329,7 @@ export default function MonitoringPutawayPage() {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                        <TableCell colSpan={10} className="h-24 text-center">
+                        <TableCell colSpan={11} className="h-24 text-center">
                             <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                         </TableCell>
                     </TableRow>
@@ -338,6 +342,7 @@ export default function MonitoringPutawayPage() {
                         <TableCell>{doc.barcode}</TableCell>
                         <TableCell>{doc.brand}</TableCell>
                         <TableCell>{format(new Date(doc.expDate), 'dd/MM/yyyy')}</TableCell>
+                        <TableCell>{doc.location}</TableCell>
                         <TableCell>{doc.checkBy}</TableCell>
                         <TableCell>{doc.qty}</TableCell>
                         <TableCell>
@@ -360,7 +365,7 @@ export default function MonitoringPutawayPage() {
                   ) : (
                     <TableRow>
                       <TableCell
-                        colSpan={10}
+                        colSpan={11}
                         className="h-24 text-center text-muted-foreground"
                       >
                         No documents found.
@@ -447,6 +452,10 @@ export default function MonitoringPutawayPage() {
                       <div className="grid grid-cols-4 items-center gap-4">
                           <Label htmlFor="expDate" className="text-right">EXP Date</Label>
                           <Input id="expDate" type="date" value={selectedDoc.expDate} className="col-span-3" onChange={(e) => setSelectedDoc({ ...selectedDoc, expDate: e.target.value })} />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="location" className="text-right">Location</Label>
+                          <Input id="location" value={selectedDoc.location || ''} className="col-span-3" onChange={(e) => setSelectedDoc({ ...selectedDoc, location: e.target.value })} />
                       </div>
                       <div className="grid grid-cols-4 items-center gap-4">
                           <Label htmlFor="checkBy" className="text-right">Check By</Label>
