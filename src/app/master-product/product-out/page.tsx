@@ -164,7 +164,7 @@ export default function ProductOutPage() {
             toast({
                 variant: 'destructive',
                 title: 'Error',
-                description: `Quantity exceeds available stock of ${availableStock.stock}.`,
+                description: `Quantity exceeds available stock of ${availableStock.stock.toLocaleString()}.`,
             });
             return;
         }
@@ -208,7 +208,7 @@ export default function ProductOutPage() {
     return (
         <MainLayout>
              <div className="w-full space-y-6">
-                <h1 className="text-2xl font-bold">Product Out</h1>
+                <h1 className="text-2xl font-bold">Goods Issue</h1>
                 {error && (
                     <Alert variant="destructive" className="mb-4">
                         <AlertCircle className="h-4 w-4" />
@@ -225,12 +225,12 @@ export default function ProductOutPage() {
                         <Dialog open={isAddDialogOpen} onOpenChange={(open) => { setAddDialogOpen(open); if(!open) resetForm(); }}>
                             <DialogTrigger asChild>
                                 <Button>
-                                    <Plus className="mr-2 h-4 w-4" /> Add Product Out
+                                    <Plus className="mr-2 h-4 w-4" /> Add Goods Issue
                                 </Button>
                             </DialogTrigger>
                             <DialogContent>
                                 <DialogHeader>
-                                    <DialogTitle>Add Product Out</DialogTitle>
+                                    <DialogTitle>Add Goods Issue</DialogTitle>
                                 </DialogHeader>
                                 <div className="grid gap-4 py-4">
                                      <div className="grid grid-cols-4 items-center gap-4">
