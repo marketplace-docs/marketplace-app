@@ -57,7 +57,7 @@ export default function UpdateExpiredPage() {
                 setUpdateFields({
                     location: data.location || '',
                     exp_date: data.exp_date ? format(new Date(data.exp_date), 'yyyy-MM-dd') : '',
-                    qty: data.qty.toString(), // The quantity to be moved/updated
+                    qty: data.qty.toString(), // Default to full quantity
                 });
             } catch (error: any) {
                 toast({ variant: "destructive", title: "Error", description: error.message });
@@ -143,7 +143,7 @@ export default function UpdateExpiredPage() {
                 <Card>
                     <CardHeader>
                         <CardTitle>Update Product Information</CardTitle>
-                        <CardDescription>Scan barcode to find a product. You can split a batch by updating the quantity, location, or expiration date. This will create a new entry for the specified quantity and reduce the original stock.</CardDescription>
+                        <CardDescription>Scan barcode to find a product. You can update the entire batch or split it by changing the quantity, location, or expiration date.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={handleSubmit} className="space-y-4">
@@ -174,8 +174,8 @@ export default function UpdateExpiredPage() {
                                     <Input id="exp_date" name="exp_date" type="date" placeholder="Enter new expiration date" value={updateFields.exp_date} onChange={handleFieldChange} disabled={!originalDoc || isSubmitting} />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="qty">Quantity to Update</Label>
-                                    <Input id="qty" name="qty" type="number" placeholder="Quantity to move" value={updateFields.qty} onChange={handleFieldChange} disabled={!originalDoc || isSubmitting} />
+                                    <Label htmlFor="qty">Quantity to Move/Update</Label>
+                                    <Input id="qty" name="qty" type="number" placeholder="Quantity" value={updateFields.qty} onChange={handleFieldChange} disabled={!originalDoc || isSubmitting} />
                                 </div>
                              </div>
                             <div className="pt-2 flex justify-end">

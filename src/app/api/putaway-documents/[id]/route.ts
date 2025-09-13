@@ -37,12 +37,45 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   const body = await request.json();
   const { userName, userEmail } = body;
 
-  // Check for the new stock splitting logic
+  // Check for the new stock splitting/updating logic
   if (body.originalDoc && body.update) {
     const { originalDoc, update } = body;
     const { qty: originalQty, location: originalLocation, exp_date: originalExpDate } = originalDoc;
     const { qty: qtyToUpdate, location: newLocation, exp_date: newExpDate } = update;
 
+    // --- LOGIC: If qtyToUpdate is the same as originalQty, it's a simple UPDATE, not a split. ---
+    if (qtyToUpdate === originalQty) {
+      const { data, error } = await supabaseService
+        .from('putaway_documents')
+        .update({ location: newLocation, exp_date: newExpDate })
+        .eq('id', originalDoc.id)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error("Supabase PATCH (simple update) error:", error);
+        return NextResponse.json({ error: "Failed to update document: " + error.message }, { status: 500 });
+      }
+
+      if (userName && userEmail) {
+        const logDetails = [];
+        const oldExpFormatted = format(new Date(originalExpDate), 'dd/MM/yyyy');
+        const newExpFormatted = format(new Date(newExpDate), 'dd/MM/yyyy');
+        if (newLocation !== originalLocation) logDetails.push(`location from "${originalLocation}" to "${newLocation}"`);
+        if (newExpFormatted !== oldExpFormatted) logDetails.push(`exp date from ${oldExpFormatted} to ${newExpFormatted}`);
+        
+        await logActivity({
+          userName,
+          userEmail,
+          action: 'UPDATE_BATCH',
+          details: `Updated ${originalQty} items for Doc ID ${originalDoc.id}. ${logDetails.join(' & ')}.`,
+        });
+      }
+
+      return NextResponse.json(data);
+    }
+
+    // --- LOGIC: If qtyToUpdate is less than originalQty, it's a SPLIT. ---
     const newOriginalQty = originalQty - qtyToUpdate;
 
     // 1. Update the original document to reduce its quantity
@@ -94,7 +127,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
          logDetails.push(`exp date from ${oldExpFormatted} to ${newExpFormatted}`);
       }
 
-      const detailsString = `Split ${qtyToUpdate} items from Doc ID ${originalDoc.id}. Updated ${logDetails.join(' & ')}. New Doc: ${newDocNumber}`;
+      const detailsString = `Split ${qtyToUpdate} items from Doc ID ${originalDoc.id}. ${logDetails.join(' & ')}. New Doc: ${newDocNumber}`;
 
       await logActivity({
         userName,
@@ -107,7 +140,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     return NextResponse.json({ message: 'Stock split successful' });
 
   } else {
-    // Fallback to the original simple update logic
+    // Fallback to the original simple update logic for other PATCH requests
     const { no_document, qty, status, sku, barcode, brand, exp_date, location, check_by } = body;
 
     const { data, error } = await supabaseService
