@@ -15,13 +15,15 @@ import { useToast } from '@/hooks/use-toast';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { format } from 'date-fns';
 
+type ProductOutStatus = 'Issue - Order' | 'Issue - Internal Transfer' | 'Issue - Adjustment Manual';
+
 type ProductOutDocument = {
     id: string;
     sku: string;
     barcode: string;
     expDate: string;
     qty: number;
-    status: 'Shipped' | 'Pending';
+    status: ProductOutStatus;
     date: string; // ISO String
 };
 
@@ -36,7 +38,7 @@ export default function ProductOutPage() {
         barcode: '',
         expDate: '',
         qty: '',
-        status: 'Shipped' as 'Shipped' | 'Pending',
+        status: 'Issue - Order' as ProductOutStatus,
     });
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -44,7 +46,7 @@ export default function ProductOutPage() {
         setNewDocument(prev => ({...prev, [name]: value}));
     };
     
-    const handleSelectChange = (value: 'Shipped' | 'Pending') => {
+    const handleSelectChange = (value: ProductOutStatus) => {
         setNewDocument(prev => ({ ...prev, status: value }));
     };
 
@@ -72,7 +74,7 @@ export default function ProductOutPage() {
 
         setIsSubmitting(false);
         setAddDialogOpen(false);
-        setNewDocument({ sku: '', barcode: '', expDate: '', qty: '', status: 'Shipped' });
+        setNewDocument({ sku: '', barcode: '', expDate: '', qty: '', status: 'Issue - Order' });
         toast({
             title: 'Success',
             description: 'Product out document has been created locally.',
@@ -123,8 +125,9 @@ export default function ProductOutPage() {
                                                 <SelectValue placeholder="Select status" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="Shipped">Shipped</SelectItem>
-                                                <SelectItem value="Pending">Pending</SelectItem>
+                                                <SelectItem value="Issue - Order">Issue - Order</SelectItem>
+                                                <SelectItem value="Issue - Internal Transfer">Issue - Internal Transfer</SelectItem>
+                                                <SelectItem value="Issue - Adjustment Manual">Issue - Adjustment Manual</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
