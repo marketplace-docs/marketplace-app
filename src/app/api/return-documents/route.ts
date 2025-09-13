@@ -18,7 +18,45 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const body = await request.json();
-  const { noDocument, qty, status, sku, barcode, brand, reason, receivedBy, userName, userEmail } = body;
+  const { user, documents, ...singleDoc } = body;
+
+  // Handle bulk upload from CSV
+  if (Array.isArray(documents)) {
+    const docsToInsert = documents.map(doc => ({
+      noDocument: doc.noDocument,
+      qty: doc.qty,
+      status: doc.status,
+      sku: doc.sku,
+      barcode: doc.barcode,
+      brand: doc.brand,
+      reason: doc.reason,
+      receivedBy: doc.receivedBy,
+    }));
+
+    const { data, error } = await supabaseService
+      .from('return_documents')
+      .insert(docsToInsert)
+      .select();
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    if (user && user.name && user.email) {
+      await logActivity({
+        userName: user.name,
+        userEmail: user.email,
+        action: 'CREATE',
+        details: `Bulk uploaded ${documents.length} return documents`,
+      });
+    }
+    return NextResponse.json(data, { status: 201 });
+  }
+
+
+  // Handle single document creation
+  const { noDocument, qty, status, sku, barcode, brand, reason, receivedBy } = singleDoc;
+  const { userName, userEmail } = singleDoc;
 
   const { data, error } = await supabaseService
     .from('return_documents')

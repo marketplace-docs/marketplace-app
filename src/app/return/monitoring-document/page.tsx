@@ -21,7 +21,7 @@ import { MainLayout } from '@/components/layout/main-layout';
 import type { ReturnDocument } from '@/types/return-document';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Pencil, Trash2, Loader2, AlertCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pencil, Trash2, Loader2, AlertCircle, Upload, Download } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -52,6 +52,7 @@ export default function MonitoringReturnPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
 
   const [searchDocument, setSearchDocument] = useState('');
@@ -163,6 +164,96 @@ export default function MonitoringReturnPage() {
       setIsSubmitting(false);
     }
   };
+  
+  const handleExport = () => {
+    if (filteredDocuments.length === 0) {
+      toast({ variant: "destructive", title: "No Data", description: "There is no data to export." });
+      return;
+    }
+    const headers = ["noDocument", "date", "sku", "barcode", "brand", "reason", "receivedBy", "qty", "status"];
+    const csvContent = [
+      headers.join(","),
+      ...filteredDocuments.map(doc => [
+        `"${doc.noDocument.replace(/"/g, '""')}"`,
+        `"${format(new Date(doc.date), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx")}"`,
+        `"${doc.sku.replace(/"/g, '""')}"`,
+        `"${doc.barcode.replace(/"/g, '""')}"`,
+        `"${doc.brand.replace(/"/g, '""')}"`,
+        `"${doc.reason.replace(/"/g, '""')}"`,
+        `"${doc.receivedBy.replace(/"/g, '""')}"`,
+        doc.qty,
+        doc.status
+      ].join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.setAttribute("download", `return_documents_${format(new Date(), "yyyyMMdd")}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast({ title: "Success", description: "Data has been exported." });
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+    setIsSubmitting(true);
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const text = e.target?.result as string;
+      try {
+        const lines = text.split('\n').filter(line => line.trim() !== '');
+        const headers = lines.shift()?.split(',').map(h => h.trim().replace(/"/g, '')) || [];
+        const requiredHeaders = ["noDocument", "sku", "barcode", "brand", "reason", "receivedBy", "qty", "status"];
+        if (!requiredHeaders.every(h => headers.includes(h))) {
+            throw new Error(`Invalid CSV headers. Required: ${requiredHeaders.join(', ')}`);
+        }
+        
+        const newDocs = lines.map(line => {
+          const values = line.split(',');
+          const docData: Record<string, string> = {};
+          headers.forEach((header, index) => {
+            docData[header] = values[index]?.trim().replace(/"/g, '');
+          });
+          
+          return {
+            noDocument: docData.noDocument,
+            sku: docData.sku,
+            barcode: docData.barcode,
+            brand: docData.brand,
+            reason: docData.reason,
+            receivedBy: docData.receivedBy,
+            qty: parseInt(docData.qty, 10),
+            status: docData.status,
+          };
+        });
+
+        const response = await fetch('/api/return-documents', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ documents: newDocs, user: { name: user.name, email: user.email } }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Failed to upload documents.");
+        }
+        
+        await fetchDocuments();
+        toast({ title: "Success", description: `${newDocs.length} documents uploaded.` });
+      } catch (error: any) {
+        toast({ variant: "destructive", title: "Upload Failed", description: error.message });
+      } finally {
+        setIsSubmitting(false);
+        if (event.target) event.target.value = '';
+      }
+    };
+    reader.readAsText(file);
+  };
 
   return (
     <MainLayout>
@@ -194,6 +285,13 @@ export default function MonitoringReturnPage() {
                     onChange={(e) => setSearchBarcode(e.target.value)}
                     className="flex-1 md:flex-auto md:w-auto"
                 />
+                <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
+                <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSubmitting}>
+                    <Upload className="h-4 w-4 mr-2" /> Upload
+                </Button>
+                <Button variant="outline" onClick={handleExport}>
+                    <Download className="h-4 w-4 mr-2" /> Export
+                </Button>
             </div>
           </CardHeader>
           <CardContent>

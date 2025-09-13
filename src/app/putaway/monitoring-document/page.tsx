@@ -20,7 +20,7 @@ import { MainLayout } from '@/components/layout/main-layout';
 import type { PutawayDocument } from '@/types/putaway-document';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Pencil, Trash2, Loader2, AlertCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pencil, Trash2, Loader2, AlertCircle, Upload, Download } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -48,6 +48,7 @@ export default function MonitoringPutawayPage() {
   const [selectedDoc, setSelectedDoc] = useState<PutawayDocument | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [searchDocument, setSearchDocument] = useState('');
   const [searchBarcode, setSearchBarcode] = useState('');
@@ -115,6 +116,84 @@ export default function MonitoringPutawayPage() {
     setSelectedDoc(null);
     toast({ title: "Success", description: "Document has been deleted.", variant: "destructive" });
   };
+  
+  const handleExport = () => {
+    if (documents.length === 0) {
+      toast({ variant: "destructive", title: "No Data", description: "There is no data to export." });
+      return;
+    }
+    const headers = ["noDocument", "date", "sku", "barcode", "brand", "expDate", "checkBy", "qty", "status"];
+    const csvContent = [
+      headers.join(","),
+      ...documents.map(doc => [
+        doc.noDocument,
+        doc.date,
+        doc.sku,
+        doc.barcode,
+        doc.brand,
+        doc.expDate,
+        doc.checkBy,
+        doc.qty,
+        doc.status
+      ].join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.setAttribute("download", `putaway_documents_${format(new Date(), "yyyyMMdd")}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast({ title: "Success", description: "Data has been exported." });
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setIsSubmitting(true);
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const text = e.target?.result as string;
+      try {
+        const lines = text.split('\n').filter(line => line.trim() !== '');
+        const headers = lines.shift()?.split(',').map(h => h.trim()) || [];
+        
+        const newDocs: PutawayDocument[] = lines.map(line => {
+          const values = line.split(',');
+          const docData: any = {};
+          headers.forEach((header, index) => {
+            docData[header] = values[index]?.trim();
+          });
+          
+          return {
+            id: Date.now().toString() + Math.random(),
+            noDocument: docData.noDocument,
+            date: new Date().toISOString(),
+            qty: parseInt(docData.qty, 10),
+            status: docData.status,
+            sku: docData.sku,
+            barcode: docData.barcode,
+            brand: docData.brand,
+            expDate: docData.expDate,
+            checkBy: docData.checkBy,
+          };
+        });
+
+        setDocuments([...documents, ...newDocs]);
+        toast({ title: "Success", description: `${newDocs.length} documents uploaded locally.` });
+      } catch (error) {
+        toast({ variant: "destructive", title: "Upload Failed", description: "Could not process CSV file." });
+      } finally {
+        setIsSubmitting(false);
+        if (event.target) event.target.value = '';
+      }
+    };
+    reader.readAsText(file);
+  };
+
 
   return (
     <MainLayout>
@@ -146,6 +225,13 @@ export default function MonitoringPutawayPage() {
                     onChange={(e) => setSearchBarcode(e.target.value)}
                     className="flex-1 md:flex-auto md:w-auto"
                 />
+                 <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
+                <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSubmitting}>
+                    <Upload className="h-4 w-4 mr-2" /> Upload
+                </Button>
+                <Button variant="outline" onClick={handleExport}>
+                    <Download className="h-4 w-4 mr-2" /> Export
+                </Button>
             </div>
           </CardHeader>
           <CardContent>
