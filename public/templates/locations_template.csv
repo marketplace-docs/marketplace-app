@@ -1,4 +1,6 @@
-name,type
+Location Name,Type
 A-01-01,Sellable
-B-02-03,Empty
-C-03-05,Quarantine
+A-01-02,Sellable
+B-01-01,Empty
+QUARANTINE-01,Quarantine
+DAMAGED-01,Damaged

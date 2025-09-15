@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -159,7 +160,7 @@ export default function LocationPage() {
           });
           return;
         }
-        const headers = ["name", "type"];
+        const headers = ["Location Name", "Type"];
         const csvContent = [
             headers.join(","),
             ...filteredData.map(item => [
@@ -189,16 +190,24 @@ export default function LocationPage() {
             const text = e.target?.result as string;
             try {
                 const lines = text.split('\n').filter(line => line.trim() !== '');
-                const headers = lines.shift()?.split(',').map(h => h.trim().toLowerCase().replace(/"/g, '')) || [];
+                const headerLine = lines.shift()?.trim();
+                if (!headerLine) {
+                    throw new Error("CSV file is empty or has no header.");
+                }
                 
-                if (!headers.includes('name') || !headers.includes('type')) {
-                    throw new Error("Invalid CSV. Required headers: name, type");
+                const headers = headerLine.split(',').map(h => h.trim().replace(/"/g, ''));
+                
+                const nameIndex = headers.indexOf('Location Name');
+                const typeIndex = headers.indexOf('Type');
+
+                if (nameIndex === -1 || typeIndex === -1) {
+                    throw new Error("Invalid CSV. Required headers: Location Name, Type");
                 }
 
                 const newLocations = lines.map(line => {
                     const values = line.split(',');
-                    const name = values[headers.indexOf('name')]?.trim().replace(/"/g, '');
-                    const type = values[headers.indexOf('type')]?.trim().replace(/"/g, '') as LocationType;
+                    const name = values[nameIndex]?.trim().replace(/"/g, '');
+                    const type = values[typeIndex]?.trim().replace(/"/g, '') as LocationType;
 
                     if (name && Object.keys(typeVariantMap).includes(type)) {
                         return { name, type };
@@ -346,7 +355,7 @@ export default function LocationPage() {
                                         <DialogHeader>
                                             <DialogTitle>Upload Locations CSV</DialogTitle>
                                             <DialogDescription>
-                                                Select a CSV file to bulk upload locations. The file must contain the headers: name, type.
+                                                Select a CSV file to bulk upload locations. The file must contain the headers: Location Name, Type.
                                             </DialogDescription>
                                         </DialogHeader>
                                         <div className="py-4">
