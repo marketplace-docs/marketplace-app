@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { format } from "date-fns";
@@ -44,42 +44,42 @@ export default function UpdateExpiredPage() {
     const { toast } = useToast();
     const { user } = useAuth();
     
-    useEffect(() => {
-        const fetchProductData = async () => {
-            if (!barcode) {
-                setOriginalBatches([]);
-                setSelectedBatch(null);
+    const fetchProductData = useCallback(async () => {
+        if (!barcode) {
+            setOriginalBatches([]);
+            setSelectedBatch(null);
+            return;
+        }
+        setIsLoading(true);
+        setSelectedBatch(null);
+        setOriginalBatches([]);
+
+        try {
+            const response = await fetch(`/api/master-product/batch-products/${barcode}`);
+            if (response.status === 404) {
+                toast({ variant: "destructive", title: "Not Found", description: "Product with this barcode not found in any batch." });
                 return;
             }
-            setIsLoading(true);
-            setSelectedBatch(null);
-            setOriginalBatches([]);
-
-            try {
-                const response = await fetch(`/api/master-product/batch-products/${barcode}`);
-                if (response.status === 404) {
-                    toast({ variant: "destructive", title: "Not Found", description: "Product with this barcode not found in any batch." });
-                    return;
-                }
-                if (!response.ok) {
-                    throw new Error('Failed to fetch product batches.');
-                }
-                const data: BatchProduct[] = await response.json();
-                setOriginalBatches(data);
-            } catch (error: any) {
-                toast({ variant: "destructive", title: "Error", description: error.message });
-                setOriginalBatches([]);
-            } finally {
-                setIsLoading(false);
+            if (!response.ok) {
+                throw new Error('Failed to fetch product batches.');
             }
-        };
+            const data: BatchProduct[] = await response.json();
+            setOriginalBatches(data);
+        } catch (error: any) {
+            toast({ variant: "destructive", title: "Error", description: error.message });
+            setOriginalBatches([]);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [barcode, toast]);
 
+    useEffect(() => {
         const timer = setTimeout(() => {
             fetchProductData();
         }, 500);
 
         return () => clearTimeout(timer);
-    }, [barcode, toast]);
+    }, [barcode, fetchProductData]);
 
     const handleSelectBatch = (batch: BatchProduct) => {
         setSelectedBatch(batch);
@@ -166,8 +166,8 @@ export default function UpdateExpiredPage() {
                         <CardDescription>Scan barcode to find all batches of a product. Select a batch to update its location, expiration date, or split it.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <form onSubmit={handleSubmit} className="space-y-6">
-                             <div className="space-y-2">
+                        <form onSubmit={handleSubmit}>
+                             <div className="space-y-2 mb-6">
                                 <Label htmlFor="barcode">Barcode</Label>
                                 <div className="relative">
                                     <Input id="barcode" placeholder="Scan or enter product barcode" value={barcode} onChange={(e) => setBarcode(e.target.value)} />
@@ -176,7 +176,7 @@ export default function UpdateExpiredPage() {
                             </div>
 
                              {originalBatches.length > 0 && (
-                                <Card className="bg-muted/50">
+                                <Card className="bg-muted/50 mb-6">
                                     <CardHeader>
                                         <CardTitle className="text-lg">Available Batches</CardTitle>
                                         <CardDescription>Select the batch you want to modify.</CardDescription>
