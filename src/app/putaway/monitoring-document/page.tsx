@@ -30,6 +30,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuth } from '@/hooks/use-auth';
+import { Checkbox } from '@/components/ui/checkbox';
 
 type PutawayDocument = {
   id: string;
@@ -76,10 +77,15 @@ export default function MonitoringPutawayPage() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
-  const isSuperAdmin = user?.role === 'Super Admin';
+  
+  const canUpdate = user?.role && ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin'].includes(user.role);
+  const canDelete = user?.role === 'Super Admin';
+  const canCreate = canUpdate;
+
 
   const [searchDocument, setSearchDocument] = useState('');
   const [searchBarcode, setSearchBarcode] = useState('');
+  const [rowSelection, setRowSelection] = useState({});
 
   const fetchDocuments = useCallback(async () => {
     setLoading(true);
@@ -304,7 +310,7 @@ export default function MonitoringPutawayPage() {
                     onChange={(e) => setSearchBarcode(e.target.value)}
                     className="flex-1 md:flex-auto md:w-auto"
                 />
-                {isSuperAdmin && (
+                {canCreate && (
                   <>
                     <Dialog open={isUploadDialogOpen} onOpenChange={setUploadDialogOpen}>
                         <DialogTrigger asChild>
@@ -340,6 +346,22 @@ export default function MonitoringPutawayPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                     <TableHead padding="checkbox">
+                        <Checkbox
+                            checked={
+                                Object.keys(rowSelection).length > 0 &&
+                                Object.keys(rowSelection).length === paginatedDocs.length
+                            }
+                            onCheckedChange={(value) => {
+                                const newSelection: { [key: string]: boolean } = {};
+                                if (value) {
+                                    paginatedDocs.forEach(doc => newSelection[doc.id] = true);
+                                }
+                                setRowSelection(newSelection);
+                            }}
+                            aria-label="Select all"
+                        />
+                    </TableHead>
                     <TableHead>No. Document</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>SKU</TableHead>
@@ -350,19 +372,34 @@ export default function MonitoringPutawayPage() {
                     <TableHead>Check By</TableHead>
                     <TableHead>QTY</TableHead>
                     <TableHead>Status</TableHead>
-                    {isSuperAdmin && <TableHead className="text-right">Actions</TableHead>}
+                    {(canUpdate || canDelete) && <TableHead className="text-right">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                        <TableCell colSpan={isSuperAdmin ? 11 : 10} className="h-24 text-center">
+                        <TableCell colSpan={(canUpdate || canDelete) ? 12 : 11} className="h-24 text-center">
                             <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                         </TableCell>
                     </TableRow>
                   ) : paginatedDocs.length > 0 ? (
                     paginatedDocs.map((doc) => (
-                      <TableRow key={doc.id}>
+                      <TableRow key={doc.id} data-state={rowSelection[doc.id as keyof typeof rowSelection] && "selected"}>
+                        <TableCell padding="checkbox">
+                           <Checkbox
+                                checked={rowSelection[doc.id as keyof typeof rowSelection] || false}
+                                onCheckedChange={(value) => {
+                                    const newSelection = { ...rowSelection };
+                                    if (value) {
+                                        newSelection[doc.id as keyof typeof rowSelection] = true;
+                                    } else {
+                                        delete newSelection[doc.id as keyof typeof rowSelection];
+                                    }
+                                    setRowSelection(newSelection);
+                                }}
+                                aria-label="Select row"
+                            />
+                        </TableCell>
                         <TableCell className="font-medium">{doc.no_document}</TableCell>
                         <TableCell>{formatDateSafely(doc.date, "eee, dd/MMM/yyyy HH:mm")}</TableCell>
                         <TableCell>{doc.sku}</TableCell>
@@ -375,17 +412,21 @@ export default function MonitoringPutawayPage() {
                         <TableCell>
                           <Badge variant={statusVariantMap[doc.status] || 'default'}>{doc.status}</Badge>
                         </TableCell>
-                        {isSuperAdmin && (
+                        {(canUpdate || canDelete) && (
                             <TableCell className="text-right">
                                 <div className="flex items-center justify-end gap-2">
+                                  {canUpdate && (
                                     <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(doc)}>
                                         <Pencil className="h-4 w-4" />
                                         <span className="sr-only">Edit</span>
                                     </Button>
+                                  )}
+                                  {canDelete && (
                                     <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" onClick={() => handleOpenDeleteDialog(doc)}>
                                         <Trash2 className="h-4 w-4" />
                                         <span className="sr-only">Delete</span>
                                     </Button>
+                                  )}
                                 </div>
                             </TableCell>
                         )}
@@ -394,7 +435,7 @@ export default function MonitoringPutawayPage() {
                   ) : (
                     <TableRow>
                       <TableCell
-                        colSpan={isSuperAdmin ? 11 : 10}
+                        colSpan={(canUpdate || canDelete) ? 12 : 11}
                         className="h-24 text-center text-muted-foreground"
                       >
                         No documents found.
@@ -406,7 +447,7 @@ export default function MonitoringPutawayPage() {
             </div>
              <div className="flex items-center justify-end space-x-2 py-4">
                 <div className="flex-1 text-sm text-muted-foreground">
-                    Page {filteredDocuments.length > 0 ? currentPage : 0} of {totalPages}
+                    {Object.keys(rowSelection).length} of {filteredDocuments.length} row(s) selected.
                 </div>
                 <div className="flex items-center space-x-2">
                     <span className="text-sm text-muted-foreground">Rows per page:</span>
@@ -539,5 +580,3 @@ export default function MonitoringPutawayPage() {
     </MainLayout>
   );
 }
-
-    
