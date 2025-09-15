@@ -53,6 +53,11 @@ export const NAV_LINKS: NavLink[] = [
                 icon: Eye,
             },
             {
+                href: '/putaway/go-putaway',
+                label: 'Go-Putaway',
+                icon: Route,
+            },
+            {
                 href: '/putaway/update-expired',
                 label: 'Update Expired',
                 icon: CalendarClock,
