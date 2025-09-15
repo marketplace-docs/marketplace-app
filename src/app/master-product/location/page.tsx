@@ -45,6 +45,7 @@ const locationTypes: LocationType[] = ['empty', 'sellable', 'expiring', 'expired
 
 export default function LocationPage() {
     const [locationsData, setLocationsData] = useState<LocationData[]>([]);
+    const [totalLocationCount, setTotalLocationCount] = useState(0);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -61,14 +62,24 @@ export default function LocationPage() {
     const [newLocationName, setNewLocationName] = useState('');
     const [newLocationType, setNewLocationType] = useState<LocationType>('empty');
     
-    const fetchLocations = useCallback(async () => {
+    const fetchData = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch('/api/locations');
-            if (!response.ok) throw new Error('Failed to fetch location data');
-            const data: LocationData[] = await response.json();
+            const [locationsRes, countRes] = await Promise.all([
+                fetch('/api/locations'),
+                fetch('/api/locations/count')
+            ]);
+            
+            if (!locationsRes.ok) throw new Error('Failed to fetch location data');
+            if (!countRes.ok) throw new Error('Failed to fetch location count');
+
+            const data: LocationData[] = await locationsRes.json();
+            const countData = await countRes.json();
+            
             setLocationsData(data);
+            setTotalLocationCount(countData.count);
+
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -77,8 +88,8 @@ export default function LocationPage() {
     }, []);
 
     useEffect(() => {
-        fetchLocations();
-    }, [fetchLocations]);
+        fetchData();
+    }, [fetchData]);
 
     const filteredData = useMemo(() => {
         return locationsData.filter(location =>
@@ -108,13 +119,12 @@ export default function LocationPage() {
     const kpiData = useMemo(() => {
         return locationsData.reduce((acc, loc) => {
             const type = loc.type.toLowerCase();
-            acc.total += 1;
             if (type === 'sellable') acc.sellable += 1;
             if (type === 'expiring') acc.expiring += 1;
             if (type === 'expired') acc.expired += 1;
             if (type === 'quarantine') acc.quarantine += 1;
             return acc;
-        }, { total: 0, sellable: 0, expiring: 0, expired: 0, quarantine: 0 });
+        }, { sellable: 0, expiring: 0, expired: 0, quarantine: 0 });
     }, [locationsData]);
     
     const handleAddLocation = async () => {
@@ -143,7 +153,7 @@ export default function LocationPage() {
                 throw new Error(errorData.error || 'Failed to add location.');
             }
             
-            await fetchLocations(); // Refetch from DB
+            await fetchData(); // Refetch from DB
             toast({ title: 'Success', description: `Location "${newLocationName.trim()}" has been added.` });
             setNewLocationName('');
             setNewLocationType('empty');
@@ -239,7 +249,7 @@ export default function LocationPage() {
                     throw new Error(errorData.error || 'Failed to upload locations.');
                 }
                 
-                await fetchLocations();
+                await fetchData();
                 setUploadDialogOpen(false);
                 toast({ title: "Success", description: `${newLocations.length} new locations uploaded.` });
 
@@ -273,7 +283,7 @@ export default function LocationPage() {
                             <Warehouse className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{kpiData.total.toLocaleString()}</div>}
+                            {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{totalLocationCount.toLocaleString()}</div>}
                         </CardContent>
                     </Card>
                      <Card>
@@ -496,3 +506,6 @@ export default function LocationPage() {
 
 
 
+
+
+  
