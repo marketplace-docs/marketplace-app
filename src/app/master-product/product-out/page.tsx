@@ -15,7 +15,16 @@ import { format, parse, isValid, isBefore } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-type ProductOutStatus = 'Issue - Order' | 'Issue - Internal Transfer' | 'Issue - Adjustment Manual';
+type ProductOutStatus = 
+    | 'Issue - Order' 
+    | 'Issue - Internal Transfer' 
+    | 'Issue - Adjustment Manual'
+    | 'Adjusment - Loc'
+    | 'Adjustment - SKU'
+    | 'Issue - Putaway'
+    | 'Receipt - Putaway'
+    | 'Issue - Return'
+    | 'Issue - Return Putaway';
 
 type ProductOutDocument = {
     id: string;
@@ -437,6 +446,12 @@ export default function ProductOutPage() {
                                                       <SelectItem value="Issue - Order">Issue - Order</SelectItem>
                                                       <SelectItem value="Issue - Internal Transfer">Issue - Internal Transfer</SelectItem>
                                                       <SelectItem value="Issue - Adjustment Manual">Issue - Adjustment Manual</SelectItem>
+                                                      <SelectItem value="Adjusment - Loc">Adjusment - Loc</SelectItem>
+                                                      <SelectItem value="Adjustment - SKU">Adjustment - SKU</SelectItem>
+                                                      <SelectItem value="Issue - Putaway">Issue - Putaway</SelectItem>
+                                                      <SelectItem value="Receipt - Putaway">Receipt - Putaway</SelectItem>
+                                                      <SelectItem value="Issue - Return">Issue - Return</SelectItem>
+                                                      <SelectItem value="Issue - Return Putaway">Issue - Return Putaway</SelectItem>
                                                   </SelectContent>
                                               </Select>
                                           </div>
