@@ -6,17 +6,35 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { format, differenceInMonths, isBefore } from 'date-fns';
-import { Loader2, ChevronLeft, ChevronRight, PackageSearch, AlertCircle, ShoppingCart, Clock, Ban, Trash2 } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight, PackageSearch, AlertCircle, ShoppingCart, Clock, Ban, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import type { BatchProduct } from '@/types/batch-product';
 import { cn } from '@/lib/utils';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/hooks/use-auth';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
+type BatchProduct = {
+    id: string;
+    sku: string;
+    barcode: string;
+    brand: string;
+    exp_date: string;
+    location: string;
+    stock: number;
+    status: 'Sellable' | 'Expiring' | 'Expired' | 'Out of Stock';
+};
+
+type AggregatedBySku = {
+    sku: string;
+    barcode: string;
+    brand: string;
+    totalStock: number;
+    batches: BatchProduct[];
+};
 
 type ProductStatus = 'All' | 'Sellable' | 'Expiring' | 'Expired' | 'Out of Stock';
 
@@ -74,6 +92,8 @@ export default function BatchProductPage() {
     const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [selectedBatchToDelete, setSelectedBatchToDelete] = useState<BatchProduct | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    
+    const [openAccordion, setOpenAccordion] = useState<string[]>([]);
 
     const isSuperAdmin = user?.role === 'Super Admin';
 
@@ -103,19 +123,47 @@ export default function BatchProductPage() {
         fetchInventoryData();
     }, [fetchInventoryData]);
 
+    const aggregatedAndFilteredData = useMemo(() => {
+        const productMap = new Map<string, AggregatedBySku>();
 
-    const filteredData = useMemo(() => {
-        return inventoryData.filter(product => {
-            const matchesSearch = product.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        inventoryData.forEach(product => {
+            if (!productMap.has(product.sku)) {
+                productMap.set(product.sku, {
+                    sku: product.sku,
+                    barcode: product.barcode,
+                    brand: product.brand,
+                    totalStock: 0,
+                    batches: [],
+                });
+            }
+            const existing = productMap.get(product.sku)!;
+            existing.totalStock += product.stock;
+            existing.batches.push(product);
+        });
+
+        const allAggregated = Array.from(productMap.values());
+        
+        return allAggregated.filter(product => {
+             const matchesSearch = product.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 product.barcode.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 (product.brand && product.brand.toLowerCase().includes(searchTerm.toLowerCase()));
-            
-            const matchesStatus = statusFilter === 'All' || product.status === statusFilter;
 
+            const matchesStatus = statusFilter === 'All' || product.batches.some(batch => batch.status === statusFilter);
+            
             return matchesSearch && matchesStatus;
+        }).map(product => {
+            if (statusFilter !== 'All') {
+                return {
+                    ...product,
+                    batches: product.batches.filter(batch => batch.status === statusFilter),
+                };
+            }
+            return product;
         });
+
     }, [inventoryData, searchTerm, statusFilter]);
-    
+
+
     const kpiData = useMemo(() => {
         return inventoryData.reduce((acc, product) => {
             if (product.status === 'Sellable') acc.sellable += 1;
@@ -130,8 +178,8 @@ export default function BatchProductPage() {
         setCurrentPage(1);
     }, [rowsPerPage, searchTerm, statusFilter]);
 
-    const totalPages = Math.ceil(filteredData.length / rowsPerPage);
-    const paginatedData = filteredData.slice(
+    const totalPages = Math.ceil(aggregatedAndFilteredData.length / rowsPerPage);
+    const paginatedData = aggregatedAndFilteredData.slice(
         (currentPage - 1) * rowsPerPage,
         currentPage * rowsPerPage
     );
@@ -228,62 +276,100 @@ export default function BatchProductPage() {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
+                                        <TableHead className="w-10"></TableHead>
                                         <TableHead>SKU</TableHead>
                                         <TableHead>Barcode</TableHead>
                                         <TableHead>Brand</TableHead>
-                                        <TableHead>EXP Date</TableHead>
-                                        <TableHead>Location</TableHead>
-                                        <TableHead>Stock</TableHead>
-                                        <TableHead>Status</TableHead>
+                                        <TableHead>Total Stock</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {loading ? (
                                         <TableRow>
-                                            <TableCell colSpan={7} className="h-24 text-center">
+                                            <TableCell colSpan={5} className="h-24 text-center">
                                                 <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                                             </TableCell>
                                         </TableRow>
                                     ) : paginatedData.length > 0 ? (
-                                        paginatedData.map((product, index) => (
-                                            <TableRow key={`${product.id}-${product.location}-${product.exp_date}`}>
-                                                <TableCell className="font-medium">{product.sku}</TableCell>
-                                                <TableCell>{product.barcode}</TableCell>
-                                                <TableCell>{product.brand}</TableCell>
-                                                <TableCell>{format(new Date(product.exp_date), 'dd/MM/yyyy')}</TableCell>
-                                                <TableCell>{product.location}</TableCell>
-                                                <TableCell>
-                                                     <Badge variant={product.stock > 0 ? 'default' : 'destructive'} className="font-semibold">
-                                                        {product.stock.toLocaleString()}
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="flex items-center gap-2">
-                                                        <Badge variant={statusVariantMap[product.status]}
-                                                            className={cn({
-                                                                'bg-green-500 hover:bg-green-500/80': product.status === 'Sellable',
-                                                                'bg-yellow-500 hover:bg-yellow-500/80 text-black': product.status === 'Expiring',
-                                                            })}
-                                                        >
-                                                            {product.status}
-                                                        </Badge>
-                                                        {isSuperAdmin && product.stock < 0 && (
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="h-6 w-6 text-destructive hover:text-destructive/90"
-                                                                onClick={() => handleOpenDeleteDialog(product)}
-                                                            >
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </Button>
-                                                        )}
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
+                                        <Accordion type="multiple" value={openAccordion} onValueChange={setOpenAccordion} asChild>
+                                          <>
+                                            {paginatedData.map((product) => (
+                                                <AccordionItem value={product.sku} key={product.sku} className="border-b">
+                                                    <TableRow className="bg-inherit hover:bg-inherit">
+                                                        <TableCell>
+                                                            <AccordionTrigger>
+                                                                <ChevronDown className="h-5 w-5 transition-transform duration-200" />
+                                                            </AccordionTrigger>
+                                                        </TableCell>
+                                                        <TableCell className="font-medium">{product.sku}</TableCell>
+                                                        <TableCell>{product.barcode}</TableCell>
+                                                        <TableCell>{product.brand}</TableCell>
+                                                        <TableCell>
+                                                             <Badge variant={product.totalStock > 0 ? 'default' : 'destructive'} className="font-semibold text-base">
+                                                                {product.totalStock.toLocaleString()}
+                                                            </Badge>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                    <TableRow>
+                                                        <TableCell colSpan={5} className="p-0">
+                                                            <AccordionContent>
+                                                                <div className="p-4 bg-muted/50">
+                                                                     <Table>
+                                                                        <TableHeader>
+                                                                            <TableRow>
+                                                                                <TableHead>Location</TableHead>
+                                                                                <TableHead>EXP Date</TableHead>
+                                                                                <TableHead>Stock</TableHead>
+                                                                                <TableHead>Status</TableHead>
+                                                                            </TableRow>
+                                                                        </TableHeader>
+                                                                        <TableBody>
+                                                                            {product.batches.map((batch) => (
+                                                                                <TableRow key={`${batch.id}-${batch.location}-${batch.exp_date}`}>
+                                                                                    <TableCell>{batch.location}</TableCell>
+                                                                                    <TableCell>{format(new Date(batch.exp_date), 'dd/MM/yyyy')}</TableCell>
+                                                                                    <TableCell>
+                                                                                        <Badge variant={batch.stock > 0 ? 'secondary' : 'destructive'}>
+                                                                                            {batch.stock.toLocaleString()}
+                                                                                        </Badge>
+                                                                                    </TableCell>
+                                                                                    <TableCell>
+                                                                                         <div className="flex items-center gap-2">
+                                                                                            <Badge variant={statusVariantMap[batch.status]}
+                                                                                                className={cn({
+                                                                                                    'bg-green-500 hover:bg-green-500/80': batch.status === 'Sellable',
+                                                                                                    'bg-yellow-500 hover:bg-yellow-500/80 text-black': batch.status === 'Expiring',
+                                                                                                })}
+                                                                                            >
+                                                                                                {batch.status}
+                                                                                            </Badge>
+                                                                                            {isSuperAdmin && batch.stock < 0 && (
+                                                                                                <Button
+                                                                                                    variant="ghost"
+                                                                                                    size="icon"
+                                                                                                    className="h-6 w-6 text-destructive hover:text-destructive/90"
+                                                                                                    onClick={() => handleOpenDeleteDialog(batch)}
+                                                                                                >
+                                                                                                    <Trash2 className="h-4 w-4" />
+                                                                                                </Button>
+                                                                                            )}
+                                                                                        </div>
+                                                                                    </TableCell>
+                                                                                </TableRow>
+                                                                            ))}
+                                                                        </TableBody>
+                                                                    </Table>
+                                                                </div>
+                                                            </AccordionContent>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                </AccordionItem>
+                                            ))}
+                                          </>
+                                        </Accordion>
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                                            <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                                                 <div className="flex flex-col items-center justify-center gap-2">
                                                     <PackageSearch className="h-8 w-8" />
                                                     <span>No inventory data found.</span>
@@ -296,7 +382,7 @@ export default function BatchProductPage() {
                        </div>
                         <div className="flex items-center justify-end space-x-2 py-4">
                             <div className="flex-1 text-sm text-muted-foreground">
-                                Page {filteredData.length > 0 ? currentPage : 0} of {totalPages}
+                                Page {aggregatedAndFilteredData.length > 0 ? currentPage : 0} of {totalPages}
                             </div>
                             <div className="flex items-center space-x-2">
                                 <span className="text-sm text-muted-foreground">Rows per page:</span>
