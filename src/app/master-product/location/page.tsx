@@ -19,7 +19,7 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/use-auth';
 import { format } from 'date-fns';
 
-type LocationType = 'Sellable' | 'Expiring' | 'Expired' | 'Quarantine' | 'Empty';
+type LocationType = 'Sellable' | 'Expiring' | 'Expired' | 'Quarantine' | 'Empty' | 'Sensitive MP';
 type LocationFilterType = 'All' | LocationType;
 
 type LocationData = {
@@ -35,6 +35,7 @@ const typeVariantMap: Record<LocationType, 'default' | 'secondary' | 'destructiv
     'Expired': 'destructive',
     'Quarantine': 'outline',
     'Empty': 'outline',
+    'Sensitive MP': 'secondary',
 };
 
 
@@ -331,6 +332,7 @@ export default function LocationPage() {
                                                         <SelectItem value="Expiring">Expiring</SelectItem>
                                                         <SelectItem value="Expired">Expired</SelectItem>
                                                         <SelectItem value="Quarantine">Quarantine</SelectItem>
+                                                        <SelectItem value="Sensitive MP">Sensitive MP</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                             </div>
@@ -380,6 +382,7 @@ export default function LocationPage() {
                                         <SelectItem value="Expired">Expired</SelectItem>
                                         <SelectItem value="Quarantine">Quarantine</SelectItem>
                                         <SelectItem value="Empty">Empty</SelectItem>
+                                        <SelectItem value="Sensitive MP">Sensitive MP</SelectItem>
                                     </SelectContent>
                                 </Select>
                                 <Input 
@@ -416,6 +419,7 @@ export default function LocationPage() {
                                                         className={cn({
                                                             'bg-green-500 hover:bg-green-500/80 text-white': location.type === 'Sellable',
                                                             'bg-yellow-500 hover:bg-yellow-500/80 text-black': location.type === 'Expiring',
+                                                            'bg-purple-500 hover:bg-purple-500/80': location.type === 'Sensitive MP',
                                                         })}
                                                     >
                                                         {location.type}
@@ -480,3 +484,4 @@ export default function LocationPage() {
         </MainLayout>
     );
 }
+
