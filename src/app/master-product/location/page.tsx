@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -84,6 +83,7 @@ export default function LocationPage() {
 
     const [isAddDialogOpen, setAddDialogOpen] = useState(false);
     const [newLocationName, setNewLocationName] = useState('');
+    const [newLocationType, setNewLocationType] = useState<LocationType>('Empty');
     
     const fetchLocations = useCallback(async () => {
         setLoading(true);
@@ -174,12 +174,13 @@ export default function LocationPage() {
 
         const newLocation: LocationData = {
             name: newLocationName.trim(),
-            type: 'Empty',
+            type: newLocationType,
         };
 
         setLocationsData(prev => [newLocation, ...prev].sort((a, b) => a.name.localeCompare(b.name)));
         toast({ title: 'Success', description: `Location "${newLocation.name}" has been added.` });
         setNewLocationName('');
+        setNewLocationType('Empty');
         setAddDialogOpen(false);
     };
 
@@ -263,6 +264,22 @@ export default function LocationPage() {
                                                     className="col-span-3"
                                                     placeholder="e.g., A-01-01 or QUARANTINE-02"
                                                 />
+                                            </div>
+                                             <div className="grid grid-cols-4 items-center gap-4">
+                                                <Label htmlFor="location-type" className="text-right">Location Type</Label>
+                                                <Select value={newLocationType} onValueChange={(v) => setNewLocationType(v as LocationType)}>
+                                                    <SelectTrigger className="col-span-3">
+                                                        <SelectValue placeholder="Select type" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="Empty">Empty</SelectItem>
+                                                        <SelectItem value="Sellable">Sellable</SelectItem>
+                                                        <SelectItem value="Expiring">Expiring</SelectItem>
+                                                        <SelectItem value="Expired">Expired</SelectItem>
+                                                        <SelectItem value="Quarantine">Quarantine</SelectItem>
+                                                        <SelectItem value="Mixed">Mixed</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
                                             </div>
                                         </div>
                                         <DialogFooter>
