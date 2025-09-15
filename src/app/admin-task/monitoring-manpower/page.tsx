@@ -106,6 +106,7 @@ export default function MonitoringManpowerPage() {
             ...selectedTask,
             userName: user.name,
             userEmail: user.email,
+            userRole: user.role,
         })
       });
       if (!response.ok) throw new Error('Failed to update task');
@@ -129,7 +130,8 @@ export default function MonitoringManpowerPage() {
         method: 'DELETE',
         headers: {
             'X-User-Name': user.name,
-            'X-User-Email': user.email
+            'X-User-Email': user.email,
+            'X-User-Role': user.role
         }
       });
       if (!response.ok) throw new Error('Failed to delete task');
@@ -330,9 +332,9 @@ export default function MonitoringManpowerPage() {
                                     <SelectValue placeholder="Select Status" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="Event">Event</SelectItem>
-                                    <SelectItem value="Regular">Regular</SelectItem>
                                     <SelectItem value="Staff">Staff</SelectItem>
+                                    <SelectItem value="Regular">Regular</SelectItem>
+                                    <SelectItem value="Event">Event</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>

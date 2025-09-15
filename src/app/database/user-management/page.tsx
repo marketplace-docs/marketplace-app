@@ -47,14 +47,14 @@ type User = {
     id: number;
     name: string;
     email: string;
-    status: 'Leader' | 'Reguler' | 'Event';
+    status: 'Staff' | 'Reguler' | 'Event';
     role: string;
 };
 
 type NewUser = Omit<User, 'id'>;
 
 const statusVariantMap: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
-    'Leader': 'destructive',
+    'Staff': 'destructive',
     'Reguler': 'default',
     'Event': 'secondary',
 };
@@ -131,6 +131,7 @@ export default function DatabaseUserPage() {
                     ...selectedUser,
                     userName: currentUser.name,
                     userEmail: currentUser.email,
+                    userRole: currentUser.role,
                 })
             });
             if (!response.ok) throw new Error('Failed to update user');
@@ -162,6 +163,7 @@ export default function DatabaseUserPage() {
                     ...newUser,
                     userName: currentUser.name,
                     userEmail: currentUser.email,
+                    userRole: currentUser.role,
                 })
             });
             if (!response.ok) {
@@ -189,6 +191,7 @@ export default function DatabaseUserPage() {
                 headers: {
                     'X-User-Name': currentUser.name,
                     'X-User-Email': currentUser.email,
+                    'X-User-Role': currentUser.role,
                 }
             });
             if (!response.ok) {
@@ -244,7 +247,7 @@ export default function DatabaseUserPage() {
                                           <SelectValue placeholder="Select Status" />
                                       </SelectTrigger>
                                       <SelectContent>
-                                          <SelectItem value="Leader">Leader</SelectItem>
+                                          <SelectItem value="Staff">Staff</SelectItem>
                                           <SelectItem value="Reguler">Reguler</SelectItem>
                                           <SelectItem value="Event">Event</SelectItem>
                                       </SelectContent>
@@ -415,7 +418,7 @@ export default function DatabaseUserPage() {
                                         <SelectValue placeholder="Select Status" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="Leader">Leader</SelectItem>
+                                        <SelectItem value="Staff">Staff</SelectItem>
                                         <SelectItem value="Reguler">Reguler</SelectItem>
                                         <SelectItem value="Event">Event</SelectItem>
                                     </SelectContent>

@@ -44,20 +44,20 @@ import { MainLayout } from "@/components/layout/main-layout";
 type User = {
     id: number;
     name: string;
-    status: 'Leader' | 'Reguler' | 'Event';
+    status: 'Staff' | 'Reguler' | 'Event';
     role: string;
 };
 
 const initialUsers: User[] = [
-    { id: 1, name: 'Arlan Saputra', status: 'Leader', role: 'Super Admin' },
+    { id: 1, name: 'Arlan Saputra', status: 'Staff', role: 'Super Admin' },
     { id: 2, name: 'Rudi Setiawan', status: 'Reguler', role: 'Admin' },
     { id: 3, name: 'Nova Aurelia', status: 'Reguler', role: 'Admin' },
     { id: 4, name: 'Nurul Tanzilla', status: 'Event', role: 'Event Staff' },
-    { id: 5, name: 'Regina Rifana', status: 'Leader', role: 'Captain' },
+    { id: 5, name: 'Regina Rifana', status: 'Staff', role: 'Captain' },
 ];
 
 const statusVariantMap: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
-    'Leader': 'destructive',
+    'Staff': 'destructive',
     'Reguler': 'default',
     'Event': 'secondary',
 };
@@ -234,7 +234,7 @@ export default function DatabaseUserPage() {
                                         <SelectValue placeholder="Select Status" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="Leader">Leader</SelectItem>
+                                        <SelectItem value="Staff">Staff</SelectItem>
                                         <SelectItem value="Reguler">Reguler</SelectItem>
                                         <SelectItem value="Event">Event</SelectItem>
                                     </SelectContent>
