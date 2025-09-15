@@ -42,6 +42,13 @@ const apiRoutes = [
             { method: "DELETE", path: "/api/daily-performance/[id]", description: "Menghapus entri kinerja." },
         ]
     },
+     {
+        category: "Data Master Lokasi",
+        endpoints: [
+            { method: "GET", path: "/api/locations", description: "Mengambil semua data lokasi gudang." },
+            { method: "POST", path: "/api/locations", description: "Menambahkan lokasi baru (massal atau tunggal). Memerlukan hak akses Admin atau lebih tinggi." },
+        ]
+    },
     {
         category: "Toko Marketplace (Marketplace Stores)",
         endpoints: [

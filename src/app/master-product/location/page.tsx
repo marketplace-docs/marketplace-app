@@ -30,11 +30,11 @@ type LocationData = {
 };
 
 const typeVariantMap: Record<LocationType, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+    'Empty': 'outline',
     'Sellable': 'default',
     'Expiring': 'secondary',
     'Expired': 'destructive',
     'Quarantine': 'outline',
-    'Empty': 'outline',
     'Sensitive MP': 'secondary',
     'Marketplace': 'default',
     'Damaged': 'destructive',
@@ -306,7 +306,7 @@ export default function LocationPage() {
                         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                             <div className="flex-1">
                                 <CardTitle>Registered Locations</CardTitle>
-                                <CardDescription>A list of all unique storage locations and their status type.</CardDescription>
+                                <CardDescription>Daftar semua lokasi penyimpanan unik beserta tipenya. Gunakan fitur upload untuk menambah data secara massal.</CardDescription>
                             </div>
                              <div className="flex w-full md:w-auto items-center gap-2">
                                 <Dialog open={isAddDialogOpen} onOpenChange={setAddDialogOpen}>
@@ -369,7 +369,7 @@ export default function LocationPage() {
                                         <DialogHeader>
                                             <DialogTitle>Upload Locations CSV</DialogTitle>
                                             <DialogDescription>
-                                                Select a CSV file to bulk upload locations. The file must contain the headers: `name` and `type`.
+                                                Pilih file CSV untuk mengunggah lokasi secara massal. Pastikan file berisi header `name` dan `type`.
                                             </DialogDescription>
                                         </DialogHeader>
                                         <div className="py-4">
@@ -378,7 +378,7 @@ export default function LocationPage() {
                                                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Choose File'}
                                            </Button>
                                            <p className="text-xs text-muted-foreground mt-2">
-                                                Don't have a template? <a href="/templates/locations_template.csv" download className="underline text-primary">Download CSV template</a>
+                                                Tidak punya template? <a href="/templates/locations_template.csv" download className="underline text-primary">Unduh template CSV</a>
                                            </p>
                                         </div>
                                     </DialogContent>
@@ -502,4 +502,5 @@ export default function LocationPage() {
         </MainLayout>
     );
 }
+
 

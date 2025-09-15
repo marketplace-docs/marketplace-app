@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { NAV_LINKS } from "@/lib/constants";
 import Link from "next/link";
-import { Route, type LucideIcon } from "lucide-react";
+import { Route, type LucideIcon, Warehouse } from "lucide-react";
 
 const techStack = ["Next.js", "React", "TypeScript", "Tailwind CSS", "ShadCN UI", "Genkit", "Firebase", "Supabase"];
 
@@ -34,7 +34,7 @@ const featureDescriptions: FeatureDescription[] = [
     {
         label: "Putaway",
         icon: NAV_LINKS.find(l => l.label === "Putaway")!.icon,
-        description: "Manajemen proses penerimaan dan penempatan barang ke lokasi penyimpanan di gudang.",
+        description: "Manajemen proses penerimaan dan penempatan barang ke lokasi penyimpanan di gudang. Input lokasi menggunakan dropdown untuk mencegah kesalahan ketik.",
         children: [
             { label: "Create", description: "Mencatat dokumen penerimaan barang baru secara manual (hanya Super Admin)." },
             { label: "Monitoring Document", description: "Melihat, mengedit, mengelola, dan mengunggah massal semua dokumen penerimaan barang (hanya Super Admin)." },
@@ -55,12 +55,13 @@ const featureDescriptions: FeatureDescription[] = [
     {
         label: "Master Product",
         icon: NAV_LINKS.find(l => l.label === "Master Product")!.icon,
-        description: "Pusat data untuk semua informasi terkait produk dan pergerakan stok.",
+        description: "Pusat data untuk semua informasi terkait produk, stok, dan lokasi gudang.",
         children: [
             { label: "Batch Product", description: "Menampilkan data stok terkini yang diagregasi per batch (berdasarkan lokasi & tanggal kedaluwarsa)." },
             { label: "Product In", description: "Menampilkan total stok masuk (goods receipt) yang diagregasi per SKU." },
             { label: "Product Out", description: "Mencatat dan menampilkan semua data barang keluar (goods issue). Pencatatan hanya bisa oleh Super Admin." },
             { label: "Stock Log", description: "Menampilkan riwayat lengkap semua pergerakan stok (masuk, keluar, dan pembaruan internal)." },
+            { label: "Location", description: "Mengelola data master semua lokasi gudang. Mendukung penambahan massal via upload CSV dengan format 'name,type'." },
         ]
     },
     {
