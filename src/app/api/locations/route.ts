@@ -11,7 +11,8 @@ export async function GET() {
   const { data, error } = await supabaseService
     .from('locations')
     .select('*')
-    .order('name', { ascending: true });
+    .order('name', { ascending: true })
+    .limit(5000); // Set a higher limit to fetch all locations
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
