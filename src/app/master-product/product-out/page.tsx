@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -12,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Loader2, AlertCircle, ChevronLeft, ChevronRight, Upload, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { format, parse, isValid } from 'date-fns';
+import { format, parse, isValid, isBefore } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
@@ -32,6 +31,7 @@ type ProductOutDocument = {
 };
 
 type AggregatedProduct = {
+    id: string;
     sku: string;
     barcode: string;
     brand: string;
@@ -128,10 +128,16 @@ export default function ProductOutPage() {
 
     useEffect(() => {
         if (newDocument.barcode) {
-            const foundStock = productInStock.find(p => p.barcode === newDocument.barcode);
-            if (foundStock) {
-                setAvailableStock(foundStock);
-                setNewDocument(prev => ({ ...prev, sku: foundStock.sku, expdate: foundStock.exp_date, location: foundStock.location }));
+            const allBatchesForBarcode = productInStock.filter(p => p.barcode === newDocument.barcode && p.stock > 0);
+            
+            if (allBatchesForBarcode.length > 0) {
+                 // FEFO logic: sort by nearest expiration date
+                const sortedBatches = allBatchesForBarcode.sort((a, b) => 
+                    new Date(a.exp_date).getTime() - new Date(b.exp_date).getTime()
+                );
+                const bestBatch = sortedBatches[0];
+                setAvailableStock(bestBatch);
+                setNewDocument(prev => ({ ...prev, sku: bestBatch.sku, expdate: bestBatch.exp_date, location: bestBatch.location }));
             } else {
                 setAvailableStock(null);
                 setNewDocument(prev => ({ ...prev, sku: '', expdate: '', location: '' }));
@@ -174,7 +180,15 @@ export default function ProductOutPage() {
              toast({
                 variant: 'destructive',
                 title: 'Error',
-                description: 'Product not found in stock.',
+                description: 'Product not found in stock or has no available quantity.',
+            });
+            return;
+        }
+         if (availableStock.stock <= 0) {
+            toast({
+                variant: "destructive",
+                title: "Stock is Zero",
+                description: `This batch has 0 stock. Please re-book to another location with available stock.`
             });
             return;
         }
@@ -383,6 +397,7 @@ export default function ProductOutPage() {
                                   <DialogContent>
                                       <DialogHeader>
                                           <DialogTitle>Add Goods Issue</DialogTitle>
+                                           <DialogDescription>The system automatically selects the batch with the nearest expiration date (FEFO).</DialogDescription>
                                       </DialogHeader>
                                       <div className="grid gap-4 py-4">
                                            <div className="grid grid-cols-4 items-center gap-4">
@@ -535,7 +550,3 @@ export default function ProductOutPage() {
         </MainLayout>
     );
 }
-
-    
-
-    

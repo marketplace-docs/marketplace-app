@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { format } from 'date-fns';
 
 type ProductDoc = {
+    id: string; // Ensure id is part of the type for selection
     sku: string;
     barcode: string;
     brand: string;
@@ -13,6 +14,7 @@ type ProductDoc = {
 };
 
 type AggregatedProduct = {
+    id: string;
     sku: string;
     barcode: string;
     brand: string;
@@ -34,7 +36,7 @@ export async function GET() {
             { data: putawayData, error: putawayError },
             { data: productOutData, error: productOutError }
         ] = await Promise.all([
-            supabaseService.from('putaway_documents').select('sku, barcode, brand, exp_date, location, qty'),
+            supabaseService.from('putaway_documents').select('id, sku, barcode, brand, exp_date, location, qty'),
             supabaseService.from('product_out_documents').select('sku, barcode, location, qty, expdate')
         ]);
 
@@ -53,6 +55,7 @@ export async function GET() {
                 existing.stock += doc.qty;
             } else {
                 stockMap.set(key, {
+                    id: doc.id,
                     sku: doc.sku,
                     barcode: doc.barcode,
                     brand: doc.brand,
@@ -78,7 +81,8 @@ export async function GET() {
              }
         });
 
-        const finalInventory = Array.from(stockMap.values()).filter(p => p.stock > 0);
+        // Do not filter out items with 0 stock
+        const finalInventory = Array.from(stockMap.values());
 
         return NextResponse.json(finalInventory);
 
