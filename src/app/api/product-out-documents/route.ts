@@ -13,14 +13,22 @@ async function generateNewDocumentNumber(status: ProductOutStatus): Promise<stri
   
   if (status.startsWith('Issue - Order')) {
       prefix = `MP-ORD-${year}`;
-  } else if (status.startsWith('Adjusment')) { // Note: 'Adjusment' is the typo in the status
+  } else if (status.startsWith('Adjustment') || status.startsWith('Adjusment')) { // Handle typo and correct version
       prefix = `MP-ADJ-${year}`;
   } else if (status.startsWith('Issue - Internal Transfer')) {
       prefix = `MP-TRSF-${year}`;
   } else if (status.startsWith('Issue - Return')) {
       prefix = `MP-RTN-${year}`;
+  } else if (status.startsWith('Issue - Update Expired') || status.startsWith('Receipt - Update Expired')) {
+      prefix = `MP-UPD-EXP-${year}`;
+  } else if (status.startsWith('Receipt - Outbound Return')) {
+      prefix = `MP-OTR-${year}`;
+  } else if (status === 'Receipt') {
+      prefix = `MP-RCP-${year}`;
+  } else if (status.startsWith('Issue - Putaway') || status.startsWith('Receipt - Putaway')) {
+    prefix = `MP-PTW-${year}`;
   } else {
-      // Fallback for other statuses like 'Issue - Putaway', etc.
+      // Fallback for other statuses
       prefix = `MP-GEN-${year}`;
   }
 
@@ -115,12 +123,15 @@ type ProductOutStatus =
     | 'Issue - Order' 
     | 'Issue - Internal Transfer' 
     | 'Issue - Adjustment Manual'
-    | 'Adjusment - Loc'
+    | 'Adjustment - Loc'
     | 'Adjustment - SKU'
     | 'Issue - Putaway'
     | 'Receipt - Putaway'
     | 'Issue - Return'
-    | 'Issue - Return Putaway';
-
+    | 'Issue - Return Putaway'
+    | 'Issue - Update Expired'
+    | 'Receipt - Update Expired'
+    | 'Receipt - Outbound Return'
+    | 'Receipt'
+    | 'Adjusment - Loc'; // Keep for backwards compatibility if needed
     
-

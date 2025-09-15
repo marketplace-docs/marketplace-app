@@ -20,12 +20,17 @@ type ProductOutStatus =
     | 'Issue - Order' 
     | 'Issue - Internal Transfer' 
     | 'Issue - Adjustment Manual'
-    | 'Adjusment - Loc'
+    | 'Adjustment - Loc'
     | 'Adjustment - SKU'
     | 'Issue - Putaway'
     | 'Receipt - Putaway'
     | 'Issue - Return'
-    | 'Issue - Return Putaway';
+    | 'Issue - Return Putaway'
+    | 'Issue - Update Expired'
+    | 'Receipt - Update Expired'
+    | 'Receipt - Outbound Return'
+    | 'Receipt'
+    | 'Adjusment - Loc'; // Keep for backwards compatibility if needed
 
 type ProductOutDocument = {
     id: string;
@@ -123,12 +128,20 @@ export default function ProductOutPage() {
                     
                     if (allBatchesForBarcode.length > 0) {
                         // FEFO logic: sort by nearest expiration date
-                        const sortedBatches = allBatchesForBarcode.sort((a, b) => 
-                            new Date(a.exp_date).getTime() - new Date(b.exp_date).getTime()
-                        );
-                        const bestBatch = sortedBatches[0];
-                        setAvailableStock(bestBatch);
-                        setNewDocument(prev => ({ ...prev, sku: bestBatch.sku, expdate: bestBatch.exp_date, location: bestBatch.location }));
+                        const sortedBatches = allBatchesForBarcode
+                            .filter(batch => batch.stock > 0) // Only consider batches with stock
+                            .sort((a, b) => 
+                                new Date(a.exp_date).getTime() - new Date(b.exp_date).getTime()
+                            );
+
+                        if(sortedBatches.length > 0) {
+                            const bestBatch = sortedBatches[0];
+                            setAvailableStock(bestBatch);
+                            setNewDocument(prev => ({ ...prev, sku: bestBatch.sku, expdate: bestBatch.exp_date, location: bestBatch.location }));
+                        } else {
+                            setAvailableStock(null);
+                            setNewDocument(prev => ({ ...prev, sku: '', expdate: '', location: '' }));
+                        }
                     } else {
                         setAvailableStock(null);
                         setNewDocument(prev => ({ ...prev, sku: '', expdate: '', location: '' }));
@@ -172,12 +185,20 @@ export default function ProductOutPage() {
         
         if (status.startsWith('Issue - Order')) {
             prefix = `MP-ORD-${year}`;
-        } else if (status.startsWith('Adjusment') || status.startsWith('Adjustment')) {
+        } else if (status.startsWith('Adjustment') || status.startsWith('Adjusment')) {
             prefix = `MP-ADJ-${year}`;
         } else if (status.startsWith('Issue - Internal Transfer')) {
             prefix = `MP-TRSF-${year}`;
         } else if (status.startsWith('Issue - Return')) {
             prefix = `MP-RTN-${year}`;
+        } else if (status.startsWith('Issue - Update Expired') || status.startsWith('Receipt - Update Expired')) {
+            prefix = `MP-UPD-EXP-${year}`;
+        } else if (status.startsWith('Receipt - Outbound Return')) {
+            prefix = `MP-OTR-${year}`;
+        } else if (status === 'Receipt') {
+            prefix = `MP-RCP-${year}`;
+        } else if (status.startsWith('Issue - Putaway') || status.startsWith('Receipt - Putaway')) {
+            prefix = `MP-PTW-${year}`;
         } else {
              prefix = `MP-GEN-${year}`; // Generic prefix for others
         }
@@ -344,35 +365,56 @@ export default function ProductOutPage() {
                 if (lines.length <= 1) throw new Error("CSV is empty or has only a header.");
     
                 const header = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
-                const requiredHeaders = ['nodocument', 'sku', 'barcode', 'qty', 'status'];
+                const requiredHeaders = ['barcode', 'qty', 'status'];
                 if (!requiredHeaders.every(h => header.includes(h))) {
                     throw new Error(`Invalid CSV. Required headers: ${requiredHeaders.join(', ')}`);
                 }
     
-                const docsToUpload = lines.slice(1).map(line => {
+                const docsToUpload = await Promise.all(lines.slice(1).map(async (line) => {
                     const values = line.split(',');
                     const entry: { [key: string]: string } = {};
                     header.forEach((h, i) => entry[h] = values[i]?.trim().replace(/"/g, ''));
                     
-                    const foundStock = productInStock.find(p => p.barcode === entry.barcode);
+                    // Fetch best batch for each row
+                    const stockResponse = await fetch(`/api/master-product/batch-products/${entry.barcode}`);
+                    if (!stockResponse.ok) {
+                        console.warn(`Skipping row, barcode not found: ${entry.barcode}`);
+                        return null;
+                    }
+                    const batches: AggregatedProduct[] = await stockResponse.json();
+                     const sortedBatches = batches
+                        .filter(batch => batch.stock > 0)
+                        .sort((a, b) => new Date(a.exp_date).getTime() - new Date(b.exp_date).getTime());
+
+                    if (sortedBatches.length === 0) {
+                        console.warn(`Skipping row, no stock for barcode: ${entry.barcode}`);
+                        return null;
+                    }
+                    
+                    const bestBatch = sortedBatches[0];
                     
                     return {
-                        nodocument: entry.nodocument,
-                        sku: entry.sku,
+                        sku: bestBatch.sku,
                         barcode: entry.barcode,
-                        expdate: foundStock?.exp_date || new Date().toISOString(),
-                        location: foundStock?.location || 'N/A',
+                        expdate: bestBatch.exp_date,
+                        location: bestBatch.location,
                         qty: parseInt(entry.qty, 10),
                         status: entry.status as ProductOutStatus,
                         date: new Date().toISOString(),
                         validatedby: user.name,
                     };
-                }).filter(Boolean);
+                }));
+                
+                const validDocs = docsToUpload.filter((doc): doc is NonNullable<typeof doc> => doc !== null);
     
+                if(validDocs.length === 0) {
+                    throw new Error("No valid documents to upload from the CSV.");
+                }
+
                 const response = await fetch('/api/product-out-documents', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ documents: docsToUpload, user })
+                    body: JSON.stringify({ documents: validDocs, user })
                 });
     
                 if (!response.ok) {
@@ -382,7 +424,7 @@ export default function ProductOutPage() {
     
                 await fetchData();
                 setUploadDialogOpen(false);
-                toast({ title: "Success", description: `${docsToUpload.length} documents uploaded.` });
+                toast({ title: "Success", description: `${validDocs.length} documents uploaded.` });
     
             } catch (error: any) {
                 toast({ variant: "destructive", title: "Upload Failed", description: error.message });
@@ -422,7 +464,7 @@ export default function ProductOutPage() {
                                       <DialogHeader>
                                           <DialogTitle>Upload Goods Issue CSV</DialogTitle>
                                           <DialogDescription>
-                                              Select a CSV file to bulk upload documents. Required headers: nodocument, sku, barcode, qty, status.
+                                              Select a CSV file to bulk upload documents. Required headers: barcode, qty, status.
                                           </DialogDescription>
                                       </DialogHeader>
                                       <div className="py-4">
@@ -486,12 +528,16 @@ export default function ProductOutPage() {
                                                       <SelectItem value="Issue - Order">Issue - Order</SelectItem>
                                                       <SelectItem value="Issue - Internal Transfer">Issue - Internal Transfer</SelectItem>
                                                       <SelectItem value="Issue - Adjustment Manual">Issue - Adjustment Manual</SelectItem>
-                                                      <SelectItem value="Adjusment - Loc">Adjusment - Loc</SelectItem>
+                                                      <SelectItem value="Adjustment - Loc">Adjustment - Loc</SelectItem>
                                                       <SelectItem value="Adjustment - SKU">Adjustment - SKU</SelectItem>
                                                       <SelectItem value="Issue - Putaway">Issue - Putaway</SelectItem>
                                                       <SelectItem value="Receipt - Putaway">Receipt - Putaway</SelectItem>
                                                       <SelectItem value="Issue - Return">Issue - Return</SelectItem>
                                                       <SelectItem value="Issue - Return Putaway">Issue - Return Putaway</SelectItem>
+                                                      <SelectItem value="Issue - Update Expired">Issue - Update Expired</SelectItem>
+                                                      <SelectItem value="Receipt - Update Expired">Receipt - Update Expired</SelectItem>
+                                                      <SelectItem value="Receipt - Outbound Return">Receipt - Outbound Return</SelectItem>
+                                                      <SelectItem value="Receipt">Receipt</SelectItem>
                                                   </SelectContent>
                                               </Select>
                                           </div>
