@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -10,16 +9,72 @@ import { Loader2, ChevronLeft, ChevronRight, AlertCircle, Warehouse } from 'luci
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { differenceInMonths, isBefore } from 'date-fns';
+import { cn } from '@/lib/utils';
 
-type PutawayDocument = {
+
+type BatchProduct = {
+    id: string;
+    sku: string;
+    barcode: string;
+    brand: string;
+    exp_date: string;
     location: string;
+    stock: number;
+    status: 'Sellable' | 'Expiring' | 'Expired' | 'Out of Stock';
 };
 
+type LocationType = 'Sellable' | 'Expiring' | 'Expired' | 'Quarantine' | 'Mixed' | 'Empty';
+type LocationFilterType = 'All' | LocationType;
+
+type LocationData = {
+    name: string;
+    type: LocationType;
+};
+
+const getProductStatus = (expDate: string, stock: number): BatchProduct['status'] => {
+    if (stock <= 0) return 'Out of Stock';
+    const today = new Date();
+    const expiryDate = new Date(expDate);
+    if (isBefore(expiryDate, today)) return 'Expired';
+    const monthsUntilExpiry = differenceInMonths(expiryDate, today);
+    if (monthsUntilExpiry < 3) return 'Expiring';
+    return 'Sellable';
+};
+
+
+const getLocationType = (location: string, productsInLocation: BatchProduct[]): LocationType => {
+    if (location.toLowerCase().includes('quarantine')) {
+        return 'Quarantine';
+    }
+    const productStatuses = new Set(productsInLocation.map(p => p.status).filter(s => s !== 'Out of Stock'));
+
+    if (productStatuses.size === 0) return 'Empty';
+    if (productStatuses.size > 1) return 'Mixed';
+    if (productStatuses.has('Expired')) return 'Expired';
+    if (productStatuses.has('Expiring')) return 'Expiring';
+    if (productStatuses.has('Sellable')) return 'Sellable';
+
+    return 'Mixed'; // Fallback
+};
+
+const typeVariantMap: Record<LocationType, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+    'Sellable': 'default',
+    'Expiring': 'secondary',
+    'Expired': 'destructive',
+    'Quarantine': 'outline',
+    'Mixed': 'outline',
+    'Empty': 'outline',
+};
+
+
 export default function LocationPage() {
-    const [locations, setLocations] = useState<string[]>([]);
+    const [locationsData, setLocationsData] = useState<LocationData[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [typeFilter, setTypeFilter] = useState<LocationFilterType>('All');
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     
@@ -27,11 +82,31 @@ export default function LocationPage() {
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch('/api/putaway-documents');
-            if (!response.ok) throw new Error('Failed to fetch putaway documents');
-            const data: PutawayDocument[] = await response.json();
-            const uniqueLocations = Array.from(new Set(data.map(doc => doc.location).filter(Boolean)));
-            setLocations(uniqueLocations);
+            const response = await fetch('/api/master-product/batch-products');
+            if (!response.ok) throw new Error('Failed to fetch product data');
+            const products: Omit<BatchProduct, 'status'>[] = await response.json();
+
+            const productsWithStatus: BatchProduct[] = products.map(p => ({
+                ...p,
+                status: getProductStatus(p.exp_date, p.stock),
+            }));
+
+            const locationsMap = new Map<string, BatchProduct[]>();
+            productsWithStatus.forEach(p => {
+                if (!p.location) return;
+                if (!locationsMap.has(p.location)) {
+                    locationsMap.set(p.location, []);
+                }
+                locationsMap.get(p.location)!.push(p);
+            });
+            
+            const processedLocations: LocationData[] = Array.from(locationsMap.entries()).map(([location, products]) => ({
+                name: location,
+                type: getLocationType(location, products),
+            }));
+
+            setLocationsData(processedLocations);
+
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -44,14 +119,15 @@ export default function LocationPage() {
     }, [fetchLocations]);
 
     const filteredData = useMemo(() => {
-        return locations.filter(location =>
-            location.toLowerCase().includes(searchTerm.toLowerCase())
+        return locationsData.filter(location =>
+            (location.name.toLowerCase().includes(searchTerm.toLowerCase())) &&
+            (typeFilter === 'All' || location.type === typeFilter)
         );
-    }, [locations, searchTerm]);
+    }, [locationsData, searchTerm, typeFilter]);
     
     useEffect(() => {
         setCurrentPage(1);
-    }, [rowsPerPage, searchTerm]);
+    }, [rowsPerPage, searchTerm, typeFilter]);
 
     const totalPages = Math.ceil(filteredData.length / rowsPerPage);
     const paginatedData = filteredData.slice(
@@ -66,6 +142,19 @@ export default function LocationPage() {
     const handlePrevPage = () => {
         setCurrentPage((prev) => (prev > 1 ? prev - 1 : prev));
     };
+    
+    const kpiData = useMemo(() => {
+        return locationsData.reduce((acc, loc) => {
+            acc.total += 1;
+            if (loc.type === 'Sellable') acc.sellable += 1;
+            if (loc.type === 'Expiring') acc.expiring += 1;
+            if (loc.type === 'Expired') acc.expired += 1;
+            if (loc.type === 'Quarantine') acc.quarantine += 1;
+            if (loc.type === 'Mixed') acc.mixed += 1;
+            return acc;
+        }, { total: 0, sellable: 0, expiring: 0, expired: 0, quarantine: 0, mixed: 0 });
+    }, [locationsData]);
+
 
     return (
         <MainLayout>
@@ -79,14 +168,38 @@ export default function LocationPage() {
                     </Alert>
                 )}
                 
-                <div className="grid gap-4 md:grid-cols-3">
-                    <Card>
+                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Total Unique Locations</CardTitle>
+                            <CardTitle className="text-sm font-medium">Total Locations</CardTitle>
                             <Warehouse className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{locations.length.toLocaleString()}</div>}
+                            {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{kpiData.total.toLocaleString()}</div>}
+                        </CardContent>
+                    </Card>
+                     <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Sellable Locations</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold text-green-600">{kpiData.sellable.toLocaleString()}</div>}
+                        </CardContent>
+                    </Card>
+                     <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Expired Locations</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold text-red-600">{kpiData.expired.toLocaleString()}</div>}
+                        </CardContent>
+                    </Card>
+                     <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Mixed Locations</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{kpiData.mixed.toLocaleString()}</div>}
                         </CardContent>
                     </Card>
                 </div>
@@ -96,9 +209,23 @@ export default function LocationPage() {
                         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                             <div className="flex-1">
                                 <CardTitle>Registered Locations</CardTitle>
-                                <CardDescription>A list of all unique storage locations.</CardDescription>
+                                <CardDescription>A list of all unique storage locations and their status type.</CardDescription>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex w-full md:w-auto items-center gap-2">
+                                <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as LocationFilterType)}>
+                                    <SelectTrigger className="w-full md:w-[180px]">
+                                        <SelectValue placeholder="Filter by type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="All">All Types</SelectItem>
+                                        <SelectItem value="Sellable">Sellable</SelectItem>
+                                        <SelectItem value="Expiring">Expiring</SelectItem>
+                                        <SelectItem value="Expired">Expired</SelectItem>
+                                        <SelectItem value="Quarantine">Quarantine</SelectItem>
+                                        <SelectItem value="Mixed">Mixed</SelectItem>
+                                        <SelectItem value="Empty">Empty</SelectItem>
+                                    </SelectContent>
+                                </Select>
                                 <Input 
                                     placeholder="Search location..." 
                                     value={searchTerm}
@@ -114,24 +241,35 @@ export default function LocationPage() {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Location Name</TableHead>
+                                        <TableHead>Location Type</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {loading ? (
                                         <TableRow>
-                                            <TableCell colSpan={1} className="h-24 text-center">
+                                            <TableCell colSpan={2} className="h-24 text-center">
                                                 <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                                             </TableCell>
                                         </TableRow>
                                     ) : paginatedData.length > 0 ? (
-                                        paginatedData.map((location, index) => (
-                                            <TableRow key={index}>
-                                                <TableCell className="font-medium">{location}</TableCell>
+                                        paginatedData.map((location) => (
+                                            <TableRow key={location.name}>
+                                                <TableCell className="font-medium">{location.name}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant={typeVariantMap[location.type]}
+                                                        className={cn({
+                                                            'bg-green-500 hover:bg-green-500/80 text-white': location.type === 'Sellable',
+                                                            'bg-yellow-500 hover:bg-yellow-500/80 text-black': location.type === 'Expiring',
+                                                        })}
+                                                    >
+                                                        {location.type}
+                                                    </Badge>
+                                                </TableCell>
                                             </TableRow>
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={1} className="h-24 text-center text-muted-foreground">
+                                            <TableCell colSpan={2} className="h-24 text-center text-muted-foreground">
                                                 No locations found.
                                             </TableCell>
                                         </TableRow>
