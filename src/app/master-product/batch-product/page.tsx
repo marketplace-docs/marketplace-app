@@ -6,13 +6,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { format, differenceInMonths, isBefore } from 'date-fns';
-import { Loader2, ChevronLeft, ChevronRight, PackageSearch, AlertCircle, ShoppingCart, Clock, Ban } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight, PackageSearch, AlertCircle, ShoppingCart, Clock, Ban, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import type { BatchProduct } from '@/types/batch-product';
 import { cn } from '@/lib/utils';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { useAuth } from '@/hooks/use-auth';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
+
 
 type ProductStatus = 'All' | 'Sellable' | 'Expiring' | 'Expired' | 'Out of Stock';
 
@@ -64,6 +68,14 @@ export default function BatchProductPage() {
     const [statusFilter, setStatusFilter] = useState<ProductStatus>('All');
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
+    const { user } = useAuth();
+    const { toast } = useToast();
+
+    const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [selectedBatchToDelete, setSelectedBatchToDelete] = useState<BatchProduct | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const isSuperAdmin = user?.role === 'Super Admin';
 
     const fetchInventoryData = useCallback(async () => {
         setLoading(true);
@@ -131,6 +143,40 @@ export default function BatchProductPage() {
     const handlePrevPage = () => {
         setCurrentPage((prev) => (prev > 1 ? prev - 1 : prev));
     };
+
+    const handleOpenDeleteDialog = (batch: BatchProduct) => {
+        setSelectedBatchToDelete(batch);
+        setDeleteDialogOpen(true);
+    };
+
+    const handleDeleteAnomaly = async () => {
+        if (!selectedBatchToDelete || !user || !isSuperAdmin) return;
+
+        setIsSubmitting(true);
+        try {
+            const response = await fetch(`/api/master-product/batch-products/delete-anomaly`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    batch: selectedBatchToDelete,
+                    user,
+                }),
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to delete anomaly');
+            }
+            toast({ title: "Success", description: "Stock anomaly has been resolved." });
+            await fetchInventoryData();
+            setDeleteDialogOpen(false);
+
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Error', description: error.message });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
 
     return (
         <MainLayout>
@@ -200,7 +246,7 @@ export default function BatchProductPage() {
                                         </TableRow>
                                     ) : paginatedData.length > 0 ? (
                                         paginatedData.map((product, index) => (
-                                            <TableRow key={`${product.barcode}-${index}`}>
+                                            <TableRow key={`${product.id}-${product.location}-${product.exp_date}`}>
                                                 <TableCell className="font-medium">{product.sku}</TableCell>
                                                 <TableCell>{product.barcode}</TableCell>
                                                 <TableCell>{product.brand}</TableCell>
@@ -212,14 +258,26 @@ export default function BatchProductPage() {
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Badge variant={statusVariantMap[product.status]}
-                                                        className={cn({
-                                                            'bg-green-500 hover:bg-green-500/80': product.status === 'Sellable',
-                                                            'bg-yellow-500 hover:bg-yellow-500/80 text-black': product.status === 'Expiring',
-                                                        })}
-                                                    >
-                                                        {product.status}
-                                                    </Badge>
+                                                    <div className="flex items-center gap-2">
+                                                        <Badge variant={statusVariantMap[product.status]}
+                                                            className={cn({
+                                                                'bg-green-500 hover:bg-green-500/80': product.status === 'Sellable',
+                                                                'bg-yellow-500 hover:bg-yellow-500/80 text-black': product.status === 'Expiring',
+                                                            })}
+                                                        >
+                                                            {product.status}
+                                                        </Badge>
+                                                        {isSuperAdmin && product.stock < 0 && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-6 w-6 text-destructive hover:text-destructive/90"
+                                                                onClick={() => handleOpenDeleteDialog(product)}
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        )}
+                                                    </div>
                                                 </TableCell>
                                             </TableRow>
                                         ))
@@ -280,6 +338,26 @@ export default function BatchProductPage() {
                     </CardContent>
                 </Card>
             </div>
+            
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Delete Stock Anomaly?</DialogTitle>
+                        <DialogDescription>
+                            This will delete the outgoing transaction documents that caused the negative stock for barcode <span className="font-bold">{selectedBatchToDelete?.barcode}</span> at location <span className="font-bold">{selectedBatchToDelete?.location}</span>. This action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+                        <Button variant="destructive" onClick={handleDeleteAnomaly} disabled={isSubmitting}>
+                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Delete Anomaly
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
         </MainLayout>
     );
 }
