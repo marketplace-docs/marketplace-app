@@ -3,12 +3,14 @@ import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 import { logActivity } from '@/lib/logger';
 
+const UPDATE_ROLES = ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin'];
+
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const { id } = params;
   const body = await request.json();
   const { marketplace_name, store_name, platform, userName, userEmail, userRole } = body;
 
-  if (userRole !== 'Super Admin') {
+  if (!userRole || !UPDATE_ROLES.includes(userRole)) {
     return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
   }
 

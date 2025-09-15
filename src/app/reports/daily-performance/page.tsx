@@ -95,6 +95,10 @@ export default function DailyPerformancePage() {
     });
     const [newEntryDate, setNewEntryDate] = useState<Date | undefined>(new Date());
 
+    const canCreate = user?.role && ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin', 'Staff'].includes(user.role);
+    const canUpdate = user?.role && ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin'].includes(user.role);
+    const canDelete = user?.role === 'Super Admin';
+
     const fetchPerformanceData = useCallback(async () => {
         setLoading(true);
         setError(null);
@@ -230,7 +234,7 @@ export default function DailyPerformancePage() {
                 const response = await fetch('/api/daily-performance', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ entries: newEntries, user: { name: user.name, email: user.email } })
+                    body: JSON.stringify({ entries: newEntries, user })
                 });
                 
                 if (!response.ok) {
@@ -278,7 +282,7 @@ export default function DailyPerformancePage() {
               const response = await fetch('/api/daily-performance', {
                   method: 'PATCH',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ updates, user: { name: user.name, email: user.email } })
+                  body: JSON.stringify({ updates, user })
               });
 
               if (!response.ok) throw new Error('Failed to save changes.');
@@ -338,7 +342,7 @@ export default function DailyPerformancePage() {
             const response = await fetch('/api/daily-performance', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ entries: [newPerformanceEntry], user: { name: user.name, email: user.email } })
+                body: JSON.stringify({ entries: [newPerformanceEntry], user })
             });
 
             if (!response.ok) {
@@ -378,7 +382,8 @@ export default function DailyPerformancePage() {
                 method: 'DELETE',
                 headers: {
                   'X-User-Name': user.name,
-                  'X-User-Email': user.email
+                  'X-User-Email': user.email,
+                  'X-User-Role': user.role
                 }
             });
             if (!response.ok) throw new Error('Failed to delete entry');
@@ -401,6 +406,8 @@ export default function DailyPerformancePage() {
                 <div className="flex justify-between items-center">
                     <h1 className="text-2xl font-bold">Performance Report</h1>
                     <div className="flex gap-2">
+                        {canCreate && (
+                        <>
                         <Dialog open={isUploadDialogOpen} onOpenChange={setUploadDialogOpen}>
                             <DialogTrigger asChild>
                                 <Button variant="outline" disabled={isSubmitting}><Upload className="mr-2 h-4 w-4" />Upload</Button>
@@ -496,6 +503,8 @@ export default function DailyPerformancePage() {
                                 </DialogFooter>
                             </DialogContent>
                         </Dialog>
+                        </>
+                        )}
                         <Button onClick={handleExport}>
                             <Download className="mr-2 h-4 w-4" />
                             Export
@@ -518,10 +527,12 @@ export default function DailyPerformancePage() {
                                 <CardTitle>Performance Report</CardTitle>
                                 <CardDescription>Detailed daily performance metrics of team members.</CardDescription>
                             </div>
+                             {canUpdate && (
                              <Button variant="outline" onClick={handleEditToggle} disabled={isSubmitting}>
                                 {isEditing ? (isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />) : <Pencil className="mr-2 h-4 w-4" />}
                                 {isEditing ? 'Save' : 'Edit'}
                             </Button>
+                             )}
                         </div>
                          <div className="flex items-center gap-4 pt-4">
                             <Popover>
@@ -587,7 +598,7 @@ export default function DailyPerformancePage() {
                                         <TableHead>Task Perf.</TableHead>
                                         <TableHead>Items Perf.</TableHead>
                                         <TableHead className='text-center'>Result</TableHead>
-                                        <TableHead className='text-right'>Actions</TableHead>
+                                        {canDelete && <TableHead className='text-right'>Actions</TableHead>}
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -604,7 +615,7 @@ export default function DailyPerformancePage() {
                                                 <TableCell>{item.month}</TableCell>
                                                 <TableCell className="font-medium">{item.name}</TableCell>
                                                 <TableCell>
-                                                    {isEditing ? (
+                                                    {isEditing && canUpdate ? (
                                                         <Input 
                                                           type="number"
                                                           value={editedItems[item.id]?.task_daily ?? item.task_daily}
@@ -614,7 +625,7 @@ export default function DailyPerformancePage() {
                                                     ) : item.task_daily.toLocaleString()}
                                                 </TableCell>
                                                 <TableCell>
-                                                    {isEditing ? (
+                                                    {isEditing && canUpdate ? (
                                                         <Input 
                                                           type="number"
                                                           value={editedItems[item.id]?.total_items ?? item.total_items}
@@ -630,12 +641,14 @@ export default function DailyPerformancePage() {
                                                 <TableCell className="text-center">
                                                     <ResultBadge result={item.result} />
                                                 </TableCell>
+                                                {canDelete && (
                                                 <TableCell className="text-right">
                                                     <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" onClick={() => handleOpenDeleteDialog(item)}>
                                                         <Trash2 className="h-4 w-4" />
                                                         <span className="sr-only">Delete</span>
                                                     </Button>
                                                 </TableCell>
+                                                )}
                                             </TableRow>
                                         ))
                                     ) : (

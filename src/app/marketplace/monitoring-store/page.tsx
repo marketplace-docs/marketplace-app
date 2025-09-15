@@ -47,7 +47,9 @@ export default function MonitoringStorePage() {
   const { toast } = useToast();
   const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const isSuperAdmin = user?.role === 'Super Admin';
+  
+  const canUpdate = user?.role && ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin'].includes(user.role);
+  const canDelete = user?.role === 'Super Admin';
 
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -116,7 +118,7 @@ export default function MonitoringStorePage() {
       const response = await fetch(`/api/marketplace-stores/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ marketplace_name, store_name, platform, userName: user.name, userEmail: user.email }),
+        body: JSON.stringify({ marketplace_name, store_name, platform, userName: user.name, userEmail: user.email, userRole: user.role }),
       });
 
       if (!response.ok) {
@@ -142,7 +144,8 @@ export default function MonitoringStorePage() {
             method: 'DELETE',
             headers: {
               'X-User-Name': user.name,
-              'X-User-Email': user.email
+              'X-User-Email': user.email,
+              'X-User-Role': user.role
             }
         });
 
@@ -223,7 +226,7 @@ export default function MonitoringStorePage() {
              const response = await fetch('/api/marketplace-stores', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ stores: newStores, user: { name: user.name, email: user.email } }),
+                body: JSON.stringify({ stores: newStores, user }),
             });
 
             if (!response.ok) {
@@ -270,7 +273,7 @@ export default function MonitoringStorePage() {
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="flex-1 md:flex-auto md:w-auto"
                 />
-                 {isSuperAdmin && (
+                 {canUpdate && (
                    <>
                     <Dialog open={isUploadDialogOpen} onOpenChange={setUploadDialogOpen}>
                         <DialogTrigger asChild>
@@ -311,13 +314,13 @@ export default function MonitoringStorePage() {
                     <TableHead>Store Name</TableHead>
                     <TableHead>Platform</TableHead>
                     <TableHead>Created At</TableHead>
-                    {isSuperAdmin && <TableHead className="text-right">Actions</TableHead>}
+                    {(canUpdate || canDelete) && <TableHead className="text-right">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                        <TableCell colSpan={isSuperAdmin ? 5 : 4} className="h-24 text-center">
+                        <TableCell colSpan={5} className="h-24 text-center">
                             <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                         </TableCell>
                     </TableRow>
@@ -328,17 +331,21 @@ export default function MonitoringStorePage() {
                         <TableCell>{store.store_name}</TableCell>
                         <TableCell>{store.platform}</TableCell>
                         <TableCell>{format(new Date(store.created_at), "eee, dd/MMM/yyyy HH:mm")}</TableCell>
-                        {isSuperAdmin && (
+                        {(canUpdate || canDelete) && (
                             <TableCell className="text-right">
                                 <div className="flex items-center justify-end gap-2">
+                                    {canUpdate && (
                                     <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(store)}>
                                         <Pencil className="h-4 w-4" />
                                         <span className="sr-only">Edit</span>
                                     </Button>
+                                    )}
+                                    {canDelete && (
                                     <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" onClick={() => handleOpenDeleteDialog(store)}>
                                         <Trash2 className="h-4 w-4" />
                                         <span className="sr-only">Delete</span>
                                     </Button>
+                                    )}
                                 </div>
                             </TableCell>
                         )}
@@ -347,7 +354,7 @@ export default function MonitoringStorePage() {
                   ) : (
                     <TableRow>
                       <TableCell
-                        colSpan={isSuperAdmin ? 5 : 4}
+                        colSpan={5}
                         className="h-24 text-center text-muted-foreground"
                       >
                         No stores found. Go to Create to add one.
@@ -455,5 +462,3 @@ export default function MonitoringStorePage() {
     </MainLayout>
   );
 }
-
-    

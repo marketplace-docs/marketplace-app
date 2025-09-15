@@ -4,6 +4,8 @@ import { NextResponse } from 'next/server';
 import { format } from 'date-fns';
 import { logActivity } from '@/lib/logger';
 
+const ALLOWED_ROLES = ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin', 'Staff'];
+
 // Helper function to calculate performance metrics
 const calculateMetrics = (entry: { task_daily: number; total_items: number; }) => {
     const target = 400; // Mock target, adjust as needed
@@ -47,7 +49,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
     const { entries, user } = await request.json();
 
-    if (user?.role !== 'Super Admin') {
+    if (!user?.role || !ALLOWED_ROLES.includes(user.role)) {
         return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
     }
 
@@ -95,7 +97,8 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
     const { updates, user } = await request.json();
 
-    if (user?.role !== 'Super Admin') {
+    const UPDATE_ROLES = ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin'];
+    if (!user?.role || !UPDATE_ROLES.includes(user.role)) {
         return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
     }
 

@@ -92,7 +92,9 @@ export default function BacklogPage() {
   const [isUploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<BacklogItem | null>(null);
   const { user } = useAuth();
-  const isSuperAdmin = user?.role === 'Super Admin';
+  
+  const canUpdate = user?.role && ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin'].includes(user.role);
+  const canDelete = user?.role === 'Super Admin';
 
 
   const fetchBacklogItems = useCallback(async () => {
@@ -211,7 +213,7 @@ export default function BacklogPage() {
         const response = await fetch('/api/backlog-items', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ items: newItems, user: { name: user.name, email: user.email } })
+          body: JSON.stringify({ items: newItems, user })
         });
 
         if (!response.ok) {
@@ -278,7 +280,7 @@ export default function BacklogPage() {
               fetch(`/api/backlog-items/${id}`, {
                   method: 'PATCH',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ ...changes, userName: user.name, userEmail: user.email })
+                  body: JSON.stringify({ ...changes, userName: user.name, userEmail: user.email, userRole: user.role })
               })
             );
             const responses = await Promise.all(updatePromises);
@@ -321,7 +323,8 @@ export default function BacklogPage() {
           method: 'DELETE',
           headers: {
             'X-User-Name': user.name,
-            'X-User-Email': user.email
+            'X-User-Email': user.email,
+            'X-User-Role': user.role
           }
         });
         if (!response.ok) throw new Error("Failed to delete item.");
@@ -342,7 +345,7 @@ export default function BacklogPage() {
       <div className="w-full space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold">Backlog Marketplace</h1>
-          {isSuperAdmin && (
+          {canUpdate && (
             <div className="flex items-center gap-2">
                 <Dialog open={isUploadDialogOpen} onOpenChange={setUploadDialogOpen}>
                     <DialogTrigger asChild>
@@ -402,13 +405,13 @@ export default function BacklogPage() {
                             <TableHead>STORE NAME</TableHead>
                             <TableHead>PAYMENT ACCEPTED</TableHead>
                             <TableHead>MARKETPLACE</TableHead>
-                            {isSuperAdmin && <TableHead className="text-right">ACTIONS</TableHead>}
+                            {(canUpdate || canDelete) && <TableHead className="text-right">ACTIONS</TableHead>}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={isSuperAdmin ? 4 : 3} className="h-24 text-center">
+                                    <TableCell colSpan={4} className="h-24 text-center">
                                         <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                                     </TableCell>
                                 </TableRow>
@@ -416,7 +419,7 @@ export default function BacklogPage() {
                             paginatedItems.map((item) => (
                                 <TableRow key={item.id}>
                                 <TableCell className="font-medium">
-                                  {isEditing && isSuperAdmin ? (
+                                  {isEditing && canUpdate ? (
                                     <Input 
                                       type="text"
                                       value={editedItems[item.id]?.store_name ?? item.store_name} 
@@ -428,7 +431,7 @@ export default function BacklogPage() {
                                   )}
                                 </TableCell>
                                 <TableCell>
-                                  {isEditing && isSuperAdmin ? (
+                                  {isEditing && canUpdate ? (
                                     <Input 
                                       type="number"
                                       value={editedItems[item.id]?.payment_accepted ?? item.payment_accepted} 
@@ -440,7 +443,7 @@ export default function BacklogPage() {
                                   )}
                                 </TableCell>
                                 <TableCell>
-                                {isEditing && isSuperAdmin ? (
+                                {isEditing && canUpdate ? (
                                     <Input 
                                       type="text"
                                       value={editedItems[item.id]?.marketplace ?? item.marketplace} 
@@ -451,19 +454,21 @@ export default function BacklogPage() {
                                     item.marketplace
                                   )}
                                 </TableCell>
-                                {isSuperAdmin && (
+                                {(canUpdate || canDelete) && (
                                     <TableCell className="text-right">
+                                      {canDelete && (
                                         <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" onClick={() => handleOpenDeleteDialog(item)}>
                                             <Trash2 className="h-4 w-4" />
                                             <span className="sr-only">Delete</span>
                                         </Button>
+                                      )}
                                     </TableCell>
                                 )}
                                 </TableRow>
                             ))
                             ) : (
                             <TableRow>
-                                <TableCell colSpan={isSuperAdmin ? 4 : 3} className="h-24 text-center text-muted-foreground">
+                                <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
                                 No backlog data available.
                                 </TableCell>
                             </TableRow>
@@ -650,5 +655,3 @@ export default function BacklogPage() {
     </MainLayout>
   );
 }
-
-    

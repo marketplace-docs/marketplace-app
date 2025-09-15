@@ -54,8 +54,10 @@ export default function MonitoringReturnPage() {
   const { toast } = useToast();
   const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const isSuperAdmin = user?.role === 'Super Admin';
-
+  
+  const canUpdate = user?.role && ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin'].includes(user.role);
+  const canDelete = user?.role === 'Super Admin';
+  const canCreate = user?.role === 'Super Admin';
 
   const [searchDocument, setSearchDocument] = useState('');
   const [searchBarcode, setSearchBarcode] = useState('');
@@ -124,7 +126,7 @@ export default function MonitoringReturnPage() {
       const response = await fetch(`/api/return-documents/${selectedDoc.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...selectedDoc, userName: user.name, userEmail: user.email })
+        body: JSON.stringify({ ...selectedDoc, userRole: user.role })
       });
       if (!response.ok) throw new Error('Failed to update document');
       
@@ -148,6 +150,7 @@ export default function MonitoringReturnPage() {
         headers: {
           'X-User-Name': user.name,
           'X-User-Email': user.email,
+          'X-User-Role': user.role,
         }
       });
       if (!response.ok) throw new Error('Failed to delete document');
@@ -237,7 +240,7 @@ export default function MonitoringReturnPage() {
         const response = await fetch('/api/return-documents', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ documents: newDocs, user: { name: user.name, email: user.email } }),
+          body: JSON.stringify({ documents: newDocs, user }),
         });
 
         if (!response.ok) {
@@ -288,7 +291,7 @@ export default function MonitoringReturnPage() {
                     onChange={(e) => setSearchBarcode(e.target.value)}
                     className="flex-1 md:flex-auto md:w-auto"
                 />
-                {isSuperAdmin && (
+                {canCreate && (
                   <>
                     <Dialog open={isUploadDialogOpen} onOpenChange={setUploadDialogOpen}>
                         <DialogTrigger asChild>
@@ -333,13 +336,13 @@ export default function MonitoringReturnPage() {
                     <TableHead>Received By</TableHead>
                     <TableHead>QTY</TableHead>
                     <TableHead>Status</TableHead>
-                    {isSuperAdmin && <TableHead className="text-right">Actions</TableHead>}
+                    {(canUpdate || canDelete) && <TableHead className="text-right">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                      <TableRow>
-                        <TableCell colSpan={isSuperAdmin ? 10 : 9} className="h-24 text-center">
+                        <TableCell colSpan={10} className="h-24 text-center">
                             <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                         </TableCell>
                     </TableRow>
@@ -357,17 +360,21 @@ export default function MonitoringReturnPage() {
                         <TableCell>
                           <Badge variant={statusVariantMap[doc.status] || 'default'}>{doc.status}</Badge>
                         </TableCell>
-                        {isSuperAdmin && (
+                        {(canUpdate || canDelete) && (
                             <TableCell className="text-right">
                                 <div className="flex items-center justify-end gap-2">
+                                  {canUpdate && (
                                     <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(doc)}>
                                         <Pencil className="h-4 w-4" />
                                         <span className="sr-only">Edit</span>
                                     </Button>
+                                  )}
+                                  {canDelete && (
                                     <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" onClick={() => handleOpenDeleteDialog(doc)}>
                                         <Trash2 className="h-4 w-4" />
                                         <span className="sr-only">Delete</span>
                                     </Button>
+                                  )}
                                 </div>
                             </TableCell>
                         )}
@@ -376,7 +383,7 @@ export default function MonitoringReturnPage() {
                   ) : (
                     <TableRow>
                       <TableCell
-                        colSpan={isSuperAdmin ? 10 : 9}
+                        colSpan={10}
                         className="h-24 text-center text-muted-foreground"
                       >
                         No documents found.
@@ -518,5 +525,3 @@ export default function MonitoringReturnPage() {
     </MainLayout>
   );
 }
-
-    

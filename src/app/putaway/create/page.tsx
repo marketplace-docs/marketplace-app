@@ -54,6 +54,8 @@ export default function CreatePutawayPage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const { toast } = useToast();
   const router = useRouter();
+
+  const canCreate = user?.role === 'Super Admin';
   
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement>
@@ -90,7 +92,7 @@ export default function CreatePutawayPage() {
             body: JSON.stringify({
                 ...newDocument,
                 qty: parseInt(newDocument.qty, 10),
-                user: { name: user.name, email: user.email }
+                user: { name: user.name, email: user.email, role: user.role }
             })
         });
 
@@ -234,10 +236,12 @@ export default function CreatePutawayPage() {
                 </div>
               </div>
               <div className="flex justify-end pt-4 space-x-2">
+                {canCreate && (
                 <Button type="submit" disabled={isSubmitting}>
                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                    Submit
                 </Button>
+                )}
               </div>
             </form>
           </CardContent>

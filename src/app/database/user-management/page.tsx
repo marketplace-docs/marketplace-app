@@ -78,7 +78,11 @@ export default function DatabaseUserPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10); 
 
-    const isSuperAdmin = currentUser?.role === 'Super Admin';
+    const canAddUser = currentUser?.role && ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin', 'Staff'].includes(currentUser.role);
+    const canEditUser = currentUser?.role && ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin', 'Staff'].includes(currentUser.role);
+    const canDeleteUser = currentUser?.role === 'Super Admin';
+    const isSuperAdminForRoleChange = currentUser?.role === 'Super Admin';
+
 
     const fetchUsers = useCallback(async () => {
         setLoading(true);
@@ -220,7 +224,7 @@ export default function DatabaseUserPage() {
         <div className="w-full">
             <div className="flex justify-between items-center mb-6">
               <h1 className="text-3xl font-bold">User Management</h1>
-               {isSuperAdmin && (
+               {canAddUser && (
                 <Dialog open={isAddDialogOpen} onOpenChange={setAddDialogOpen}>
                       <DialogTrigger asChild>
                           <Button>
@@ -255,7 +259,7 @@ export default function DatabaseUserPage() {
                               </div>
                               <div className="grid grid-cols-4 items-center gap-4">
                                   <Label htmlFor="new-role" className="text-right">Role</Label>
-                                   <Select value={newUser.role} onValueChange={(value: string) => setNewUser({ ...newUser, role: value })} disabled={!isSuperAdmin}>
+                                   <Select value={newUser.role} onValueChange={(value: string) => setNewUser({ ...newUser, role: value })} disabled={!isSuperAdminForRoleChange}>
                                       <SelectTrigger className="col-span-3">
                                           <SelectValue placeholder="Select Role" />
                                       </SelectTrigger>
@@ -301,13 +305,13 @@ export default function DatabaseUserPage() {
                                 <TableHead>Email</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead>Role</TableHead>
-                                {isSuperAdmin && <TableHead className="text-right">Actions</TableHead>}
+                                {(canEditUser || canDeleteUser) && <TableHead className="text-right">Actions</TableHead>}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={isSuperAdmin ? 5 : 4} className="h-24 text-center">
+                                    <TableCell colSpan={5} className="h-24 text-center">
                                         <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                                     </TableCell>
                                 </TableRow>
@@ -320,17 +324,21 @@ export default function DatabaseUserPage() {
                                             <Badge variant={statusVariantMap[user.status] || 'default'}>{user.status}</Badge>
                                         </TableCell>
                                         <TableCell>{user.role}</TableCell>
-                                        {isSuperAdmin && (
+                                        {(canEditUser || canDeleteUser) && (
                                             <TableCell className="text-right">
                                                 <div className="flex items-center justify-end gap-2">
-                                                    <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(user)}>
-                                                        <Pencil className="h-4 w-4" />
-                                                        <span className="sr-only">Edit</span>
-                                                    </Button>
-                                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" onClick={() => handleOpenDeleteDialog(user)}>
-                                                        <Trash2 className="h-4 w-4" />
-                                                        <span className="sr-only">Delete</span>
-                                                    </Button>
+                                                    {canEditUser && (
+                                                        <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(user)}>
+                                                            <Pencil className="h-4 w-4" />
+                                                            <span className="sr-only">Edit</span>
+                                                        </Button>
+                                                    )}
+                                                    {canDeleteUser && (
+                                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" onClick={() => handleOpenDeleteDialog(user)}>
+                                                            <Trash2 className="h-4 w-4" />
+                                                            <span className="sr-only">Delete</span>
+                                                        </Button>
+                                                    )}
                                                 </div>
                                             </TableCell>
                                         )}
@@ -338,7 +346,7 @@ export default function DatabaseUserPage() {
                                 ))
                             ) : (
                                  <TableRow>
-                                    <TableCell colSpan={isSuperAdmin ? 5 : 4} className="h-24 text-center text-muted-foreground">
+                                    <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                                         No users found.
                                     </TableCell>
                                 </TableRow>
@@ -427,7 +435,7 @@ export default function DatabaseUserPage() {
                             </div>
                             <div className="grid grid-cols-4 items-center gap-4">
                                 <Label htmlFor="role" className="text-right">Role</Label>
-                                 <Select value={selectedUser.role} onValueChange={(value) => setSelectedUser({ ...selectedUser, role: value })} disabled={!isSuperAdmin}>
+                                 <Select value={selectedUser.role} onValueChange={(value) => setSelectedUser({ ...selectedUser, role: value })} disabled={!isSuperAdminForRoleChange}>
                                     <SelectTrigger className="col-span-3">
                                         <SelectValue placeholder="Select Role" />
                                     </SelectTrigger>
@@ -476,7 +484,3 @@ export default function DatabaseUserPage() {
       </MainLayout>
     )
 }
-
-    
-
-    

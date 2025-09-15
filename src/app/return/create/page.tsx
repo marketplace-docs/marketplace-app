@@ -45,6 +45,7 @@ export default function CreateReturnPage() {
   const { toast } = useToast();
   const router = useRouter();
   const { user } = useAuth();
+  const canCreate = user?.role === 'Super Admin';
 
 
   const handleInputChange = (
@@ -84,8 +85,7 @@ export default function CreateReturnPage() {
         body: JSON.stringify({
             ...newDocument,
             qty: parseInt(newDocument.qty, 10),
-            userName: user.name,
-            userEmail: user.email,
+            user,
         }),
       });
 
@@ -220,10 +220,12 @@ export default function CreateReturnPage() {
                 </div>
               </div>
               <div className="flex justify-end pt-4 space-x-2">
+                {canCreate && (
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Submit
                 </Button>
+                )}
               </div>
             </form>
           </CardContent>

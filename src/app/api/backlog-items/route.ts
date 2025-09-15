@@ -19,7 +19,8 @@ export async function GET() {
 export async function POST(request: Request) {
   const { items, user } = await request.json();
   
-  if (user?.role !== 'Super Admin') {
+  const ALLOWED_ROLES = ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin'];
+  if (!user?.role || !ALLOWED_ROLES.includes(user.role)) {
     return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
   }
 

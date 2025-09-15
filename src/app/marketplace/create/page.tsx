@@ -32,6 +32,8 @@ export default function CreateMarketplacePage() {
   const router = useRouter();
   const { user } = useAuth();
 
+  const canCreate = user?.role && ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin'].includes(user.role);
+
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -59,7 +61,7 @@ export default function CreateMarketplacePage() {
       const response = await fetch('/api/marketplace-stores', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...newStore, userName: user.name, userEmail: user.email }),
+        body: JSON.stringify({ ...newStore, user }),
       });
 
       if (!response.ok) {
@@ -129,10 +131,12 @@ export default function CreateMarketplacePage() {
                 />
               </div>
               <div className="flex justify-end pt-4">
+                {canCreate && (
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Submit
                 </Button>
+                )}
               </div>
             </form>
           </CardContent>
