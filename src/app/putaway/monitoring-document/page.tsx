@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
@@ -146,7 +147,7 @@ export default function MonitoringPutawayPage() {
       const response = await fetch(`/api/putaway-documents/${selectedDoc.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...selectedDoc, userName: user.name, userEmail: user.email })
+        body: JSON.stringify({ ...selectedDoc, userName: user.name, userEmail: user.email, userRole: user.role })
       });
       if (!response.ok) throw new Error('Failed to update document');
 
@@ -167,7 +168,7 @@ export default function MonitoringPutawayPage() {
     try {
       const response = await fetch(`/api/putaway-documents/${selectedDoc.id}`, {
         method: 'DELETE',
-        headers: { 'X-User-Name': user.name, 'X-User-Email': user.email }
+        headers: { 'X-User-Name': user.name, 'X-User-Email': user.email, 'X-User-Role': user.role }
       });
       if (!response.ok) throw new Error('Failed to delete document');
 
@@ -252,7 +253,7 @@ export default function MonitoringPutawayPage() {
         const response = await fetch('/api/putaway-documents', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ documents: newDocs, user: { name: user.name, email: user.email } })
+          body: JSON.stringify({ documents: newDocs, user: { name: user.name, email: user.email, role: user.role } })
         });
         if (!response.ok) {
             const errorData = await response.json();
