@@ -27,7 +27,7 @@ const featureDescriptions: FeatureDescription[] = [
         description: "Modul untuk mengelola tugas-tugas administratif dan sumber daya manusia harian di gudang.",
         children: [
             { label: "Create", description: "Membuat data manpower baru untuk pekerjaan spesifik." },
-            { label: "Monitoring Manpower", description: "Melihat, mengedit, dan menghapus data manpower yang telah dibuat." },
+            { label: "Monitoring Manpower", description: "Melihat, mengedit, dan menghapus data manpower yang telah dibuat. Hanya Super Admin yang dapat melakukan modifikasi." },
             { label: "Task", description: "Menampilkan daftar tanggung jawab umum untuk peran Admin." },
         ]
     },
@@ -36,9 +36,9 @@ const featureDescriptions: FeatureDescription[] = [
         icon: NAV_LINKS.find(l => l.label === "Putaway")!.icon,
         description: "Manajemen proses penerimaan dan penempatan barang ke lokasi penyimpanan di gudang.",
         children: [
-            { label: "Create", description: "Mencatat dokumen penerimaan barang baru secara manual." },
-            { label: "Monitoring Document", description: "Melihat, mengedit, dan mengelola semua dokumen penerimaan barang, termasuk unggah massal via CSV." },
-            { label: "Update Expired", description: "Memperbarui lokasi, tanggal kedaluwarsa, atau memecah stok (split batch) untuk produk yang sudah ada." },
+            { label: "Create", description: "Mencatat dokumen penerimaan barang baru secara manual (hanya Super Admin)." },
+            { label: "Monitoring Document", description: "Melihat, mengedit, mengelola, dan mengunggah massal semua dokumen penerimaan barang (hanya Super Admin)." },
+            { label: "Update Expired", description: "Memperbarui lokasi, tanggal kedaluwarsa, atau memecah stok (split batch) untuk produk yang sudah ada (hanya Super Admin)." },
             { label: "Task", description: "Menampilkan daftar tanggung jawab umum untuk proses Putaway." },
         ]
     },
@@ -47,8 +47,8 @@ const featureDescriptions: FeatureDescription[] = [
         icon: NAV_LINKS.find(l => l.label === "Return")!.icon,
         description: "Mengelola proses pengembalian barang dari pelanggan atau ekspedisi.",
         children: [
-            { label: "Create", description: "Mencatat dokumen retur baru." },
-            { label: "Monitoring Document", description: "Melihat dan mengelola semua dokumen retur yang tercatat." },
+            { label: "Create", description: "Mencatat dokumen retur baru (hanya Super Admin)." },
+            { label: "Monitoring Document", description: "Melihat dan mengelola semua dokumen retur yang tercatat (hanya Super Admin)." },
             { label: "Task", description: "Menampilkan daftar tanggung jawab umum untuk proses penanganan retur." },
         ]
     },
@@ -57,9 +57,9 @@ const featureDescriptions: FeatureDescription[] = [
         icon: NAV_LINKS.find(l => l.label === "Master Product")!.icon,
         description: "Pusat data untuk semua informasi terkait produk dan pergerakan stok.",
         children: [
-            { label: "Batch Product", description: "Menampilkan data stok terkini yang diagregasi per batch (berdasarkan lokasi & exp date)." },
+            { label: "Batch Product", description: "Menampilkan data stok terkini yang diagregasi per batch (berdasarkan lokasi & tanggal kedaluwarsa)." },
             { label: "Product In", description: "Menampilkan total stok masuk (goods receipt) yang diagregasi per SKU." },
-            { label: "Product Out", description: "Mencatat dan menampilkan semua data barang keluar (goods issue)." },
+            { label: "Product Out", description: "Mencatat dan menampilkan semua data barang keluar (goods issue). Pencatatan hanya bisa oleh Super Admin." },
             { label: "Stock Log", description: "Menampilkan riwayat lengkap semua pergerakan stok (masuk, keluar, dan pembaruan internal)." },
         ]
     },
@@ -68,8 +68,8 @@ const featureDescriptions: FeatureDescription[] = [
         icon: NAV_LINKS.find(l => l.label === "Marketplace")!.icon,
         description: "Mengelola toko dan operasional yang terkait dengan platform marketplace.",
         children: [
-            { label: "Create", description: "Mendaftarkan toko marketplace baru." },
-            { label: "Monitoring Store", description: "Melihat dan mengelola daftar toko yang sudah ada." },
+            { label: "Create", description: "Mendaftarkan toko marketplace baru (hanya Super Admin)." },
+            { label: "Monitoring Store", description: "Melihat dan mengelola daftar toko yang sudah ada. Modifikasi hanya bisa oleh Super Admin." },
             { label: "Task", description: "Menampilkan daftar tanggung jawab umum untuk operasional Marketplace." },
         ]
     },
@@ -78,8 +78,8 @@ const featureDescriptions: FeatureDescription[] = [
         icon: NAV_LINKS.find(l => l.label === "Reports")!.icon,
         description: "Menyajikan laporan dan analisis data operasional untuk pengambilan keputusan.",
         children: [
-            { label: "Backlog", description: "Menampilkan data backlog pesanan dari berbagai marketplace, lengkap dengan visualisasi grafik." },
-            { label: "Daily Performance", description: "Melihat, menambah, dan mengelola laporan kinerja harian per individu." },
+            { label: "Backlog", description: "Menampilkan data backlog pesanan dari berbagai marketplace, lengkap dengan visualisasi grafik. Modifikasi hanya bisa oleh Super Admin." },
+            { label: "Daily Performance", description: "Melihat, menambah, dan mengelola laporan kinerja harian per individu. Modifikasi hanya bisa oleh Super Admin." },
             { label: "KPI Performance", description: "Menganalisis Key Performance Indicator (KPI) tim berdasarkan data kinerja harian." },
         ]
     },
@@ -88,9 +88,9 @@ const featureDescriptions: FeatureDescription[] = [
         icon: NAV_LINKS.find(l => l.label === "Database")!.icon,
         description: "Modul untuk manajemen data master, pengguna, dan hak akses sistem (khusus Super Admin).",
         children: [
-            { label: "User Management", description: "Mengelola data pengguna, termasuk menambah, mengedit, dan menghapus." },
+            { label: "User Management", description: "Mengelola data pengguna, termasuk menambah, mengedit, dan menghapus (hanya Super Admin)." },
             { label: "Role", description: "Menampilkan daftar peran (role) yang ada di dalam sistem." },
-            { label: "Menu Permission", description: "Mengatur hak akses setiap pengguna terhadap menu-menu di aplikasi." },
+            { label: "Menu Permission", description: "Mengatur hak akses setiap pengguna terhadap menu-menu di aplikasi (hanya Super Admin)." },
             { label: "Log Activity", description: "Melihat jejak audit dari semua aktivitas penting yang terjadi di sistem." },
         ]
     }
