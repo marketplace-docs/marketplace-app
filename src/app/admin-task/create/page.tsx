@@ -39,7 +39,8 @@ export default function CreateTaskPage() {
   const { toast } = useToast();
   const router = useRouter();
   const { user } = useAuth();
-  const isSuperAdmin = user?.role === 'Super Admin';
+  const canCreate = user?.role && ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin'].includes(user.role);
+
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement>
@@ -168,14 +169,14 @@ export default function CreateTaskPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Staff">Staff</SelectItem>
-                      <SelectItem value="Regular">Regular</SelectItem>
+                      <SelectItem value="Reguler">Reguler</SelectItem>
                       <SelectItem value="Event">Event</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
               <div className="flex justify-end pt-4 space-x-2">
-                {isSuperAdmin && (
+                {canCreate && (
                   <Button type="submit" disabled={isSubmitting}>
                     {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Submit

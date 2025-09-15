@@ -3,6 +3,18 @@ import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 import { logActivity } from '@/lib/logger';
 
+// Role-based access control rules
+const ROLES = {
+  SUPER_ADMIN: 'Super Admin',
+  MANAGER: 'Manager',
+  SUPERVISOR: 'Supervisor',
+  CAPTAIN: 'Captain',
+  ADMIN: 'Admin'
+};
+
+const CREATE_ROLES = [ROLES.SUPER_ADMIN, ROLES.MANAGER, ROLES.SUPERVISOR, ROLES.CAPTAIN, ROLES.ADMIN];
+
+
 export async function GET() {
   const { data, error } = await supabaseService
     .from('admin_tasks')
@@ -20,7 +32,7 @@ export async function POST(request: Request) {
   const body = await request.json();
   const { name, job, shift, status, userName, userEmail, userRole } = body;
   
-  if (userRole !== 'Super Admin') {
+  if (!userRole || !CREATE_ROLES.includes(userRole)) {
     return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
   }
 

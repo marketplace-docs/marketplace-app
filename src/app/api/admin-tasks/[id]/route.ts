@@ -3,12 +3,25 @@ import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 import { logActivity } from '@/lib/logger';
 
+// Role-based access control rules
+const ROLES = {
+  SUPER_ADMIN: 'Super Admin',
+  MANAGER: 'Manager',
+  SUPERVISOR: 'Supervisor',
+  CAPTAIN: 'Captain',
+  ADMIN: 'Admin'
+};
+
+const UPDATE_ROLES = [ROLES.SUPER_ADMIN, ROLES.MANAGER, ROLES.SUPERVISOR, ROLES.CAPTAIN, ROLES.ADMIN];
+const DELETE_ROLES = [ROLES.SUPER_ADMIN];
+
+
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const { id } = params;
   const body = await request.json();
   const { name, job, shift, status, userName, userEmail, userRole } = body;
   
-  if (userRole !== 'Super Admin') {
+  if (!userRole || !UPDATE_ROLES.includes(userRole)) {
     return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
   }
 
@@ -45,7 +58,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
       role: request.headers.get('X-User-Role')
   };
 
-  if (user.role !== 'Super Admin') {
+  if (!user.role || !DELETE_ROLES.includes(user.role)) {
     return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
   }
 
