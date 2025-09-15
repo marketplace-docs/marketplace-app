@@ -5,6 +5,8 @@ import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 import { logActivity } from '@/lib/logger';
 
+const ALLOWED_ROLES = ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin', 'Staff'];
+
 export async function GET() {
   const { data, error } = await supabaseService
     .from('product_out_documents')
@@ -22,7 +24,7 @@ export async function POST(request: Request) {
   const body = await request.json();
   const { user, documents } = body;
 
-  if (user?.role !== 'Super Admin') {
+  if (!user?.role || !ALLOWED_ROLES.includes(user.role)) {
     return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
   }
 

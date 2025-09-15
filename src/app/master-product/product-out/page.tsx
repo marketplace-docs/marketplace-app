@@ -47,7 +47,6 @@ export default function ProductOutPage() {
     const { toast } = useToast();
     const { user } = useAuth();
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const isSuperAdmin = user?.role === 'Super Admin';
     
     const [documents, setDocuments] = useState<ProductOutDocument[]>([]);
     const [productInStock, setProductInStock] = useState<AggregatedProduct[]>([]);
@@ -67,6 +66,8 @@ export default function ProductOutPage() {
 
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
+    
+    const canCreate = user?.role && ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin', 'Staff'].includes(user.role);
 
 
     const fetchData = useCallback(async () => {
@@ -348,7 +349,7 @@ export default function ProductOutPage() {
                             <CardDescription>Stock data of issued items. This feature deducts stock from Product In.</CardDescription>
                         </div>
                         <div className="flex items-center gap-2">
-                           {isSuperAdmin && (
+                           {canCreate && (
                             <>
                               <Dialog open={isUploadDialogOpen} onOpenChange={setUploadDialogOpen}>
                                   <DialogTrigger asChild>
