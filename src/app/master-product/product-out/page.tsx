@@ -32,6 +32,24 @@ type ProductOutStatus =
     | 'Receipt'
     | 'Adjusment - Loc'; // Keep for backwards compatibility if needed
 
+const validStatuses: ProductOutStatus[] = [
+    'Issue - Order', 
+    'Issue - Internal Transfer', 
+    'Issue - Adjustment Manual',
+    'Adjustment - Loc',
+    'Adjustment - SKU',
+    'Issue - Putaway',
+    'Receipt - Putaway',
+    'Issue - Return',
+    'Issue - Return Putaway',
+    'Issue - Update Expired',
+    'Receipt - Update Expired',
+    'Receipt - Outbound Return',
+    'Receipt',
+    'Adjusment - Loc'
+];
+
+
 type ProductOutDocument = {
     id: string;
     nodocument: string;
@@ -490,14 +508,20 @@ export default function ProductOutPage() {
                                       <DialogHeader>
                                           <DialogTitle>Upload Goods Issue CSV</DialogTitle>
                                           <DialogDescription>
-                                              Select a CSV file to bulk upload documents. Required headers: barcode, qty, status.
+                                              Select a CSV with headers: `barcode`, `qty`, `status`. The status must match one of the valid system statuses.
                                           </DialogDescription>
                                       </DialogHeader>
-                                      <div className="py-4">
+                                      <div className="py-4 space-y-4">
                                          <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
                                          <Button onClick={() => fileInputRef.current?.click()} className="w-full" disabled={isSubmitting}>
                                               {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Choose File'}
                                          </Button>
+                                         <div className="text-xs text-muted-foreground p-2 border rounded-md max-h-24 overflow-y-auto">
+                                            <h4 className="font-semibold text-foreground mb-1">Valid Statuses:</h4>
+                                            <ul className="list-disc list-inside">
+                                                {validStatuses.map(s => <li key={s}>{s}</li>)}
+                                            </ul>
+                                         </div>
                                       </div>
                                   </DialogContent>
                               </Dialog>
