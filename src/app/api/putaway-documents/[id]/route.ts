@@ -1,4 +1,3 @@
-
 'use server';
 
 import { supabaseService } from '@/lib/supabase-service';
@@ -20,7 +19,7 @@ const DELETE_ROLES = [ROLES.SUPER_ADMIN];
 
 async function generateNewDocumentNumber(): Promise<string> {
   const year = new Date().getFullYear();
-  const prefix = `UPD-EXP-${year}`;
+  const prefix = `MP-UPD-EXP-${year}`;
   
   const { data, error } = await supabaseService
     .from('putaway_documents')
@@ -46,7 +45,7 @@ async function generateNewDocumentNumber(): Promise<string> {
 }
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
-  const { id } = params;
+  // The `id` from params is now potentially misleading. The true ID is in the body.
   const body = await request.json();
   const { userName, userEmail, userRole } = body;
 
@@ -59,13 +58,16 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     const { originalDoc, update } = body;
     const { qty: originalQty, location: originalLocation, exp_date: originalExpDate } = originalDoc;
     const { qty: qtyToUpdate, location: newLocation, exp_date: newExpDate } = update;
+    
+    // IMPORTANT: Use the ID from the original document in the body, not from the URL params.
+    const originalDocId = originalDoc.id;
 
     // --- LOGIC: If qtyToUpdate is the same as originalQty, it's a simple UPDATE, not a split. ---
     if (qtyToUpdate === originalQty) {
       const { data, error } = await supabaseService
         .from('putaway_documents')
         .update({ location: newLocation, exp_date: newExpDate })
-        .eq('id', originalDoc.id)
+        .eq('id', originalDocId) // Use the correct ID from the body
         .select()
         .single();
       
@@ -85,7 +87,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
           userName,
           userEmail,
           action: 'UPDATE_BATCH',
-          details: `Updated ${originalQty} items for Doc ID ${originalDoc.id}. ${logDetails.join(' & ')}.`,
+          details: `Updated ${originalQty} items for Doc ID ${originalDocId}. ${logDetails.join(' & ')}.`,
         });
       }
 
@@ -99,7 +101,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     const { error: updateError } = await supabaseService
       .from('putaway_documents')
       .update({ qty: newOriginalQty })
-      .eq('id', originalDoc.id);
+      .eq('id', originalDocId); // Use the correct ID from the body
 
     if (updateError) {
       console.error("Supabase PATCH (update original) error:", updateError);
@@ -110,20 +112,23 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     const newDocNumber = await generateNewDocumentNumber();
 
     // 3. Create a new document for the split-off quantity
-    const { error: insertError } = await supabaseService
+    const { data: newDoc, error: insertError } = await supabaseService
       .from('putaway_documents')
       .insert({
-        ...originalDoc,
-        id: undefined, // Let Supabase generate a new ID
-        created_at: undefined,
-        no_document: newDocNumber, // Use the new document number
-        qty: qtyToUpdate,
-        location: newLocation,
-        exp_date: newExpDate,
-        status: 'Done', // Assume the split batch is confirmed
-        check_by: userName,
+        // Copy relevant fields, let DB generate id, created_at
+        no_document: newDocNumber,
         date: new Date().toISOString(),
-      });
+        qty: qtyToUpdate,
+        status: 'Done', // Assume the split batch is confirmed
+        sku: originalDoc.sku,
+        barcode: originalDoc.barcode,
+        brand: originalDoc.brand,
+        exp_date: newExpDate, // Use the new expiration date
+        location: newLocation, // Use the new location
+        check_by: userName,
+      })
+      .select()
+      .single();
     
     if (insertError) {
       console.error("Supabase PATCH (insert new) error:", insertError);
@@ -138,10 +143,10 @@ export async function PATCH(request: Request, { params }: { params: { id: string
         const newExpFormatted = format(new Date(newExpDate), 'dd/MM/yyyy');
 
         if (newLocation !== originalLocation) {
-            logDetails.push(`location from "${originalLocation}" to "${newLocation}"`);
+            logDetails.push(`location to "${newLocation}"`);
         }
         if (newExpFormatted !== oldExpFormatted) {
-            logDetails.push(`exp date from ${oldExpFormatted} to ${newExpFormatted}`);
+            logDetails.push(`exp date to ${newExpFormatted}`);
         }
 
         const detailsString = logDetails.length > 0 ? logDetails.join(' & ') : "No changes in location or exp date";
@@ -149,15 +154,16 @@ export async function PATCH(request: Request, { params }: { params: { id: string
         await logActivity({
             userName,
             userEmail,
-            action: 'UPDATE_BATCH',
-            details: `Split ${qtyToUpdate} items for Doc ID ${originalDoc.id}. ${detailsString}. New Doc: ${newDocNumber}`,
+            action: 'SPLIT_BATCH',
+            details: `Split ${qtyToUpdate} items from Doc ID ${originalDocId}. New Doc: ${newDocNumber}. Changes: ${detailsString}.`,
         });
     }
 
 
-    return NextResponse.json({ message: 'Stock split successful' });
+    return NextResponse.json({ message: 'Stock split successful', newDocument: newDoc });
 
   } else {
+    const { id } = params; // Fallback to URL id for simple updates
     // Fallback to the original simple update logic for other PATCH requests
     const { no_document, qty, status, sku, barcode, brand, exp_date, location, check_by } = body;
 
