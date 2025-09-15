@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { MainLayout } from "@/components/layout/main-layout";
@@ -12,6 +13,7 @@ import { Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 
 type BatchProduct = {
     id: string;

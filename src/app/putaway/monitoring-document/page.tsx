@@ -59,7 +59,8 @@ const statusVariantMap: { [key in PutawayDocument['status']]: "default" | "secon
 
 const formatDateSafely = (dateString: string | null | undefined, formatString: string): string => {
     if (!dateString) return '-';
-    const date = new Date(dateString);
+    // Add a time to the date string if it's just a date to avoid timezone issues
+    const date = new Date(dateString.includes('T') ? dateString : `${dateString}T00:00:00`);
     if (isNaN(date.getTime())) {
         return '-';
     }
@@ -152,7 +153,7 @@ export default function MonitoringPutawayPage() {
   const handleOpenEditDialog = (doc: PutawayDocument) => {
     const formattedDoc = {
         ...doc,
-        exp_date: doc.exp_date ? format(new Date(doc.exp_date), 'yyyy-MM-dd') : ''
+        exp_date: doc.exp_date ? format(new Date(doc.exp_date.includes('T') ? doc.exp_date : `${doc.exp_date}T00:00:00`), 'yyyy-MM-dd') : ''
     };
     setSelectedDoc(formattedDoc);
     setEditDialogOpen(true);
