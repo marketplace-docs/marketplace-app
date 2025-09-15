@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -5,14 +6,16 @@ import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Loader2, ChevronLeft, ChevronRight, AlertCircle, Warehouse } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight, AlertCircle, Warehouse, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { differenceInMonths, isBefore } from 'date-fns';
 import { cn } from '@/lib/utils';
-
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
+import { Label } from '@/components/ui/label';
 
 type BatchProduct = {
     id: string;
@@ -77,6 +80,10 @@ export default function LocationPage() {
     const [typeFilter, setTypeFilter] = useState<LocationFilterType>('All');
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
+    const { toast } = useToast();
+
+    const [isAddDialogOpen, setAddDialogOpen] = useState(false);
+    const [newLocationName, setNewLocationName] = useState('');
     
     const fetchLocations = useCallback(async () => {
         setLoading(true);
@@ -154,6 +161,27 @@ export default function LocationPage() {
             return acc;
         }, { total: 0, sellable: 0, expiring: 0, expired: 0, quarantine: 0, mixed: 0 });
     }, [locationsData]);
+    
+    const handleAddLocation = () => {
+        if (!newLocationName.trim()) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Location name cannot be empty.' });
+            return;
+        }
+        if (locationsData.some(loc => loc.name.toLowerCase() === newLocationName.trim().toLowerCase())) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Location already exists.' });
+            return;
+        }
+
+        const newLocation: LocationData = {
+            name: newLocationName.trim(),
+            type: 'Empty',
+        };
+
+        setLocationsData(prev => [newLocation, ...prev].sort((a, b) => a.name.localeCompare(b.name)));
+        toast({ title: 'Success', description: `Location "${newLocation.name}" has been added.` });
+        setNewLocationName('');
+        setAddDialogOpen(false);
+    };
 
 
     return (
@@ -212,6 +240,37 @@ export default function LocationPage() {
                                 <CardDescription>A list of all unique storage locations and their status type.</CardDescription>
                             </div>
                             <div className="flex w-full md:w-auto items-center gap-2">
+                                <Dialog open={isAddDialogOpen} onOpenChange={setAddDialogOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button variant="outline">
+                                            <Plus className="mr-2 h-4 w-4" /> Add Location
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                        <DialogHeader>
+                                            <DialogTitle>Add New Location</DialogTitle>
+                                            <DialogDescription>
+                                               Manually add a new storage location. This is useful for pre-registering locations before goods arrive.
+                                            </DialogDescription>
+                                        </DialogHeader>
+                                        <div className="grid gap-4 py-4">
+                                            <div className="grid grid-cols-4 items-center gap-4">
+                                                <Label htmlFor="location-name" className="text-right">Location Name</Label>
+                                                <Input
+                                                    id="location-name"
+                                                    value={newLocationName}
+                                                    onChange={(e) => setNewLocationName(e.target.value)}
+                                                    className="col-span-3"
+                                                    placeholder="e.g., A-01-01 or QUARANTINE-02"
+                                                />
+                                            </div>
+                                        </div>
+                                        <DialogFooter>
+                                            <Button variant="outline" onClick={() => setAddDialogOpen(false)}>Cancel</Button>
+                                            <Button onClick={handleAddLocation}>Submit</Button>
+                                        </DialogFooter>
+                                    </DialogContent>
+                                </Dialog>
                                 <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as LocationFilterType)}>
                                     <SelectTrigger className="w-full md:w-[180px]">
                                         <SelectValue placeholder="Filter by type" />
