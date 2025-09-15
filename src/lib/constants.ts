@@ -103,12 +103,12 @@ export const NAV_LINKS: NavLink[] = [
             },
             {
                 href: '/master-product/product-in',
-                label: 'Product In',
+                label: 'Stock In',
                 icon: PackagePlus,
             },
             {
                 href: '/master-product/product-out',
-                label: 'Product Out',
+                label: 'Stock Out',
                 icon: PackageMinus,
             },
             {

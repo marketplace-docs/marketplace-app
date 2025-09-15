@@ -475,7 +475,7 @@ export default function ProductOutPage() {
     return (
         <MainLayout>
              <div className="w-full space-y-6">
-                <h1 className="text-2xl font-bold">Goods Issue</h1>
+                <h1 className="text-2xl font-bold">Stock Out</h1>
                 {error && (
                     <Alert variant="destructive" className="mb-4">
                         <AlertCircle className="h-4 w-4" />
@@ -486,8 +486,8 @@ export default function ProductOutPage() {
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between">
                         <div>
-                            <CardTitle>Goods Issue</CardTitle>
-                            <CardDescription>Stock data of issued items. This feature deducts stock from Product In.</CardDescription>
+                            <CardTitle>Stock Out Documents</CardTitle>
+                            <CardDescription>Stock data of issued items. This feature deducts stock from Stock In.</CardDescription>
                         </div>
                         <div className="flex items-center gap-2">
                            {canCreate && (
@@ -498,7 +498,7 @@ export default function ProductOutPage() {
                                   </DialogTrigger>
                                   <DialogContent>
                                       <DialogHeader>
-                                          <DialogTitle>Upload Goods Issue CSV</DialogTitle>
+                                          <DialogTitle>Upload Stock Out CSV</DialogTitle>
                                           <DialogDescription>
                                              Gunakan file CSV dengan kolom `barcode`, `qty`, dan `status`. Sistem akan otomatis mengisi data lain (SKU, Exp Date, Location) berdasarkan stok FEFO dan membuat No. Dokumen berdasarkan status dari setiap baris.
                                           </DialogDescription>
@@ -524,12 +524,12 @@ export default function ProductOutPage() {
                               <Dialog open={isAddDialogOpen} onOpenChange={(open) => { setAddDialogOpen(open); if(!open) resetForm(); }}>
                                   <DialogTrigger asChild>
                                       <Button>
-                                          <Plus className="mr-2 h-4 w-4" /> Add Goods Issue
+                                          <Plus className="mr-2 h-4 w-4" /> Add Stock Out
                                       </Button>
                                   </DialogTrigger>
                                   <DialogContent>
                                       <DialogHeader>
-                                          <DialogTitle>Add Goods Issue</DialogTitle>
+                                          <DialogTitle>Add Stock Out</DialogTitle>
                                            <DialogDescription>The system automatically selects the batch with the nearest expiration date (FEFO).</DialogDescription>
                                       </DialogHeader>
                                       <div className="grid gap-4 py-4">

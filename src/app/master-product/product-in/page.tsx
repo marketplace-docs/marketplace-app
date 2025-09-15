@@ -7,12 +7,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ChevronLeft, ChevronRight, AlertCircle, Download, ChevronDown, Warehouse } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight, AlertCircle, Download, Warehouse } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 type PutawayDocument = {
     id: string;
@@ -28,12 +27,6 @@ type PutawayDocument = {
     check_by: string;
 };
 
-type AggregatedByLocation = {
-    location: string;
-    totalQty: number;
-    documents: PutawayDocument[];
-};
-
 const statusVariantMap: { [key in PutawayDocument['status']]: "default" | "secondary" } = {
     'Done': 'default',
     'Pending': 'secondary',
@@ -47,7 +40,6 @@ export default function ProductInPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const { toast } = useToast();
-    const [openAccordion, setOpenAccordion] = useState<string[]>([]);
     
     const fetchPutawayDocs = useCallback(async () => {
         setLoading(true);
@@ -68,46 +60,20 @@ export default function ProductInPage() {
         fetchPutawayDocs();
     }, [fetchPutawayDocs]);
 
-    const aggregatedAndFilteredData = useMemo(() => {
-        const locationMap = new Map<string, AggregatedByLocation>();
-
-        putawayDocs.forEach(doc => {
-            const locationKey = doc.location || 'No Location';
-            if (!locationMap.has(locationKey)) {
-                locationMap.set(locationKey, {
-                    location: locationKey,
-                    totalQty: 0,
-                    documents: [],
-                });
-            }
-            const existing = locationMap.get(locationKey)!;
-            existing.totalQty += doc.qty;
-            existing.documents.push(doc);
-        });
-
-        const allAggregated = Array.from(locationMap.values()).sort((a, b) => b.totalQty - a.totalQty);
-        
-        if (!searchTerm) {
-            return allAggregated;
-        }
-
-        return allAggregated.map(group => ({
-            ...group,
-            documents: group.documents.filter(doc =>
-                doc.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                doc.barcode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                doc.no_document.toLowerCase().includes(searchTerm.toLowerCase())
-            )
-        })).filter(group => group.documents.length > 0);
-
+    const filteredData = useMemo(() => {
+        return putawayDocs.filter(doc =>
+            doc.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            doc.barcode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            doc.no_document.toLowerCase().includes(searchTerm.toLowerCase())
+        );
     }, [putawayDocs, searchTerm]);
     
     useEffect(() => {
         setCurrentPage(1);
     }, [rowsPerPage, searchTerm]);
 
-    const totalPages = Math.ceil(aggregatedAndFilteredData.length / rowsPerPage);
-    const paginatedData = aggregatedAndFilteredData.slice(
+    const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+    const paginatedData = filteredData.slice(
         (currentPage - 1) * rowsPerPage,
         currentPage * rowsPerPage
     );
@@ -162,7 +128,7 @@ export default function ProductInPage() {
     return (
         <MainLayout>
              <div className="w-full space-y-6">
-                <h1 className="text-2xl font-bold">Goods Receipt</h1>
+                <h1 className="text-2xl font-bold">Stock In</h1>
                  {error && (
                     <Alert variant="destructive" className="mb-4">
                         <AlertCircle className="h-4 w-4" />
@@ -174,8 +140,8 @@ export default function ProductInPage() {
                     <CardHeader>
                         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                             <div className="flex-1">
-                                <CardTitle>Goods Receipt by Location</CardTitle>
-                                <CardDescription>A log of all received items, grouped by warehouse location.</CardDescription>
+                                <CardTitle>Stock In Documents</CardTitle>
+                                <CardDescription>A log of all received items.</CardDescription>
                             </div>
                             <div className="flex items-center gap-2">
                                 <Button variant="outline" onClick={handleExport}>
@@ -193,96 +159,64 @@ export default function ProductInPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="border rounded-lg">
-                           <Accordion type="multiple" value={openAccordion} onValueChange={setOpenAccordion} className="w-full">
-                                <Table>
-                                    <TableHeader>
+                           <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>No. Document</TableHead>
+                                        <TableHead>Date</TableHead>
+                                        <TableHead>SKU</TableHead>
+                                        <TableHead>Barcode</TableHead>
+                                        <TableHead>Brand</TableHead>
+                                        <TableHead>EXP</TableHead>
+                                        <TableHead>Location</TableHead>
+                                        <TableHead>Quantity</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead>Checked By</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {loading ? (
                                         <TableRow>
-                                            <TableHead>Location</TableHead>
-                                            <TableHead>Total Quantity</TableHead>
-                                            <TableHead className="w-12 text-right"></TableHead>
+                                            <TableCell colSpan={10} className="h-24 text-center">
+                                                <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+                                            </TableCell>
                                         </TableRow>
-                                    </TableHeader>
-                                </Table>
-                                {loading ? (
-                                    <div className="h-24 flex items-center justify-center">
-                                        <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
-                                    </div>
-                                ) : paginatedData.length > 0 ? (
-                                    <Table>
-                                        <TableBody>
-                                            {paginatedData.map((group) => (
-                                            <AccordionItem value={group.location} key={group.location} asChild>
-                                                <>
-                                                <TableRow>
-                                                    <TableCell className="font-medium flex items-center gap-2"><Warehouse className="h-4 w-4 text-muted-foreground" /> {group.location}</TableCell>
-                                                    <TableCell>
-                                                        <Badge variant="default" className="font-semibold text-base">
-                                                            {group.totalQty.toLocaleString()}
-                                                        </Badge>
-                                                    </TableCell>
-                                                    <TableCell className="w-12 text-right">
-                                                        <AccordionTrigger className="p-0 [&[data-state=open]>svg]:rotate-180">
-                                                            <ChevronDown className="h-5 w-5 transition-transform duration-200" />
-                                                        </AccordionTrigger>
-                                                    </TableCell>
-                                                </TableRow>
-                                                <TableRow>
-                                                    <TableCell colSpan={3} className="p-0 border-0">
-                                                        <AccordionContent>
-                                                            <div className="p-4 bg-muted/50">
-                                                                <Table>
-                                                                    <TableHeader>
-                                                                        <TableRow>
-                                                                            <TableHead>No. Document</TableHead>
-                                                                            <TableHead>Date</TableHead>
-                                                                            <TableHead>SKU</TableHead>
-                                                                            <TableHead>Barcode</TableHead>
-                                                                            <TableHead>Brand</TableHead>
-                                                                            <TableHead>EXP</TableHead>
-                                                                            <TableHead>Quantity</TableHead>
-                                                                            <TableHead>Status</TableHead>
-                                                                            <TableHead>Checked By</TableHead>
-                                                                        </TableRow>
-                                                                    </TableHeader>
-                                                                    <TableBody>
-                                                                        {group.documents.map((doc) => (
-                                                                            <TableRow key={doc.id}>
-                                                                                <TableCell>{doc.no_document}</TableCell>
-                                                                                <TableCell>{format(new Date(doc.date), 'dd/MM/yyyy HH:mm')}</TableCell>
-                                                                                <TableCell className="font-medium">{doc.sku}</TableCell>
-                                                                                <TableCell>{doc.barcode}</TableCell>
-                                                                                <TableCell>{doc.brand}</TableCell>
-                                                                                <TableCell>{format(new Date(doc.exp_date), 'dd/MM/yyyy')}</TableCell>
-                                                                                <TableCell>{doc.qty.toLocaleString()}</TableCell>
-                                                                                <TableCell>
-                                                                                    <Badge variant={statusVariantMap[doc.status] || 'default'}>
-                                                                                        {doc.status}
-                                                                                    </Badge>
-                                                                                </TableCell>
-                                                                                <TableCell>{doc.check_by}</TableCell>
-                                                                            </TableRow>
-                                                                        ))}
-                                                                    </TableBody>
-                                                                </Table>
-                                                            </div>
-                                                        </AccordionContent>
-                                                    </TableCell>
-                                                </TableRow>
-                                                </>
-                                            </AccordionItem>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                ) : (
-                                    <div className="h-24 flex items-center justify-center text-muted-foreground">
-                                        No incoming product data.
-                                    </div>
-                                )}
-                            </Accordion>
+                                    ) : paginatedData.length > 0 ? (
+                                        paginatedData.map((doc) => (
+                                            <TableRow key={doc.id}>
+                                                <TableCell>{doc.no_document}</TableCell>
+                                                <TableCell>{format(new Date(doc.date), 'dd/MM/yyyy HH:mm')}</TableCell>
+                                                <TableCell className="font-medium">{doc.sku}</TableCell>
+                                                <TableCell>{doc.barcode}</TableCell>
+                                                <TableCell>{doc.brand}</TableCell>
+                                                <TableCell>{format(new Date(doc.exp_date), 'dd/MM/yyyy')}</TableCell>
+                                                <TableCell className="font-medium flex items-center gap-2"><Warehouse className="h-4 w-4 text-muted-foreground" /> {doc.location}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant="default" className="font-semibold">
+                                                        {doc.qty.toLocaleString()}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge variant={statusVariantMap[doc.status] || 'default'}>
+                                                        {doc.status}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell>{doc.check_by}</TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : (
+                                        <TableRow>
+                                            <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
+                                                No incoming product data.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
                        </div>
                         <div className="flex items-center justify-end space-x-2 py-4">
                             <div className="flex-1 text-sm text-muted-foreground">
-                                Page {aggregatedAndFilteredData.length > 0 ? currentPage : 0} of {totalPages}
+                                Page {filteredData.length > 0 ? currentPage : 0} of {totalPages}
                             </div>
                             <div className="flex items-center space-x-2">
                                 <span className="text-sm text-muted-foreground">Rows per page:</span>
