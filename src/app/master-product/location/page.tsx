@@ -159,7 +159,7 @@ export default function LocationPage() {
           });
           return;
         }
-        const headers = ["Location Name", "Type"];
+        const headers = ["name", "type"];
         const csvContent = [
             headers.join(","),
             ...filteredData.map(item => [
@@ -196,11 +196,11 @@ export default function LocationPage() {
                 
                 const headers = headerLine.split(',').map(h => h.trim().replace(/"/g, ''));
                 
-                const nameIndex = headers.indexOf('Location Name');
-                const typeIndex = headers.indexOf('Type');
+                const nameIndex = headers.indexOf('name');
+                const typeIndex = headers.indexOf('type');
 
                 if (nameIndex === -1 || typeIndex === -1) {
-                    throw new Error("Invalid CSV. Required headers: Location Name, Type");
+                    throw new Error("Invalid CSV. Required headers: name, type");
                 }
 
                 const newLocations = lines.map(line => {
@@ -354,7 +354,7 @@ export default function LocationPage() {
                                         <DialogHeader>
                                             <DialogTitle>Upload Locations CSV</DialogTitle>
                                             <DialogDescription>
-                                                Select a CSV file to bulk upload locations. The file must contain the headers: Location Name, Type.
+                                                Select a CSV file to bulk upload locations. The file must contain the headers: `name` and `type`.
                                             </DialogDescription>
                                         </DialogHeader>
                                         <div className="py-4">
@@ -484,4 +484,3 @@ export default function LocationPage() {
         </MainLayout>
     );
 }
-
