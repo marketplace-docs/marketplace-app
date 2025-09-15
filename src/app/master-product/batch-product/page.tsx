@@ -277,11 +277,11 @@ export default function BatchProductPage() {
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead className="w-12"></TableHead>
                                             <TableHead>SKU</TableHead>
                                             <TableHead>Barcode</TableHead>
                                             <TableHead>Brand</TableHead>
                                             <TableHead>Total Stock</TableHead>
+                                            <TableHead className="w-12 text-right"></TableHead>
                                         </TableRow>
                                     </TableHeader>
                                 </Table>
@@ -296,11 +296,6 @@ export default function BatchProductPage() {
                                             <AccordionItem value={product.sku} key={product.sku} asChild>
                                                 <>
                                                 <TableRow>
-                                                    <TableCell className="w-12">
-                                                        <AccordionTrigger className="p-0 [&[data-state=open]>svg]:rotate-180">
-                                                            <ChevronDown className="h-5 w-5 transition-transform duration-200" />
-                                                        </AccordionTrigger>
-                                                    </TableCell>
                                                     <TableCell className="font-medium">{product.sku}</TableCell>
                                                     <TableCell>{product.barcode}</TableCell>
                                                     <TableCell>{product.brand}</TableCell>
@@ -308,6 +303,11 @@ export default function BatchProductPage() {
                                                         <Badge variant={product.totalStock > 0 ? 'default' : 'destructive'} className="font-semibold text-base">
                                                             {product.totalStock.toLocaleString()}
                                                         </Badge>
+                                                    </TableCell>
+                                                    <TableCell className="w-12 text-right">
+                                                        <AccordionTrigger className="p-0 [&[data-state=open]>svg]:rotate-180">
+                                                            <ChevronDown className="h-5 w-5 transition-transform duration-200" />
+                                                        </AccordionTrigger>
                                                     </TableCell>
                                                 </TableRow>
                                                 <TableRow>
