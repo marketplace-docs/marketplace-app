@@ -86,7 +86,8 @@ export async function GET(request: Request, { params }: { params: { barcode: str
             const key = createStockKey(doc.barcode, doc.location, doc.expDate);
             if (!stockMap.has(key)) {
                 stockMap.set(key, {
-                    id: doc.id,
+                    // Use the key itself as the unique ID
+                    id: key,
                     sku: doc.sku,
                     barcode: doc.barcode,
                     brand: (doc as ProductDoc).brand || '', // Brand might not be on OUT docs
@@ -104,8 +105,7 @@ export async function GET(request: Request, { params }: { params: { barcode: str
             ...(productOutData as ProductOutDoc[]).map(doc => ({ type: 'OUT' as const, date: new Date(doc.date), doc }))
         ].sort((a, b) => a.date.getTime() - b.date.getTime());
 
-        // Reset stock to 0 before chronological calculation
-        stockMap.forEach(entry => entry.stock = 0);
+        // Stock levels are already reset to 0 during initialization.
 
         // Process transactions chronologically
         combinedTransactions.forEach(tx => {
@@ -125,20 +125,8 @@ export async function GET(request: Request, { params }: { params: { barcode: str
                 if (tx.type === 'IN' && !(entry.brand)) {
                     entry.brand = (doc as ProductDoc).brand;
                 }
-            } else {
-                 // This case should ideally not happen with the new pre-initialization logic
-                 // but kept as a safeguard for data anomalies.
-                 const newEntry: AggregatedProduct = {
-                    id: `anomaly-${doc.id}`,
-                    sku: doc.sku,
-                    barcode: doc.barcode,
-                    brand: (doc as ProductDoc).brand || '',
-                    exp_date: exp_date,
-                    location: doc.location,
-                    stock: tx.type === 'IN' ? doc.qty : -doc.qty,
-                };
-                stockMap.set(key, newEntry);
             }
+            // 'else' case is not needed because all batches are pre-initialized.
         });
 
         const finalInventory = Array.from(stockMap.values());
