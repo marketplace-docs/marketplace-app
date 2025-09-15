@@ -4,13 +4,36 @@
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ListTodo, CheckSquare, Palette, Users, Archive, BarChart3, Database, Monitor, BrainCircuit, UserCheck, KeyRound } from "lucide-react";
+import { ListTodo, CheckSquare, Palette, Users, Archive, BarChart3, Database, Monitor, BrainCircuit, UserCheck, KeyRound, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 const techStack = ["Next.js", "React", "TypeScript", "Tailwind CSS", "ShadCN UI", "Genkit", "Firebase"];
 
 export default function AppSettingsPage() {
+    const { toast } = useToast();
+
+    const handleClearCache = () => {
+        try {
+            localStorage.clear();
+            sessionStorage.clear();
+            toast({
+                title: "Cache Cleared",
+                description: "Local data has been cleared. The application will now reload.",
+            });
+            setTimeout(() => {
+                window.location.reload(true);
+            }, 1500);
+        } catch (error) {
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Could not clear cache.",
+            });
+        }
+    };
+
     return (
         <MainLayout>
              <div className="w-full space-y-6">
@@ -51,6 +74,25 @@ export default function AppSettingsPage() {
                                 <Link href="/app-documentation">
                                     Lihat Dokumentasi
                                 </Link>
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Maintenance</CardTitle>
+                        <CardDescription>Actions for application maintenance and troubleshooting.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                         <div>
+                            <h3 className="font-semibold text-lg mb-2">Clear Application Cache</h3>
+                            <p className="text-sm text-muted-foreground mb-4">
+                                This will clear all locally stored data, including your session, and force a hard reload of the application. Use this if you are experiencing data inconsistencies.
+                            </p>
+                            <Button variant="destructive" onClick={handleClearCache}>
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Clear Cache & Hard Reload
                             </Button>
                         </div>
                     </CardContent>
