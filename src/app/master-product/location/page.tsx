@@ -19,8 +19,8 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/use-auth';
 import { format } from 'date-fns';
 
-type LocationType = 'Empty' | 'Sellable' | 'Expiring' | 'Expired' | 'Quarantine' | 'Sensitive MP' | 'Marketplace' | 'Damaged';
-type LocationFilterType = 'All' | LocationType;
+type LocationType = 'empty' | 'sellable' | 'expiring' | 'expired' | 'quarantine' | 'sensitive mp' | 'marketplace' | 'damaged';
+type LocationFilterType = 'all' | LocationType;
 
 type LocationData = {
     id: number;
@@ -30,15 +30,17 @@ type LocationData = {
 };
 
 const typeVariantMap: Record<LocationType, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-    'Empty': 'outline',
-    'Sellable': 'default',
-    'Expiring': 'secondary',
-    'Expired': 'destructive',
-    'Quarantine': 'outline',
-    'Sensitive MP': 'secondary',
-    'Marketplace': 'default',
-    'Damaged': 'destructive',
+    'empty': 'outline',
+    'sellable': 'default',
+    'expiring': 'secondary',
+    'expired': 'destructive',
+    'quarantine': 'outline',
+    'sensitive mp': 'secondary',
+    'marketplace': 'default',
+    'damaged': 'destructive',
 };
+
+const locationTypes: LocationType[] = ['empty', 'sellable', 'expiring', 'expired', 'quarantine', 'sensitive mp', 'marketplace', 'damaged'];
 
 
 export default function LocationPage() {
@@ -46,7 +48,7 @@ export default function LocationPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
-    const [typeFilter, setTypeFilter] = useState<LocationFilterType>('All');
+    const [typeFilter, setTypeFilter] = useState<LocationFilterType>('all');
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const { toast } = useToast();
@@ -57,7 +59,7 @@ export default function LocationPage() {
     const [isUploadDialogOpen, setUploadDialogOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [newLocationName, setNewLocationName] = useState('');
-    const [newLocationType, setNewLocationType] = useState<LocationType>('Empty');
+    const [newLocationType, setNewLocationType] = useState<LocationType>('empty');
     
     const fetchLocations = useCallback(async () => {
         setLoading(true);
@@ -81,7 +83,7 @@ export default function LocationPage() {
     const filteredData = useMemo(() => {
         return locationsData.filter(location =>
             (location.name.toLowerCase().includes(searchTerm.toLowerCase())) &&
-            (typeFilter === 'All' || location.type === typeFilter)
+            (typeFilter === 'all' || location.type.toLowerCase() === typeFilter)
         );
     }, [locationsData, searchTerm, typeFilter]);
     
@@ -105,11 +107,12 @@ export default function LocationPage() {
     
     const kpiData = useMemo(() => {
         return locationsData.reduce((acc, loc) => {
+            const type = loc.type.toLowerCase();
             acc.total += 1;
-            if (loc.type === 'Sellable') acc.sellable += 1;
-            if (loc.type === 'Expiring') acc.expiring += 1;
-            if (loc.type === 'Expired') acc.expired += 1;
-            if (loc.type === 'Quarantine') acc.quarantine += 1;
+            if (type === 'sellable') acc.sellable += 1;
+            if (type === 'expiring') acc.expiring += 1;
+            if (type === 'expired') acc.expired += 1;
+            if (type === 'quarantine') acc.quarantine += 1;
             return acc;
         }, { total: 0, sellable: 0, expiring: 0, expired: 0, quarantine: 0 });
     }, [locationsData]);
@@ -143,7 +146,7 @@ export default function LocationPage() {
             await fetchLocations(); // Refetch from DB
             toast({ title: 'Success', description: `Location "${newLocationName.trim()}" has been added.` });
             setNewLocationName('');
-            setNewLocationType('Empty');
+            setNewLocationType('empty');
             setAddDialogOpen(false);
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Error', description: error.message });
@@ -212,11 +215,9 @@ export default function LocationPage() {
                 const newLocations = lines.map(line => {
                     const values = line.split(',');
                     const name = values[nameIndex]?.trim().replace(/"/g, '');
-                    const typeRaw = values[typeIndex]?.trim().replace(/"/g, '');
-                    
-                    const type = typeRaw.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ') as LocationType;
+                    const type = values[typeIndex]?.trim().replace(/"/g, '').toLowerCase() as LocationType;
 
-                    if (name && Object.keys(typeVariantMap).includes(type)) {
+                    if (name && locationTypes.includes(type)) {
                         return { name, type };
                     }
                     console.warn(`Skipping invalid row: ${line}. Name: ${name}, Type: ${type}`);
@@ -330,7 +331,7 @@ export default function LocationPage() {
                                                     value={newLocationName}
                                                     onChange={(e) => setNewLocationName(e.target.value)}
                                                     className="col-span-3"
-                                                    placeholder="e.g., A-01-01 or QUARANTINE-02"
+                                                    placeholder="e.g., a-01-01 or quarantine-02"
                                                 />
                                             </div>
                                              <div className="grid grid-cols-4 items-center gap-4">
@@ -340,14 +341,9 @@ export default function LocationPage() {
                                                         <SelectValue placeholder="Select type" />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        <SelectItem value="Empty">Empty</SelectItem>
-                                                        <SelectItem value="Sellable">Sellable</SelectItem>
-                                                        <SelectItem value="Expiring">Expiring</SelectItem>
-                                                        <SelectItem value="Expired">Expired</SelectItem>
-                                                        <SelectItem value="Quarantine">Quarantine</SelectItem>
-                                                        <SelectItem value="Sensitive MP">Sensitive MP</SelectItem>
-                                                        <SelectItem value="Marketplace">Marketplace</SelectItem>
-                                                        <SelectItem value="Damaged">Damaged</SelectItem>
+                                                        {locationTypes.map(type => (
+                                                            <SelectItem key={type} value={type} className="capitalize">{type}</SelectItem>
+                                                        ))}
                                                     </SelectContent>
                                                 </Select>
                                             </div>
@@ -391,15 +387,10 @@ export default function LocationPage() {
                                         <SelectValue placeholder="Filter by type" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="All">All Types</SelectItem>
-                                        <SelectItem value="Empty">Empty</SelectItem>
-                                        <SelectItem value="Sellable">Sellable</SelectItem>
-                                        <SelectItem value="Expiring">Expiring</SelectItem>
-                                        <SelectItem value="Expired">Expired</SelectItem>
-                                        <SelectItem value="Quarantine">Quarantine</SelectItem>
-                                        <SelectItem value="Sensitive MP">Sensitive MP</SelectItem>
-                                        <SelectItem value="Marketplace">Marketplace</SelectItem>
-                                        <SelectItem value="Damaged">Damaged</SelectItem>
+                                        <SelectItem value="all">All Types</SelectItem>
+                                        {locationTypes.map(type => (
+                                            <SelectItem key={type} value={type} className="capitalize">{type}</SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
                                 <Input 
@@ -432,12 +423,12 @@ export default function LocationPage() {
                                             <TableRow key={location.id}>
                                                 <TableCell className="font-medium">{location.name}</TableCell>
                                                 <TableCell>
-                                                    <Badge variant={typeVariantMap[location.type]}
-                                                        className={cn({
-                                                            'bg-green-500 hover:bg-green-500/80 text-white': location.type === 'Sellable',
-                                                            'bg-yellow-500 hover:bg-yellow-500/80 text-black': location.type === 'Expiring',
-                                                            'bg-purple-500 hover:bg-purple-500/80 text-white': location.type === 'Sensitive MP',
-                                                            'bg-blue-500 hover:bg-blue-500/80 text-white': location.type === 'Marketplace',
+                                                    <Badge variant={typeVariantMap[location.type.toLowerCase() as LocationType]}
+                                                        className={cn("capitalize", {
+                                                            'bg-green-500 hover:bg-green-500/80 text-white': location.type.toLowerCase() === 'sellable',
+                                                            'bg-yellow-500 hover:bg-yellow-500/80 text-black': location.type.toLowerCase() === 'expiring',
+                                                            'bg-purple-500 hover:bg-purple-500/80 text-white': location.type.toLowerCase() === 'sensitive mp',
+                                                            'bg-blue-500 hover:bg-blue-500/80 text-white': location.type.toLowerCase() === 'marketplace',
                                                         })}
                                                     >
                                                         {location.type}
@@ -502,5 +493,6 @@ export default function LocationPage() {
         </MainLayout>
     );
 }
+
 
 
