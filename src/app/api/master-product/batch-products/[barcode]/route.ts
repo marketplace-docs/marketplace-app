@@ -72,28 +72,37 @@ export async function GET(request: Request, { params }: { params: { barcode: str
         
         const stockMap = new Map<string, AggregatedProduct>();
 
-        // Initialize map with all possible batches from putaway documents for this barcode
-        (putawayData as ProductDoc[]).forEach(doc => {
-            if (!doc.barcode || !doc.location || !doc.exp_date) return;
-            const key = createStockKey(doc.barcode, doc.location, doc.exp_date);
+        const allDocsForBarcode = [
+            ...(putawayData as ProductDoc[]).map(doc => ({ ...doc, type: 'IN' as const, expDate: doc.exp_date })),
+            ...(productOutData as ProductOutDoc[]).map(doc => ({ ...doc, type: 'OUT' as const, expDate: doc.expdate }))
+        ];
+
+        // Initialize map with all possible batches for this barcode from ALL documents
+        allDocsForBarcode.forEach(doc => {
+            if (!doc.barcode || !doc.location || !doc.expDate) return;
+            const key = createStockKey(doc.barcode, doc.location, doc.expDate);
             if (!stockMap.has(key)) {
                 stockMap.set(key, {
                     id: doc.id,
                     sku: doc.sku,
                     barcode: doc.barcode,
-                    brand: doc.brand,
-                    exp_date: doc.exp_date,
+                    brand: (doc as ProductDoc).brand || '', // Brand might not be on OUT docs
+                    exp_date: doc.expDate,
                     location: doc.location,
                     stock: 0, // Start with 0, will calculate chronologically
                 });
             }
         });
 
+
         // Combine and sort all transactions by date
         const combinedTransactions: CombinedDoc[] = [
             ...(putawayData as ProductDoc[]).map(doc => ({ type: 'IN' as const, date: new Date(doc.date), doc })),
             ...(productOutData as ProductOutDoc[]).map(doc => ({ type: 'OUT' as const, date: new Date(doc.date), doc }))
         ].sort((a, b) => a.date.getTime() - b.date.getTime());
+
+        // Reset stock to 0 before chronological calculation
+        stockMap.forEach(entry => entry.stock = 0);
 
         // Process transactions chronologically
         combinedTransactions.forEach(tx => {
@@ -110,20 +119,23 @@ export async function GET(request: Request, { params }: { params: { barcode: str
                 } else { // 'OUT'
                     entry.stock -= doc.qty;
                 }
+                 // Fill in potentially missing info from putaway docs
+                if (tx.type === 'IN' && !(entry.brand)) {
+                    entry.brand = (doc as ProductDoc).brand;
+                }
             } else {
-                 if (tx.type === 'OUT') {
-                    // This case means a product_out happened for a batch that never had a putaway. This is a data anomaly.
-                    // We'll create an entry to show the negative stock to highlight the issue.
-                    stockMap.set(key, {
-                        id: `out-${doc.id}`,
-                        sku: doc.sku,
-                        barcode: doc.barcode,
-                        brand: '',
-                        exp_date: exp_date,
-                        location: doc.location,
-                        stock: -doc.qty,
-                    });
-                 }
+                 // This case should ideally not happen with the new pre-initialization logic
+                 // but kept as a safeguard for data anomalies.
+                 const newEntry: AggregatedProduct = {
+                    id: `anomaly-${doc.id}`,
+                    sku: doc.sku,
+                    barcode: doc.barcode,
+                    brand: (doc as ProductDoc).brand || '',
+                    exp_date: exp_date,
+                    location: doc.location,
+                    stock: tx.type === 'IN' ? doc.qty : -doc.qty,
+                };
+                stockMap.set(key, newEntry);
             }
         });
 
