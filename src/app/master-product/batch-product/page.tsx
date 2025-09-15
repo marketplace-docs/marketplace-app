@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { format, differenceInMonths, isBefore } from 'date-fns';
-import { Loader2, ChevronLeft, ChevronRight, PackageSearch, AlertCircle, ShoppingCart, Clock, Ban, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight, PackageSearch, AlertCircle, ShoppingCart, Clock, Ban, Trash2, ChevronDown, ChevronUp, ShieldQuestion, HeartCrack } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -25,7 +25,7 @@ type BatchProduct = {
     exp_date: string;
     location: string;
     stock: number;
-    status: 'Sellable' | 'Expiring' | 'Expired' | 'Out of Stock';
+    status: 'Sellable' | 'Expiring' | 'Expired' | 'Out of Stock' | 'Quarantine' | 'Damaged';
 };
 
 type AggregatedBySku = {
@@ -36,11 +36,17 @@ type AggregatedBySku = {
     batches: BatchProduct[];
 };
 
-type ProductStatus = 'All' | 'Sellable' | 'Expiring' | 'Expired' | 'Out of Stock';
+type ProductStatus = 'All' | 'Sellable' | 'Expiring' | 'Expired' | 'Out of Stock' | 'Quarantine' | 'Damaged';
 
-const getProductStatus = (expDate: string, stock: number): Omit<ProductStatus, 'All'> => {
+const getProductStatus = (expDate: string, stock: number, location: string): Omit<ProductStatus, 'All'> => {
     if (stock <= 0) {
         return 'Out of Stock';
+    }
+    if (location.toLowerCase().includes('quarantine')) {
+        return 'Quarantine';
+    }
+    if (location.toLowerCase().includes('damaged')) {
+        return 'Damaged';
     }
     const today = new Date();
     const expiryDate = new Date(expDate);
@@ -63,6 +69,8 @@ const statusVariantMap: Record<Omit<ProductStatus, 'All'>, 'default' | 'secondar
     'Expiring': 'secondary',
     'Expired': 'destructive',
     'Out of Stock': 'outline',
+    'Quarantine': 'outline',
+    'Damaged': 'destructive',
 };
 
 const KpiCard = ({ title, value, icon: Icon, className, isLoading }: { title: string; value: number; icon: React.ElementType, className?: string, isLoading: boolean }) => (
@@ -109,7 +117,7 @@ export default function BatchProductPage() {
             const data: Omit<BatchProduct, 'status'>[] = await response.json();
             const dataWithStatus = data.map(product => ({
                 ...product,
-                status: getProductStatus(product.exp_date, product.stock)
+                status: getProductStatus(product.exp_date, product.stock, product.location)
             }));
             setInventoryData(dataWithStatus);
         } catch (err: any) {
@@ -260,6 +268,8 @@ export default function BatchProductPage() {
                                         <SelectItem value="Expiring">Expiring</SelectItem>
                                         <SelectItem value="Expired">Expired</SelectItem>
                                         <SelectItem value="Out of Stock">Out of Stock</SelectItem>
+                                        <SelectItem value="Quarantine">Quarantine</SelectItem>
+                                        <SelectItem value="Damaged">Damaged</SelectItem>
                                     </SelectContent>
                                 </Select>
                                  <Input 
@@ -339,6 +349,8 @@ export default function BatchProductPage() {
                                                                                             className={cn({
                                                                                                 'bg-green-500 hover:bg-green-500/80': batch.status === 'Sellable',
                                                                                                 'bg-yellow-500 hover:bg-yellow-500/80 text-black': batch.status === 'Expiring',
+                                                                                                'bg-gray-500 hover:bg-gray-500/80': batch.status === 'Quarantine',
+                                                                                                'border-red-500 text-red-500': batch.status === 'Damaged',
                                                                                             })}
                                                                                         >
                                                                                             {batch.status}
