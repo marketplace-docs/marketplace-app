@@ -137,6 +137,7 @@ export default function UpdateExpiredPage() {
                 },
                 userName: user.name,
                 userEmail: user.email,
+                userRole: user.role,
             };
 
             const response = await fetch(`/api/putaway-documents/${selectedBatch.id}`, {
