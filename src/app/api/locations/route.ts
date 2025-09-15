@@ -12,7 +12,7 @@ export async function GET() {
     .from('locations')
     .select('*')
     .order('name', { ascending: true })
-    .limit(5000); // Set a higher limit to fetch all locations
+    .limit(4000); // Set a higher limit to fetch all locations
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
