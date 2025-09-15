@@ -7,6 +7,46 @@ import { logActivity } from '@/lib/logger';
 
 const ALLOWED_ROLES = ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin', 'Staff'];
 
+async function generateNewDocumentNumber(status: ProductOutStatus): Promise<string> {
+  const year = new Date().getFullYear();
+  let prefix = 'MP-ORD'; // Default prefix
+  
+  if (status.startsWith('Issue - Order')) {
+      prefix = `MP-ORD-${year}`;
+  } else if (status.startsWith('Adjusment')) { // Note: 'Adjusment' is the typo in the status
+      prefix = `MP-ADJ-${year}`;
+  } else if (status.startsWith('Issue - Internal Transfer')) {
+      prefix = `MP-TRSF-${year}`;
+  } else if (status.startsWith('Issue - Return')) {
+      prefix = `MP-RTN-${year}`;
+  } else {
+      // Fallback for other statuses like 'Issue - Putaway', etc.
+      prefix = `MP-GEN-${year}`;
+  }
+
+  const { data, error } = await supabaseService
+    .from('product_out_documents')
+    .select('nodocument')
+    .like('nodocument', `${prefix}-%`)
+    .order('nodocument', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (error && error.code !== 'PGRST116') {
+    console.error("Error fetching last document number for product_out:", error);
+    throw new Error("Could not generate new document number.");
+  }
+
+  let newSeq = 1;
+  if (data) {
+    const lastSeq = parseInt(data.nodocument.split('-').pop() || '0', 10);
+    newSeq = lastSeq + 1;
+  }
+  
+  return `${prefix}-${newSeq.toString().padStart(5, '0')}`;
+}
+
+
 export async function GET() {
   const { data, error } = await supabaseService
     .from('product_out_documents')
@@ -31,18 +71,23 @@ export async function POST(request: Request) {
   if (!Array.isArray(documents)) {
     return NextResponse.json({ error: 'Request body must be an array of documents.' }, { status: 400 });
   }
-
-  const docsToInsert = documents.map(doc => ({
-    nodocument: doc.nodocument,
-    sku: doc.sku,
-    barcode: doc.barcode,
-    location: doc.location,
-    qty: doc.qty,
-    status: doc.status,
-    date: doc.date,
-    validatedby: doc.validatedby,
-    expdate: doc.expdate,
+  
+  // Use Promise.all to generate document numbers in parallel if needed, or sequentially to guarantee order
+  const docsToInsert = await Promise.all(documents.map(async (doc) => {
+    const newDocNumber = await generateNewDocumentNumber(doc.status);
+    return {
+        nodocument: newDocNumber,
+        sku: doc.sku,
+        barcode: doc.barcode,
+        location: doc.location,
+        qty: doc.qty,
+        status: doc.status,
+        date: doc.date,
+        validatedby: doc.validatedby,
+        expdate: doc.expdate,
+    };
   }));
+
 
   const { data, error } = await supabaseService
     .from('product_out_documents')
@@ -66,4 +111,16 @@ export async function POST(request: Request) {
   return NextResponse.json(data, { status: 201 });
 }
 
+type ProductOutStatus = 
+    | 'Issue - Order' 
+    | 'Issue - Internal Transfer' 
+    | 'Issue - Adjustment Manual'
+    | 'Adjusment - Loc'
+    | 'Adjustment - SKU'
+    | 'Issue - Putaway'
+    | 'Receipt - Putaway'
+    | 'Issue - Return'
+    | 'Issue - Return Putaway';
+
     
+

@@ -1,7 +1,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -56,6 +56,23 @@ export default function CreatePutawayPage() {
   const router = useRouter();
 
   const canCreate = user?.role === 'Super Admin';
+
+  useEffect(() => {
+    // Generate document number on component mount
+    const generateDocNumber = async () => {
+        try {
+            const response = await fetch('/api/putaway-documents/generate-number');
+            if (!response.ok) throw new Error('Failed to generate document number.');
+            const data = await response.json();
+            setNewDocument(prev => ({ ...prev, no_document: data.newDocNumber }));
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not generate document number.' });
+        }
+    };
+    if (canCreate) {
+        generateDocNumber();
+    }
+  }, [canCreate, toast]);
   
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement>
@@ -137,9 +154,9 @@ export default function CreatePutawayPage() {
                   <Input
                     id="no_document"
                     name="no_document"
-                    placeholder="Enter document number"
                     value={newDocument.no_document}
-                    onChange={handleInputChange}
+                    readOnly
+                    className="bg-muted"
                   />
                 </div>
                  <div className="space-y-2">
@@ -237,7 +254,7 @@ export default function CreatePutawayPage() {
               </div>
               <div className="flex justify-end pt-4 space-x-2">
                 {canCreate && (
-                <Button type="submit" disabled={isSubmitting}>
+                <Button type="submit" disabled={isSubmitting || !newDocument.no_document}>
                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                    Submit
                 </Button>
