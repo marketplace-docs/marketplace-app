@@ -46,12 +46,6 @@ type PutawayDocument = {
   check_by: string;
 };
 
-type Location = {
-  id: number;
-  name: string;
-  type: string;
-};
-
 const statusVariantMap: { [key in PutawayDocument['status']]: "default" | "secondary" } = {
     'Done': 'default',
     'Pending': 'secondary',
@@ -70,7 +64,6 @@ const formatDateSafely = (dateString: string | null | undefined, formatString: s
 
 export default function MonitoringPutawayPage() {
   const [documents, setDocuments] = useState<PutawayDocument[]>([]);
-  const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -99,19 +92,13 @@ export default function MonitoringPutawayPage() {
     setLoading(true);
     setError(null);
     try {
-      const [docsResponse, locsResponse] = await Promise.all([
-        fetch('/api/putaway-documents'),
-        fetch('/api/locations'),
-      ]);
+      const docsResponse = await fetch('/api/putaway-documents');
 
       if (!docsResponse.ok) throw new Error('Failed to fetch documents');
-      if (!locsResponse.ok) throw new Error('Failed to fetch locations');
-
+      
       const docsData = await docsResponse.json();
-      const locsData = await locsResponse.json();
 
       setDocuments(docsData);
-      setLocations(locsData);
 
     } catch (err: any) {
       setError(err.message);
@@ -543,18 +530,7 @@ export default function MonitoringPutawayPage() {
                       </div>
                        <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="location" className="text-right">Location</Label>
-                            <Select value={selectedDoc.location || ''} onValueChange={(value) => setSelectedDoc({ ...selectedDoc, location: value })}>
-                                <SelectTrigger id="location" className="col-span-3">
-                                    <SelectValue placeholder="Select Location" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {locations.map((loc) => (
-                                        <SelectItem key={loc.id} value={loc.name}>
-                                            {loc.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <Input id="location" value={selectedDoc.location} className="col-span-3" onChange={(e) => setSelectedDoc({ ...selectedDoc, location: e.target.value })} />
                         </div>
                       <div className="grid grid-cols-4 items-center gap-4">
                           <Label htmlFor="check_by" className="text-right">Check By</Label>
