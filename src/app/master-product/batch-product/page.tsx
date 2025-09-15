@@ -273,112 +273,108 @@ export default function BatchProductPage() {
                     </CardHeader>
                     <CardContent>
                        <div className="border rounded-lg">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead className="w-10"></TableHead>
-                                        <TableHead>SKU</TableHead>
-                                        <TableHead>Barcode</TableHead>
-                                        <TableHead>Brand</TableHead>
-                                        <TableHead>Total Stock</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {loading ? (
+                            <Accordion type="multiple" value={openAccordion} onValueChange={setOpenAccordion} className="w-full">
+                                <Table>
+                                    <TableHeader>
                                         <TableRow>
-                                            <TableCell colSpan={5} className="h-24 text-center">
-                                                <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
-                                            </TableCell>
+                                            <TableHead className="w-12"></TableHead>
+                                            <TableHead>SKU</TableHead>
+                                            <TableHead>Barcode</TableHead>
+                                            <TableHead>Brand</TableHead>
+                                            <TableHead>Total Stock</TableHead>
                                         </TableRow>
-                                    ) : paginatedData.length > 0 ? (
-                                        <Accordion type="multiple" value={openAccordion} onValueChange={setOpenAccordion} asChild>
-                                          <>
+                                    </TableHeader>
+                                </Table>
+                                {loading ? (
+                                    <div className="h-24 flex items-center justify-center">
+                                        <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+                                    </div>
+                                ) : paginatedData.length > 0 ? (
+                                    <Table>
+                                        <TableBody>
                                             {paginatedData.map((product) => (
-                                                <AccordionItem value={product.sku} key={product.sku} className="border-b">
-                                                    <TableRow className="bg-inherit hover:bg-inherit">
-                                                        <TableCell>
-                                                            <AccordionTrigger>
-                                                                <ChevronDown className="h-5 w-5 transition-transform duration-200" />
-                                                            </AccordionTrigger>
-                                                        </TableCell>
-                                                        <TableCell className="font-medium">{product.sku}</TableCell>
-                                                        <TableCell>{product.barcode}</TableCell>
-                                                        <TableCell>{product.brand}</TableCell>
-                                                        <TableCell>
-                                                             <Badge variant={product.totalStock > 0 ? 'default' : 'destructive'} className="font-semibold text-base">
-                                                                {product.totalStock.toLocaleString()}
-                                                            </Badge>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                    <TableRow>
-                                                        <TableCell colSpan={5} className="p-0">
-                                                            <AccordionContent>
-                                                                <div className="p-4 bg-muted/50">
-                                                                     <Table>
-                                                                        <TableHeader>
-                                                                            <TableRow>
-                                                                                <TableHead>Location</TableHead>
-                                                                                <TableHead>EXP Date</TableHead>
-                                                                                <TableHead>Stock</TableHead>
-                                                                                <TableHead>Status</TableHead>
-                                                                            </TableRow>
-                                                                        </TableHeader>
-                                                                        <TableBody>
-                                                                            {product.batches.map((batch) => (
-                                                                                <TableRow key={`${batch.id}-${batch.location}-${batch.exp_date}`}>
-                                                                                    <TableCell>{batch.location}</TableCell>
-                                                                                    <TableCell>{format(new Date(batch.exp_date), 'dd/MM/yyyy')}</TableCell>
-                                                                                    <TableCell>
-                                                                                        <Badge variant={batch.stock > 0 ? 'secondary' : 'destructive'}>
-                                                                                            {batch.stock.toLocaleString()}
+                                            <AccordionItem value={product.sku} key={product.sku} asChild>
+                                                <>
+                                                <TableRow>
+                                                    <TableCell className="w-12">
+                                                        <AccordionTrigger className="p-0 [&[data-state=open]>svg]:rotate-180">
+                                                            <ChevronDown className="h-5 w-5 transition-transform duration-200" />
+                                                        </AccordionTrigger>
+                                                    </TableCell>
+                                                    <TableCell className="font-medium">{product.sku}</TableCell>
+                                                    <TableCell>{product.barcode}</TableCell>
+                                                    <TableCell>{product.brand}</TableCell>
+                                                    <TableCell>
+                                                        <Badge variant={product.totalStock > 0 ? 'default' : 'destructive'} className="font-semibold text-base">
+                                                            {product.totalStock.toLocaleString()}
+                                                        </Badge>
+                                                    </TableCell>
+                                                </TableRow>
+                                                <TableRow>
+                                                    <TableCell colSpan={5} className="p-0 border-0">
+                                                        <AccordionContent>
+                                                            <div className="p-4 bg-muted/50">
+                                                                <Table>
+                                                                    <TableHeader>
+                                                                        <TableRow>
+                                                                            <TableHead>Location</TableHead>
+                                                                            <TableHead>EXP Date</TableHead>
+                                                                            <TableHead>Stock</TableHead>
+                                                                            <TableHead>Status</TableHead>
+                                                                        </TableRow>
+                                                                    </TableHeader>
+                                                                    <TableBody>
+                                                                        {product.batches.map((batch) => (
+                                                                            <TableRow key={`${batch.id}-${batch.location}-${batch.exp_date}`}>
+                                                                                <TableCell>{batch.location}</TableCell>
+                                                                                <TableCell>{format(new Date(batch.exp_date), 'dd/MM/yyyy')}</TableCell>
+                                                                                <TableCell>
+                                                                                    <Badge variant={batch.stock > 0 ? 'secondary' : 'destructive'}>
+                                                                                        {batch.stock.toLocaleString()}
+                                                                                    </Badge>
+                                                                                </TableCell>
+                                                                                <TableCell>
+                                                                                    <div className="flex items-center gap-2">
+                                                                                        <Badge variant={statusVariantMap[batch.status]}
+                                                                                            className={cn({
+                                                                                                'bg-green-500 hover:bg-green-500/80': batch.status === 'Sellable',
+                                                                                                'bg-yellow-500 hover:bg-yellow-500/80 text-black': batch.status === 'Expiring',
+                                                                                            })}
+                                                                                        >
+                                                                                            {batch.status}
                                                                                         </Badge>
-                                                                                    </TableCell>
-                                                                                    <TableCell>
-                                                                                         <div className="flex items-center gap-2">
-                                                                                            <Badge variant={statusVariantMap[batch.status]}
-                                                                                                className={cn({
-                                                                                                    'bg-green-500 hover:bg-green-500/80': batch.status === 'Sellable',
-                                                                                                    'bg-yellow-500 hover:bg-yellow-500/80 text-black': batch.status === 'Expiring',
-                                                                                                })}
+                                                                                        {isSuperAdmin && batch.stock < 0 && (
+                                                                                            <Button
+                                                                                                variant="ghost"
+                                                                                                size="icon"
+                                                                                                className="h-6 w-6 text-destructive hover:text-destructive/90"
+                                                                                                onClick={() => handleOpenDeleteDialog(batch)}
                                                                                             >
-                                                                                                {batch.status}
-                                                                                            </Badge>
-                                                                                            {isSuperAdmin && batch.stock < 0 && (
-                                                                                                <Button
-                                                                                                    variant="ghost"
-                                                                                                    size="icon"
-                                                                                                    className="h-6 w-6 text-destructive hover:text-destructive/90"
-                                                                                                    onClick={() => handleOpenDeleteDialog(batch)}
-                                                                                                >
-                                                                                                    <Trash2 className="h-4 w-4" />
-                                                                                                </Button>
-                                                                                            )}
-                                                                                        </div>
-                                                                                    </TableCell>
-                                                                                </TableRow>
-                                                                            ))}
-                                                                        </TableBody>
-                                                                    </Table>
-                                                                </div>
-                                                            </AccordionContent>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                </AccordionItem>
+                                                                                                <Trash2 className="h-4 w-4" />
+                                                                                            </Button>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </TableCell>
+                                                                            </TableRow>
+                                                                        ))}
+                                                                    </TableBody>
+                                                                </Table>
+                                                            </div>
+                                                        </AccordionContent>
+                                                    </TableCell>
+                                                </TableRow>
+                                                </>
+                                            </AccordionItem>
                                             ))}
-                                          </>
-                                        </Accordion>
-                                    ) : (
-                                        <TableRow>
-                                            <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                                                <div className="flex flex-col items-center justify-center gap-2">
-                                                    <PackageSearch className="h-8 w-8" />
-                                                    <span>No inventory data found.</span>
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
+                                        </TableBody>
+                                    </Table>
+                                ) : (
+                                    <div className="h-24 flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                                         <PackageSearch className="h-8 w-8" />
+                                         <span>No inventory data found.</span>
+                                    </div>
+                                )}
+                            </Accordion>
                        </div>
                         <div className="flex items-center justify-end space-x-2 py-4">
                             <div className="flex-1 text-sm text-muted-foreground">
