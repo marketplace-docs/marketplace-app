@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { format, differenceInMonths, isBefore } from 'date-fns';
-import { Loader2, ChevronLeft, ChevronRight, PackageSearch, AlertCircle, ShoppingCart, Clock, Ban, Trash2, ChevronDown, ChevronUp, ShieldQuestion, HeartCrack } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight, PackageSearch, AlertCircle, ShoppingCart, Clock, Ban, Trash2, ChevronDown, ChevronUp, ShieldQuestion, HeartCrack, Store, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -25,7 +25,7 @@ type BatchProduct = {
     exp_date: string;
     location: string;
     stock: number;
-    status: 'Sellable' | 'Expiring' | 'Expired' | 'Out of Stock' | 'Quarantine' | 'Damaged';
+    status: 'Sellable' | 'Expiring' | 'Expired' | 'Out of Stock' | 'Quarantine' | 'Damaged' | 'Marketplace' | 'Sensitive MP';
 };
 
 type AggregatedBySku = {
@@ -36,29 +36,24 @@ type AggregatedBySku = {
     batches: BatchProduct[];
 };
 
-type ProductStatus = 'All' | 'Sellable' | 'Expiring' | 'Expired' | 'Out of Stock' | 'Quarantine' | 'Damaged';
+type ProductStatus = 'All' | 'Sellable' | 'Expiring' | 'Expired' | 'Out of Stock' | 'Quarantine' | 'Damaged' | 'Marketplace' | 'Sensitive MP';
 
 const getProductStatus = (expDate: string, stock: number, location: string): Omit<ProductStatus, 'All'> => {
-    if (stock <= 0) {
-        return 'Out of Stock';
-    }
-    if (location.toLowerCase().includes('quarantine')) {
-        return 'Quarantine';
-    }
-    if (location.toLowerCase().includes('damaged')) {
-        return 'Damaged';
-    }
+    const lowerCaseLocation = location.toLowerCase();
+    if (lowerCaseLocation.includes('marketplace')) return 'Marketplace';
+    if (lowerCaseLocation.includes('sensitive')) return 'Sensitive MP';
+    if (lowerCaseLocation.includes('quarantine')) return 'Quarantine';
+    if (lowerCaseLocation.includes('damaged')) return 'Damaged';
+    
+    if (stock <= 0) return 'Out of Stock';
+
     const today = new Date();
     const expiryDate = new Date(expDate);
     
-    if (isBefore(expiryDate, today)) {
-        return 'Expired';
-    }
+    if (isBefore(expiryDate, today)) return 'Expired';
 
     const monthsUntilExpiry = differenceInMonths(expiryDate, today);
-    if (monthsUntilExpiry < 3) {
-        return 'Expiring';
-    }
+    if (monthsUntilExpiry < 3) return 'Expiring';
     
     return 'Sellable';
 };
@@ -71,6 +66,8 @@ const statusVariantMap: Record<Omit<ProductStatus, 'All'>, 'default' | 'secondar
     'Out of Stock': 'outline',
     'Quarantine': 'outline',
     'Damaged': 'destructive',
+    'Marketplace': 'default',
+    'Sensitive MP': 'secondary',
 };
 
 const KpiCard = ({ title, value, icon: Icon, className, isLoading }: { title: string; value: number; icon: React.ElementType, className?: string, isLoading: boolean }) => (
@@ -270,6 +267,8 @@ export default function BatchProductPage() {
                                         <SelectItem value="Out of Stock">Out of Stock</SelectItem>
                                         <SelectItem value="Quarantine">Quarantine</SelectItem>
                                         <SelectItem value="Damaged">Damaged</SelectItem>
+                                        <SelectItem value="Marketplace">Marketplace</SelectItem>
+                                        <SelectItem value="Sensitive MP">Sensitive MP</SelectItem>
                                     </SelectContent>
                                 </Select>
                                  <Input 
@@ -351,6 +350,8 @@ export default function BatchProductPage() {
                                                                                                 'bg-yellow-500 hover:bg-yellow-500/80 text-black': batch.status === 'Expiring',
                                                                                                 'bg-gray-500 hover:bg-gray-500/80': batch.status === 'Quarantine',
                                                                                                 'border-red-500 text-red-500': batch.status === 'Damaged',
+                                                                                                'bg-blue-500 hover:bg-blue-500/80': batch.status === 'Marketplace',
+                                                                                                'bg-purple-500 hover:bg-purple-500/80': batch.status === 'Sensitive MP',
                                                                                             })}
                                                                                         >
                                                                                             {batch.status}
