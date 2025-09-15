@@ -1,16 +1,16 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Loader2, ChevronLeft, ChevronRight, AlertCircle, Warehouse, Plus } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight, AlertCircle, Warehouse, Plus, Upload, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { differenceInMonths, isBefore } from 'date-fns';
+import { differenceInMonths, isBefore, format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -80,8 +80,11 @@ export default function LocationPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const { toast } = useToast();
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [isAddDialogOpen, setAddDialogOpen] = useState(false);
+    const [isUploadDialogOpen, setUploadDialogOpen] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [newLocationName, setNewLocationName] = useState('');
     const [newLocationType, setNewLocationType] = useState<LocationType>('Empty');
     
@@ -184,6 +187,76 @@ export default function LocationPage() {
         setAddDialogOpen(false);
     };
 
+    const handleExport = () => {
+        if (filteredData.length === 0) {
+          toast({
+            variant: "destructive",
+            title: "No Data",
+            description: "There is no data to export.",
+          });
+          return;
+        }
+        const headers = ["name", "type"];
+        const csvContent = [
+            headers.join(","),
+            ...filteredData.map(item => [
+                `"${item.name.replace(/"/g, '""')}"`,
+                `"${item.type}"`
+            ].join(","))
+        ].join("\n");
+    
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.href = url;
+        link.setAttribute("download", `locations_data_${format(new Date(), "yyyyMMdd")}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        toast({ title: "Success", description: "Locations data exported." });
+    };
+
+    const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        setIsSubmitting(true);
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const text = e.target?.result as string;
+            try {
+                const lines = text.split('\n').filter(line => line.trim() !== '');
+                const headers = lines.shift()?.split(',').map(h => h.trim().toLowerCase().replace(/"/g, '')) || [];
+                
+                if (!headers.includes('name') || !headers.includes('type')) {
+                    throw new Error("Invalid CSV. Required headers: name, type");
+                }
+
+                const newLocations = lines.map(line => {
+                    const values = line.split(',');
+                    const name = values[headers.indexOf('name')]?.trim().replace(/"/g, '');
+                    const type = values[headers.indexOf('type')]?.trim().replace(/"/g, '') as LocationType;
+
+                    if (name && Object.keys(typeVariantMap).includes(type) && !locationsData.some(loc => loc.name.toLowerCase() === name.toLowerCase())) {
+                        return { name, type };
+                    }
+                    return null;
+                }).filter((l): l is LocationData => l !== null);
+
+                setLocationsData(prev => [...prev, ...newLocations].sort((a,b) => a.name.localeCompare(b.name)));
+                setUploadDialogOpen(false);
+                toast({ title: "Success", description: `${newLocations.length} new locations uploaded.` });
+
+            } catch (error: any) {
+                 toast({ variant: "destructive", title: "Upload Failed", description: error.message });
+            } finally {
+                setIsSubmitting(false);
+                if (fileInputRef.current) fileInputRef.current.value = '';
+            }
+        };
+        reader.readAsText(file);
+    };
+
 
     return (
         <MainLayout>
@@ -240,7 +313,7 @@ export default function LocationPage() {
                                 <CardTitle>Registered Locations</CardTitle>
                                 <CardDescription>A list of all unique storage locations and their status type.</CardDescription>
                             </div>
-                            <div className="flex w-full md:w-auto items-center gap-2">
+                             <div className="flex w-full md:w-auto items-center gap-2">
                                 <Dialog open={isAddDialogOpen} onOpenChange={setAddDialogOpen}>
                                     <DialogTrigger asChild>
                                         <Button variant="outline">
@@ -288,6 +361,28 @@ export default function LocationPage() {
                                         </DialogFooter>
                                     </DialogContent>
                                 </Dialog>
+                                <Dialog open={isUploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button variant="outline"><Upload className="mr-2 h-4 w-4" />Upload</Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                        <DialogHeader>
+                                            <DialogTitle>Upload Locations CSV</DialogTitle>
+                                            <DialogDescription>
+                                                Select a CSV file to bulk upload locations. The file must contain the headers: name, type.
+                                            </DialogDescription>
+                                        </DialogHeader>
+                                        <div className="py-4">
+                                           <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
+                                           <Button onClick={() => fileInputRef.current?.click()} className="w-full" disabled={isSubmitting}>
+                                                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Choose File'}
+                                           </Button>
+                                        </div>
+                                    </DialogContent>
+                                </Dialog>
+                                <Button variant="outline" onClick={handleExport}>
+                                    <Download className="mr-2 h-4 w-4" /> Export
+                                </Button>
                                 <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as LocationFilterType)}>
                                     <SelectTrigger className="w-full md:w-[180px]">
                                         <SelectValue placeholder="Filter by type" />
