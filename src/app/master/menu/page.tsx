@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -151,7 +152,7 @@ export default function MenuManagementPage() {
                 body: JSON.stringify({ 
                     userId: selectedUserId, 
                     permissions: menuPermissions, 
-                    user: { name: currentUser.name, email: currentUser.email }
+                    user: currentUser,
                 })
             });
 

@@ -26,13 +26,26 @@ export async function POST(request: Request) {
   }));
 
   try {
-    const { error } = await supabaseService
+    // We can't use a single transaction in Supabase JS client easily,
+    // so we will first delete old permissions, then insert new ones.
+    const { error: deleteError } = await supabaseService
+        .from('menu_permissions')
+        .delete()
+        .eq('user_id', userIdNumber);
+
+    if (deleteError) {
+        console.error('Supabase delete error:', deleteError);
+        throw deleteError;
+    }
+
+
+    const { error: insertError } = await supabaseService
       .from('menu_permissions')
       .upsert(records, { onConflict: 'user_id, menu_href' });
 
-    if (error) {
-      console.error('Supabase upsert error:', error);
-      throw error;
+    if (insertError) {
+      console.error('Supabase upsert error:', insertError);
+      throw insertError;
     }
 
     if (user && user.name && user.email) {
