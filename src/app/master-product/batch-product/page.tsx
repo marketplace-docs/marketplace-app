@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -6,8 +5,8 @@ import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { format, differenceInMonths } from 'date-fns';
-import { Loader2, ChevronLeft, ChevronRight, PackageSearch, AlertCircle } from 'lucide-react';
+import { format, differenceInMonths, isBefore } from 'date-fns';
+import { Loader2, ChevronLeft, ChevronRight, PackageSearch, AlertCircle, ShoppingCart, Clock, Ban } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -15,27 +14,46 @@ import type { BatchProduct } from '@/types/batch-product';
 import { cn } from '@/lib/utils';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
-type ProductStatus = 'Sellable' | 'Expiring' | 'Expired';
+type ProductStatus = 'All' | 'Sellable' | 'Expiring' | 'Expired' | 'Out of Stock';
 
-const getProductStatus = (expDate: string): ProductStatus => {
+const getProductStatus = (expDate: string, stock: number): Omit<ProductStatus, 'All'> => {
+    if (stock <= 0) {
+        return 'Out of Stock';
+    }
     const today = new Date();
     const expiryDate = new Date(expDate);
-    const monthsUntilExpiry = differenceInMonths(expiryDate, today);
-
-    if (monthsUntilExpiry < 3) {
+    
+    if (isBefore(expiryDate, today)) {
         return 'Expired';
     }
-    if (monthsUntilExpiry <= 9) {
+
+    const monthsUntilExpiry = differenceInMonths(expiryDate, today);
+    if (monthsUntilExpiry < 3) {
         return 'Expiring';
     }
+    
     return 'Sellable';
 };
 
-const statusVariantMap: Record<ProductStatus, 'default' | 'secondary' | 'destructive'> = {
+
+const statusVariantMap: Record<Omit<ProductStatus, 'All'>, 'default' | 'secondary' | 'destructive' | 'outline'> = {
     'Sellable': 'default',
     'Expiring': 'secondary',
     'Expired': 'destructive',
+    'Out of Stock': 'outline',
 };
+
+const KpiCard = ({ title, value, icon: Icon, className, isLoading }: { title: string; value: number; icon: React.ElementType, className?: string, isLoading: boolean }) => (
+    <Card className={cn("border-l-4", className)}>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">{title}</CardTitle>
+            <Icon className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+            {isLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{value.toLocaleString()}</div>}
+        </CardContent>
+    </Card>
+);
 
 
 export default function BatchProductPage() {
@@ -43,6 +61,7 @@ export default function BatchProductPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState<ProductStatus>('All');
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
 
@@ -58,7 +77,7 @@ export default function BatchProductPage() {
             const data: Omit<BatchProduct, 'status'>[] = await response.json();
             const dataWithStatus = data.map(product => ({
                 ...product,
-                status: getProductStatus(product.exp_date)
+                status: getProductStatus(product.exp_date, product.stock)
             }));
             setInventoryData(dataWithStatus);
         } catch (err: any) {
@@ -74,16 +93,30 @@ export default function BatchProductPage() {
 
 
     const filteredData = useMemo(() => {
-        return inventoryData.filter(product =>
-            product.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            product.barcode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (product.brand && product.brand.toLowerCase().includes(searchTerm.toLowerCase()))
-        );
-    }, [inventoryData, searchTerm]);
+        return inventoryData.filter(product => {
+            const matchesSearch = product.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                product.barcode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (product.brand && product.brand.toLowerCase().includes(searchTerm.toLowerCase()));
+            
+            const matchesStatus = statusFilter === 'All' || product.status === statusFilter;
+
+            return matchesSearch && matchesStatus;
+        });
+    }, [inventoryData, searchTerm, statusFilter]);
+    
+    const kpiData = useMemo(() => {
+        return inventoryData.reduce((acc, product) => {
+            if (product.status === 'Sellable') acc.sellable += 1;
+            if (product.status === 'Expiring') acc.expiring += 1;
+            if (product.status === 'Out of Stock') acc.outOfStock += 1;
+            return acc;
+        }, { sellable: 0, expiring: 0, outOfStock: 0 });
+    }, [inventoryData]);
+
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [rowsPerPage, searchTerm]);
+    }, [rowsPerPage, searchTerm, statusFilter]);
 
     const totalPages = Math.ceil(filteredData.length / rowsPerPage);
     const paginatedData = filteredData.slice(
@@ -110,6 +143,11 @@ export default function BatchProductPage() {
                         <AlertDescription>{error}</AlertDescription>
                     </Alert>
                 )}
+                 <div className="grid gap-4 md:grid-cols-3">
+                    <KpiCard title="Sellable Items" value={kpiData.sellable} icon={ShoppingCart} className="border-green-500" isLoading={loading} />
+                    <KpiCard title="Expiring Soon" value={kpiData.expiring} icon={Clock} className="border-yellow-500" isLoading={loading} />
+                    <KpiCard title="Out of Stock" value={kpiData.outOfStock} icon={Ban} className="border-red-500" isLoading={loading} />
+                </div>
                 <Card>
                     <CardHeader>
                         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -117,12 +155,26 @@ export default function BatchProductPage() {
                                 <CardTitle>Stock Overview</CardTitle>
                                 <CardDescription>Up-to-date stock information from goods received and issued.</CardDescription>
                             </div>
-                             <Input 
-                                placeholder="Search SKU, Barcode, or Brand..." 
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full md:w-auto md:max-w-sm"
-                            />
+                            <div className="flex w-full md:w-auto items-center gap-2">
+                                <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as ProductStatus)}>
+                                    <SelectTrigger className="w-full md:w-[180px]">
+                                        <SelectValue placeholder="Filter by status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="All">All Statuses</SelectItem>
+                                        <SelectItem value="Sellable">Sellable</SelectItem>
+                                        <SelectItem value="Expiring">Expiring</SelectItem>
+                                        <SelectItem value="Expired">Expired</SelectItem>
+                                        <SelectItem value="Out of Stock">Out of Stock</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                 <Input 
+                                    placeholder="Search SKU, Barcode, or Brand..." 
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full md:w-auto md:max-w-sm"
+                                />
+                            </div>
                         </div>
                     </CardHeader>
                     <CardContent>
@@ -147,8 +199,8 @@ export default function BatchProductPage() {
                                             </TableCell>
                                         </TableRow>
                                     ) : paginatedData.length > 0 ? (
-                                        paginatedData.map((product) => (
-                                            <TableRow key={product.barcode}>
+                                        paginatedData.map((product, index) => (
+                                            <TableRow key={`${product.barcode}-${index}`}>
                                                 <TableCell className="font-medium">{product.sku}</TableCell>
                                                 <TableCell>{product.barcode}</TableCell>
                                                 <TableCell>{product.brand}</TableCell>
