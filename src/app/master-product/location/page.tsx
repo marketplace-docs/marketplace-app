@@ -80,7 +80,7 @@ export default function LocationPage() {
             setLocationsData(data);
             setTotalLocationCount(countData.count);
 
-        } catch (err: any) {
+        } catch (err: any) -> any) {
             setError(err.message);
         } finally {
             setLoading(false);
@@ -115,17 +115,6 @@ export default function LocationPage() {
     const handlePrevPage = () => {
         setCurrentPage((prev) => (prev > 1 ? prev - 1 : prev));
     };
-    
-    const kpiData = useMemo(() => {
-        return locationsData.reduce((acc, loc) => {
-            const type = loc.type.toLowerCase();
-            if (type === 'sellable') acc.sellable += 1;
-            if (type === 'expiring') acc.expiring += 1;
-            if (type === 'expired') acc.expired += 1;
-            if (type === 'quarantine') acc.quarantine += 1;
-            return acc;
-        }, { sellable: 0, expiring: 0, expired: 0, quarantine: 0 });
-    }, [locationsData]);
     
     const handleAddLocation = async () => {
         if (!newLocationName.trim()) {
@@ -284,30 +273,6 @@ export default function LocationPage() {
                         </CardHeader>
                         <CardContent>
                             {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{totalLocationCount.toLocaleString()}</div>}
-                        </CardContent>
-                    </Card>
-                     <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Sellable Locations</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold text-green-600">{kpiData.sellable.toLocaleString()}</div>}
-                        </CardContent>
-                    </Card>
-                     <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Expired Locations</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold text-red-600">{kpiData.expired.toLocaleString()}</div>}
-                        </CardContent>
-                    </Card>
-                     <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Quarantine Locations</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{kpiData.quarantine.toLocaleString()}</div>}
                         </CardContent>
                     </Card>
                 </div>
@@ -503,9 +468,3 @@ export default function LocationPage() {
         </MainLayout>
     );
 }
-
-
-
-
-
-  
