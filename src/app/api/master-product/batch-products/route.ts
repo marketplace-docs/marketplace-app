@@ -21,7 +21,8 @@ type ProductOutDoc = {
     expdate: string;
     location: string;
     qty: number;
-    date: string; 
+    date: string;
+    status: string;
 };
 
 type CombinedDoc = {
@@ -55,15 +56,24 @@ const createStockKey = (barcode: string, location: string, exp_date: string): st
     return `${barcode}|${loc}|${exp}`;
 };
 
+// Define statuses that represent a true stock deduction from the warehouse
+const REAL_STOCK_OUT_STATUSES = [
+    'Issue - Order',
+    'Issue - Internal Transfer',
+    'Issue - Adjustment Manual',
+    'Issue - Return'
+];
+
 
 export async function GET() {
     try {
         const [
             { data: putawayData, error: putawayError },
+            // Fetch status as well to filter internal movements
             { data: productOutData, error: productOutError }
         ] = await Promise.all([
             supabaseService.from('putaway_documents').select('id, sku, barcode, brand, exp_date, location, qty, date'),
-            supabaseService.from('product_out_documents').select('id, sku, barcode, location, qty, expdate, date')
+            supabaseService.from('product_out_documents').select('id, sku, barcode, location, qty, expdate, date, status')
         ]);
 
         if (putawayError) throw putawayError;
@@ -97,14 +107,17 @@ export async function GET() {
         // Combine and sort all transactions by date
         const combinedTransactions: CombinedDoc[] = [
             ...(putawayData as ProductDoc[]).map(doc => ({ type: 'IN' as const, date: new Date(doc.date), doc })),
-            ...(productOutData as ProductOutDoc[]).map(doc => ({ type: 'OUT' as const, date: new Date(doc.date), doc }))
+            // CRITICAL FIX: Only include documents that represent a true stock out in the calculation
+            ...(productOutData as ProductOutDoc[])
+              .filter(doc => REAL_STOCK_OUT_STATUSES.includes(doc.status))
+              .map(doc => ({ type: 'OUT' as const, date: new Date(doc.date), doc }))
         ].sort((a, b) => a.date.getTime() - b.date.getTime());
         
         // Stock levels are already reset to 0 during initialization in the map.
 
         // Process transactions chronologically
         combinedTransactions.forEach(tx => {
-            const doc = tx.doc;
+            const doc = tx.doc as ProductDoc | ProductOutDoc;
             const exp_date = tx.type === 'IN' ? (doc as ProductDoc).exp_date : (doc as ProductOutDoc).expdate;
             
             const key = createStockKey(doc.barcode, doc.location, exp_date);
