@@ -83,7 +83,6 @@ export default function ProductOutPage() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     
     const [documents, setDocuments] = useState<ProductOutDocument[]>([]);
-    const [productInStock, setProductInStock] = useState<AggregatedProduct[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string|null>(null);
     
@@ -108,19 +107,11 @@ export default function ProductOutPage() {
         setLoading(true);
         setError(null);
         try {
-            const [outDocsRes, stockRes] = await Promise.all([
-                fetch('/api/product-out-documents'),
-                fetch('/api/master-product/batch-products')
-            ]);
-            
+            const outDocsRes = await fetch('/api/product-out-documents');
             if (!outDocsRes.ok) throw new Error('Failed to fetch product out documents');
-            if (!stockRes.ok) throw new Error('Failed to fetch product stock');
             
             const outDocsData = await outDocsRes.json();
-            const stockData = await stockRes.json();
-            
             setDocuments(outDocsData);
-            setProductInStock(stockData);
         } catch (error: any) {
             setError(error.message);
         } finally {
@@ -145,7 +136,7 @@ export default function ProductOutPage() {
                     }
                     const allBatchesForBarcode: AggregatedProduct[] = await response.json();
                     
-                    if (allBatchesForBarcode.length > 0) {
+                    if (allBatchesForBarcode && allBatchesForBarcode.length > 0) {
                         // FEFO logic: sort by nearest expiration date
                         const sortedBatches = allBatchesForBarcode
                             .filter(batch => batch.stock > 0) // Only consider batches with stock
@@ -509,7 +500,7 @@ export default function ProductOutPage() {
                                       <DialogHeader>
                                           <DialogTitle>Upload Goods Issue CSV</DialogTitle>
                                           <DialogDescription>
-                                              Gunakan file CSV dengan kolom `barcode`, `qty`, dan `status`. Sistem akan otomatis mengisi data lain (SKU, Exp Date, Location) berdasarkan stok FEFO dan membuat No. Dokumen berdasarkan status dari setiap baris.
+                                             Gunakan file CSV dengan kolom `barcode`, `qty`, dan `status`. Sistem akan otomatis mengisi data lain (SKU, Exp Date, Location) berdasarkan stok FEFO dan membuat No. Dokumen berdasarkan status dari setiap baris.
                                           </DialogDescription>
                                       </DialogHeader>
                                       <div className="py-4 space-y-4">
