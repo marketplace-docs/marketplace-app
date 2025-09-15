@@ -28,16 +28,6 @@ type PutawayDocument = {
     check_by: string;
 };
 
-type AggregatedProduct = {
-    sku: string;
-    barcode: string;
-    brand: string;
-    exp_date: string;
-    location: string;
-    qty: number;
-    status: 'Done' | 'Pending';
-};
-
 const statusVariantMap: { [key in PutawayDocument['status']]: "default" | "secondary" } = {
     'Done': 'default',
     'Pending': 'secondary',
@@ -71,38 +61,13 @@ export default function ProductInPage() {
         fetchPutawayDocs();
     }, [fetchPutawayDocs]);
 
-
-    const aggregatedData = useMemo(() => {
-        const productMap = new Map<string, AggregatedProduct>();
-        
-        const sortedDocs = [...putawayDocs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-        sortedDocs.forEach(doc => {
-            if (productMap.has(doc.sku)) {
-                const existing = productMap.get(doc.sku)!;
-                existing.qty += doc.qty;
-            } else {
-                productMap.set(doc.sku, {
-                    sku: doc.sku,
-                    barcode: doc.barcode,
-                    brand: doc.brand,
-                    exp_date: doc.exp_date,
-                    location: doc.location,
-                    qty: doc.qty,
-                    status: doc.status,
-                });
-            }
-        });
-
-        return Array.from(productMap.values());
-    }, [putawayDocs]);
-
     const filteredData = useMemo(() => {
-        return aggregatedData.filter(product =>
-            product.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            product.barcode.toLowerCase().includes(searchTerm.toLowerCase())
+        return putawayDocs.filter(doc =>
+            doc.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            doc.barcode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            doc.no_document.toLowerCase().includes(searchTerm.toLowerCase())
         );
-    }, [aggregatedData, searchTerm]);
+    }, [putawayDocs, searchTerm]);
     
     useEffect(() => {
         setCurrentPage(1);
@@ -131,17 +96,20 @@ export default function ProductInPage() {
             });
             return;
         }
-        const headers = ["SKU", "Barcode", "Brand", "EXP Date", "Location", "Quantity", "Status"];
+        const headers = ["no_document", "date", "SKU", "Barcode", "Brand", "EXP Date", "Location", "Quantity", "Status", "check_by"];
         const csvContent = [
             headers.join(","),
             ...filteredData.map(item => [
+                `"${item.no_document.replace(/"/g, '""')}"`,
+                `"${format(new Date(item.date), "yyyy-MM-dd HH:mm:ss")}"`,
                 `"${item.sku.replace(/"/g, '""')}"`,
                 `"${item.barcode.replace(/"/g, '""')}"`,
                 `"${item.brand.replace(/"/g, '""')}"`,
                 `"${format(new Date(item.exp_date), "yyyy-MM-dd")}"`,
                 `"${item.location.replace(/"/g, '""')}"`,
                 item.qty,
-                item.status
+                item.status,
+                `"${item.check_by.replace(/"/g, '""')}"`
             ].join(","))
         ].join("\n");
 
@@ -174,7 +142,7 @@ export default function ProductInPage() {
                         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                             <div className="flex-1">
                                 <CardTitle>Goods Receipt</CardTitle>
-                                <CardDescription>Aggregate stock data of received items from putaway.</CardDescription>
+                                <CardDescription>A log of all received items from putaway documents.</CardDescription>
                             </div>
                             <div className="flex items-center gap-2">
                                 <Button variant="outline" onClick={handleExport}>
@@ -182,7 +150,7 @@ export default function ProductInPage() {
                                     Export
                                 </Button>
                                 <Input 
-                                    placeholder="Search SKU or Barcode..." 
+                                    placeholder="Search SKU, Barcode, or Document..." 
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     className="w-full md:w-auto md:max-w-sm"
@@ -195,6 +163,8 @@ export default function ProductInPage() {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
+                                        <TableHead>No. Document</TableHead>
+                                        <TableHead>Date</TableHead>
                                         <TableHead>SKU</TableHead>
                                         <TableHead>Barcode</TableHead>
                                         <TableHead>Brand</TableHead>
@@ -202,34 +172,38 @@ export default function ProductInPage() {
                                         <TableHead>Location</TableHead>
                                         <TableHead>Quantity</TableHead>
                                         <TableHead>Status</TableHead>
+                                        <TableHead>Checked By</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {loading ? (
                                         <TableRow>
-                                            <TableCell colSpan={7} className="h-24 text-center">
+                                            <TableCell colSpan={10} className="h-24 text-center">
                                                 <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                                             </TableCell>
                                         </TableRow>
                                     ) : paginatedData.length > 0 ? (
-                                        paginatedData.map((product) => (
-                                            <TableRow key={product.sku}>
-                                                <TableCell className="font-medium">{product.sku}</TableCell>
-                                                <TableCell>{product.barcode}</TableCell>
-                                                <TableCell>{product.brand}</TableCell>
-                                                <TableCell>{format(new Date(product.exp_date), 'dd/MM/yyyy')}</TableCell>
-                                                <TableCell>{product.location}</TableCell>
-                                                <TableCell>{product.qty.toLocaleString()}</TableCell>
+                                        paginatedData.map((doc) => (
+                                            <TableRow key={doc.id}>
+                                                <TableCell>{doc.no_document}</TableCell>
+                                                <TableCell>{format(new Date(doc.date), 'dd/MM/yyyy HH:mm')}</TableCell>
+                                                <TableCell className="font-medium">{doc.sku}</TableCell>
+                                                <TableCell>{doc.barcode}</TableCell>
+                                                <TableCell>{doc.brand}</TableCell>
+                                                <TableCell>{format(new Date(doc.exp_date), 'dd/MM/yyyy')}</TableCell>
+                                                <TableCell>{doc.location}</TableCell>
+                                                <TableCell>{doc.qty.toLocaleString()}</TableCell>
                                                 <TableCell>
-                                                    <Badge variant={statusVariantMap[product.status] || 'default'}>
-                                                        {product.status}
+                                                    <Badge variant={statusVariantMap[doc.status] || 'default'}>
+                                                        {doc.status}
                                                     </Badge>
                                                 </TableCell>
+                                                <TableCell>{doc.check_by}</TableCell>
                                             </TableRow>
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                                            <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
                                                 No incoming product data.
                                             </TableCell>
                                         </TableRow>
