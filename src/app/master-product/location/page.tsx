@@ -19,7 +19,7 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/use-auth';
 import { format } from 'date-fns';
 
-type LocationType = 'Sellable' | 'Expiring' | 'Expired' | 'Quarantine' | 'Empty' | 'Sensitive MP' | 'Marketplace' | 'Damaged';
+type LocationType = 'Empty' | 'Sellable' | 'Expiring' | 'Expired' | 'Quarantine' | 'Sensitive MP' | 'Marketplace' | 'Damaged';
 type LocationFilterType = 'All' | LocationType;
 
 type LocationData = {
@@ -182,7 +182,7 @@ export default function LocationPage() {
         toast({ title: "Success", description: "Locations data exported." });
     };
 
-    const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file || !user) return;
         setIsSubmitting(true);
@@ -191,6 +191,10 @@ export default function LocationPage() {
             const text = e.target?.result as string;
             try {
                 const lines = text.split('\n').filter(line => line.trim() !== '');
+                if (lines.length <= 1) {
+                    throw new Error("CSV file is empty or has only a header.");
+                }
+                
                 const headerLine = lines.shift()?.trim();
                 if (!headerLine) {
                     throw new Error("CSV file is empty or has no header.");
@@ -206,11 +210,10 @@ export default function LocationPage() {
                 }
 
                 const newLocations = lines.map(line => {
-                    const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                    const values = line.split(',');
                     const name = values[nameIndex]?.trim().replace(/"/g, '');
                     const typeRaw = values[typeIndex]?.trim().replace(/"/g, '');
                     
-                    // Convert to Title Case to match LocationType
                     const type = typeRaw.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ') as LocationType;
 
                     if (name && Object.keys(typeVariantMap).includes(type)) {
