@@ -20,6 +20,10 @@ export async function POST(request: Request) {
   const body = await request.json();
   const { user, documents, ...singleDoc } = body;
 
+  if (user?.role !== 'Super Admin') {
+    return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
+  }
+
   // Handle bulk upload from CSV
   if (Array.isArray(documents)) {
     const docsToInsert = documents.map(doc => ({

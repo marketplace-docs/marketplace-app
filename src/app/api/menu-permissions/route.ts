@@ -6,6 +6,10 @@ import { logActivity } from '@/lib/logger';
 export async function POST(request: Request) {
   const { userId, permissions, user } = await request.json();
 
+  if (user?.role !== 'Super Admin') {
+    return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
+  }
+
   if (!userId || !permissions) {
     return NextResponse.json({ error: 'userId and permissions are required' }, { status: 400 });
   }

@@ -22,6 +22,10 @@ export async function POST(request: Request) {
   const body = await request.json();
   const { user, documents } = body;
 
+  if (user?.role !== 'Super Admin') {
+    return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
+  }
+
   if (!Array.isArray(documents)) {
     return NextResponse.json({ error: 'Request body must be an array of documents.' }, { status: 400 });
   }

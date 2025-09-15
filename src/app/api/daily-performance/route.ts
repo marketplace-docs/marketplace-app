@@ -47,6 +47,10 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
     const { entries, user } = await request.json();
 
+    if (user?.role !== 'Super Admin') {
+        return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
+    }
+
     if (!Array.isArray(entries)) {
         return NextResponse.json({ error: 'Request body must be an array of performance entries.' }, { status: 400 });
     }
@@ -90,6 +94,10 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
     const { updates, user } = await request.json();
+
+    if (user?.role !== 'Super Admin') {
+        return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
+    }
 
     if (!Array.isArray(updates)) {
         return NextResponse.json({ error: 'Request body must be an array of updates.' }, { status: 400 });

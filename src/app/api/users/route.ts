@@ -18,8 +18,13 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const body = await request.json();
-  const { name, email, role, status } = body;
-  const user = { name: body.userName, email: body.userEmail };
+  const { name, email, role, status, userName, userEmail, userRole } = body;
+
+  if (userRole !== 'Super Admin') {
+    return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
+  }
+
+  const user = { name: userName, email: userEmail };
 
   if (!name || !email || !role || !status) {
     return NextResponse.json({ error: 'All fields are required' }, { status: 400 });

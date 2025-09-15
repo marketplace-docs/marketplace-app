@@ -6,7 +6,11 @@ import { logActivity } from '@/lib/logger';
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const { id } = params;
   const body = await request.json();
-  const { no_document, qty, status, sku, barcode, brand, reason, received_by, userName, userEmail } = body;
+  const { no_document, qty, status, sku, barcode, brand, reason, received_by, userName, userEmail, userRole } = body;
+
+  if (userRole !== 'Super Admin') {
+    return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
+  }
 
   const { data, error } = await supabaseService
     .from('return_documents')
@@ -35,9 +39,13 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
   const { id } = params;
   const user = { 
       name: request.headers.get('X-User-Name'), 
-      email: request.headers.get('X-User-Email') 
+      email: request.headers.get('X-User-Email'),
+      role: request.headers.get('X-User-Role')
   };
 
+  if (user.role !== 'Super Admin') {
+    return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
+  }
 
   const { error } = await supabaseService
     .from('return_documents')
