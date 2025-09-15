@@ -354,6 +354,9 @@ export default function LocationPage() {
                                            <Button onClick={() => fileInputRef.current?.click()} className="w-full" disabled={isSubmitting}>
                                                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Choose File'}
                                            </Button>
+                                           <p className="text-xs text-muted-foreground mt-2">
+                                                Don't have a template? <a href="/templates/locations_template.csv" download className="underline text-primary">Download CSV template</a>
+                                           </p>
                                         </div>
                                     </DialogContent>
                                 </Dialog>
