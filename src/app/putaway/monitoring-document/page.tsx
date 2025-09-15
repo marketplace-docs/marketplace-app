@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
@@ -240,7 +239,7 @@ export default function MonitoringPutawayPage() {
         if (lines.length <= 1) throw new Error("CSV is empty or has only a header.");
         
         const header = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
-        const requiredHeaders = ['no_document', 'sku', 'barcode', 'brand', 'exp_date', 'check_by', 'qty', 'status'];
+        const requiredHeaders = ['no_document', 'sku', 'barcode', 'brand', 'exp_date', 'location', 'check_by', 'qty', 'status'];
 
         if (!requiredHeaders.every(h => header.includes(h))) {
             throw new Error(`Invalid CSV headers. Required: ${requiredHeaders.join(', ')}`);
@@ -259,7 +258,7 @@ export default function MonitoringPutawayPage() {
               barcode: docData.barcode || '',
               brand: docData.brand || '',
               exp_date: docData.exp_date || '',
-              location: null, // Location is not in the template
+              location: docData.location || '',
               check_by: docData.check_by || '',
               qty: parseInt(docData.qty || '0', 10),
               status: docData.status || 'Pending',

@@ -1,3 +1,2 @@
-no_document,sku,barcode,brand,exp_date,check_by,qty,status
-
-    
+no_document,sku,barcode,brand,exp_date,location,check_by,qty,status
+MP-PTW-2024-00001,SKU001,899000000001,BRAND A,2025-12-31,A-01-01-A,John Doe,100,Done
