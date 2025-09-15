@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
 
 type PutawayDocument = {
   id: string; no_document: string; date: string; qty: number; status: 'Done' | 'Pending'; sku: string; barcode: string; brand: string; exp_date: string; location: string; check_by: string;
@@ -45,6 +46,8 @@ export default function StockLogPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const { toast } = useToast();
+    const { user } = useAuth();
+    const isSuperAdmin = user?.role === 'Super Admin';
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -204,10 +207,12 @@ export default function StockLogPage() {
                                 <CardDescription>Stores historical data of incoming and outgoing items.</CardDescription>
                             </div>
                             <div className="flex items-center gap-2">
-                                <Button variant="outline" onClick={handleExport}>
-                                    <Download className="mr-2 h-4 w-4" />
-                                    Export
-                                </Button>
+                                {isSuperAdmin && (
+                                    <Button variant="outline" onClick={handleExport}>
+                                        <Download className="mr-2 h-4 w-4" />
+                                        Export
+                                    </Button>
+                                )}
                                 <Input 
                                     placeholder="Search Barcode or Document No..." 
                                     value={searchTerm}
@@ -316,3 +321,5 @@ export default function StockLogPage() {
         </MainLayout>
     );
 }
+
+    

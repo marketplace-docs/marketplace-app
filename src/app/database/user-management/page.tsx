@@ -78,7 +78,7 @@ export default function DatabaseUserPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10); 
 
-    const isSuperAdmin = currentUser ? currentUser.role === 'Super Admin' : false;
+    const isSuperAdmin = currentUser?.role === 'Super Admin';
 
     const fetchUsers = useCallback(async () => {
         setLoading(true);
@@ -217,63 +217,65 @@ export default function DatabaseUserPage() {
         <div className="w-full">
             <div className="flex justify-between items-center mb-6">
               <h1 className="text-3xl font-bold">User Management</h1>
-               <Dialog open={isAddDialogOpen} onOpenChange={setAddDialogOpen}>
-                    <DialogTrigger asChild>
-                        <Button>
-                            <Plus className="mr-2 h-4 w-4" /> Add User
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Add New User</DialogTitle>
-                        </DialogHeader>
-                        <div className="grid gap-4 py-4">
-                             <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="new-name" className="text-right">Name</Label>
-                                <Input id="new-name" value={newUser.name} className="col-span-3" onChange={(e) => setNewUser({ ...newUser, name: e.target.value })} />
-                            </div>
-                             <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="new-email" className="text-right">Email</Label>
-                                <Input id="new-email" type="email" value={newUser.email} className="col-span-3" onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} />
-                            </div>
-                             <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="new-status" className="text-right">Status</Label>
-                                <Select value={newUser.status} onValueChange={(value: User['status']) => setNewUser({ ...newUser, status: value })}>
-                                    <SelectTrigger className="col-span-3">
-                                        <SelectValue placeholder="Select Status" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Leader">Leader</SelectItem>
-                                        <SelectItem value="Reguler">Reguler</SelectItem>
-                                        <SelectItem value="Event">Event</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="new-role" className="text-right">Role</Label>
-                                 <Select value={newUser.role} onValueChange={(value: string) => setNewUser({ ...newUser, role: value })} disabled={!isSuperAdmin}>
-                                    <SelectTrigger className="col-span-3">
-                                        <SelectValue placeholder="Select Role" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Super Admin">Super Admin</SelectItem>
-                                        <SelectItem value="Admin">Admin</SelectItem>
-                                        <SelectItem value="Supervisor">Supervisor</SelectItem>
-                                        <SelectItem value="Captain">Captain</SelectItem>
-                                        <SelectItem value="Event Staff">Event Staff</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-                        <DialogFooter>
-                            <Button variant="outline" onClick={() => setAddDialogOpen(false)}>Cancel</Button>
-                            <Button onClick={handleAddUser} disabled={isSubmitting}>
-                                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Add User
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
+               {isSuperAdmin && (
+                <Dialog open={isAddDialogOpen} onOpenChange={setAddDialogOpen}>
+                      <DialogTrigger asChild>
+                          <Button>
+                              <Plus className="mr-2 h-4 w-4" /> Add User
+                          </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                          <DialogHeader>
+                              <DialogTitle>Add New User</DialogTitle>
+                          </DialogHeader>
+                          <div className="grid gap-4 py-4">
+                               <div className="grid grid-cols-4 items-center gap-4">
+                                  <Label htmlFor="new-name" className="text-right">Name</Label>
+                                  <Input id="new-name" value={newUser.name} className="col-span-3" onChange={(e) => setNewUser({ ...newUser, name: e.target.value })} />
+                              </div>
+                               <div className="grid grid-cols-4 items-center gap-4">
+                                  <Label htmlFor="new-email" className="text-right">Email</Label>
+                                  <Input id="new-email" type="email" value={newUser.email} className="col-span-3" onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} />
+                              </div>
+                               <div className="grid grid-cols-4 items-center gap-4">
+                                  <Label htmlFor="new-status" className="text-right">Status</Label>
+                                  <Select value={newUser.status} onValueChange={(value: User['status']) => setNewUser({ ...newUser, status: value })}>
+                                      <SelectTrigger className="col-span-3">
+                                          <SelectValue placeholder="Select Status" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                          <SelectItem value="Leader">Leader</SelectItem>
+                                          <SelectItem value="Reguler">Reguler</SelectItem>
+                                          <SelectItem value="Event">Event</SelectItem>
+                                      </SelectContent>
+                                  </Select>
+                              </div>
+                              <div className="grid grid-cols-4 items-center gap-4">
+                                  <Label htmlFor="new-role" className="text-right">Role</Label>
+                                   <Select value={newUser.role} onValueChange={(value: string) => setNewUser({ ...newUser, role: value })} disabled={!isSuperAdmin}>
+                                      <SelectTrigger className="col-span-3">
+                                          <SelectValue placeholder="Select Role" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                          <SelectItem value="Super Admin">Super Admin</SelectItem>
+                                          <SelectItem value="Admin">Admin</SelectItem>
+                                          <SelectItem value="Supervisor">Supervisor</SelectItem>
+                                          <SelectItem value="Captain">Captain</SelectItem>
+                                          <SelectItem value="Event Staff">Event Staff</SelectItem>
+                                      </SelectContent>
+                                  </Select>
+                              </div>
+                          </div>
+                          <DialogFooter>
+                              <Button variant="outline" onClick={() => setAddDialogOpen(false)}>Cancel</Button>
+                              <Button onClick={handleAddUser} disabled={isSubmitting}>
+                                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                  Add User
+                              </Button>
+                          </DialogFooter>
+                      </DialogContent>
+                  </Dialog>
+               )}
             </div>
             {error && (
                  <Alert variant="destructive" className="mb-4">
@@ -295,13 +297,13 @@ export default function DatabaseUserPage() {
                                 <TableHead>Email</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead>Role</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
+                                {isSuperAdmin && <TableHead className="text-right">Actions</TableHead>}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="h-24 text-center">
+                                    <TableCell colSpan={isSuperAdmin ? 5 : 4} className="h-24 text-center">
                                         <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                                     </TableCell>
                                 </TableRow>
@@ -314,23 +316,25 @@ export default function DatabaseUserPage() {
                                             <Badge variant={statusVariantMap[user.status] || 'default'}>{user.status}</Badge>
                                         </TableCell>
                                         <TableCell>{user.role}</TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(user)}>
-                                                    <Pencil className="h-4 w-4" />
-                                                    <span className="sr-only">Edit</span>
-                                                </Button>
-                                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" onClick={() => handleOpenDeleteDialog(user)}>
-                                                    <Trash2 className="h-4 w-4" />
-                                                    <span className="sr-only">Delete</span>
-                                                </Button>
-                                            </div>
-                                        </TableCell>
+                                        {isSuperAdmin && (
+                                            <TableCell className="text-right">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(user)}>
+                                                        <Pencil className="h-4 w-4" />
+                                                        <span className="sr-only">Edit</span>
+                                                    </Button>
+                                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" onClick={() => handleOpenDeleteDialog(user)}>
+                                                        <Trash2 className="h-4 w-4" />
+                                                        <span className="sr-only">Delete</span>
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                        )}
                                     </TableRow>
                                 ))
                             ) : (
                                  <TableRow>
-                                    <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                                    <TableCell colSpan={isSuperAdmin ? 5 : 4} className="h-24 text-center text-muted-foreground">
                                         No users found.
                                     </TableCell>
                                 </TableRow>

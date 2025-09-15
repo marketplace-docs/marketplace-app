@@ -47,6 +47,7 @@ export default function ProductOutPage() {
     const { toast } = useToast();
     const { user } = useAuth();
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const isSuperAdmin = user?.role === 'Super Admin';
     
     const [documents, setDocuments] = useState<ProductOutDocument[]>([]);
     const [productInStock, setProductInStock] = useState<AggregatedProduct[]>([]);
@@ -347,90 +348,94 @@ export default function ProductOutPage() {
                             <CardDescription>Stock data of issued items. This feature deducts stock from Product In.</CardDescription>
                         </div>
                         <div className="flex items-center gap-2">
-                            <Dialog open={isUploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-                                <DialogTrigger asChild>
-                                    <Button variant="outline"><Upload className="mr-2 h-4 w-4" />Upload</Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>Upload Goods Issue CSV</DialogTitle>
-                                        <DialogDescription>
-                                            Select a CSV file to bulk upload documents. Required headers: nodocument, sku, barcode, qty, status.
-                                        </DialogDescription>
-                                    </DialogHeader>
-                                    <div className="py-4">
-                                       <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
-                                       <Button onClick={() => fileInputRef.current?.click()} className="w-full" disabled={isSubmitting}>
-                                            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Choose File'}
-                                       </Button>
-                                    </div>
-                                </DialogContent>
-                            </Dialog>
-                             <Button variant="outline" onClick={handleExport}>
-                                <Download className="mr-2 h-4 w-4" />
-                                Export
-                            </Button>
-                            <Dialog open={isAddDialogOpen} onOpenChange={(open) => { setAddDialogOpen(open); if(!open) resetForm(); }}>
-                                <DialogTrigger asChild>
-                                    <Button>
-                                        <Plus className="mr-2 h-4 w-4" /> Add Goods Issue
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>Add Goods Issue</DialogTitle>
-                                    </DialogHeader>
-                                    <div className="grid gap-4 py-4">
-                                         <div className="grid grid-cols-4 items-center gap-4">
-                                            <Label htmlFor="nodocument" className="text-right">No. Document</Label>
-                                            <Input id="nodocument" name="nodocument" value={newDocument.nodocument} className="col-span-3 bg-muted" readOnly />
-                                        </div>
-                                        <div className="grid grid-cols-4 items-center gap-4">
-                                            <Label htmlFor="barcode" className="text-right">Barcode</Label>
-                                            <Input id="barcode" name="barcode" value={newDocument.barcode} onChange={handleInputChange} className="col-span-3" placeholder="Scan or enter barcode" />
-                                        </div>
-                                        <div className="grid grid-cols-4 items-center gap-4">
-                                            <Label htmlFor="sku" className="text-right">SKU</Label>
-                                            <Input id="sku" name="sku" value={newDocument.sku} className="col-span-3 bg-muted" readOnly />
-                                        </div>
-                                        <div className="grid grid-cols-4 items-center gap-4">
-                                            <Label htmlFor="expdate" className="text-right">EXP Date</Label>
-                                            <Input id="expdate" name="expdate" value={newDocument.expdate ? format(new Date(newDocument.expdate), 'yyyy-MM-dd') : ''} className="col-span-3 bg-muted" readOnly />
-                                        </div>
-                                         <div className="grid grid-cols-4 items-center gap-4">
-                                            <Label htmlFor="location" className="text-right">Location</Label>
-                                            <Input id="location" name="location" value={newDocument.location} className="col-span-3 bg-muted" readOnly />
-                                        </div>
-                                        <div className="grid grid-cols-4 items-center gap-4">
-                                            <Label htmlFor="qty" className="text-right">Quantity</Label>
-                                            <div className="col-span-3">
-                                                <Input id="qty" name="qty" type="number" value={newDocument.qty} onChange={handleInputChange} placeholder="0" />
-                                                {availableStock && <p className="text-xs text-muted-foreground mt-1">Available Stock: {availableStock.stock.toLocaleString()}</p>}
-                                            </div>
-                                        </div>
-                                        <div className="grid grid-cols-4 items-center gap-4">
-                                            <Label htmlFor="status" className="text-right">Status</Label>
-                                            <Select value={newDocument.status} onValueChange={handleSelectChange}>
-                                                <SelectTrigger className="col-span-3">
-                                                    <SelectValue placeholder="Select status" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="Issue - Order">Issue - Order</SelectItem>
-                                                    <SelectItem value="Issue - Internal Transfer">Issue - Internal Transfer</SelectItem>
-                                                    <SelectItem value="Issue - Adjustment Manual">Issue - Adjustment Manual</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                    </div>
-                                    <DialogFooter>
-                                        <Button variant="outline" onClick={() => { setAddDialogOpen(false); resetForm(); }}>Cancel</Button>
-                                        <Button onClick={handleAddDocument} disabled={isSubmitting}>
-                                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                            Submit
-                                        </Button>
-                                    </DialogFooter>
-                                </DialogContent>
-                            </Dialog>
+                           {isSuperAdmin && (
+                            <>
+                              <Dialog open={isUploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+                                  <DialogTrigger asChild>
+                                      <Button variant="outline"><Upload className="mr-2 h-4 w-4" />Upload</Button>
+                                  </DialogTrigger>
+                                  <DialogContent>
+                                      <DialogHeader>
+                                          <DialogTitle>Upload Goods Issue CSV</DialogTitle>
+                                          <DialogDescription>
+                                              Select a CSV file to bulk upload documents. Required headers: nodocument, sku, barcode, qty, status.
+                                          </DialogDescription>
+                                      </DialogHeader>
+                                      <div className="py-4">
+                                         <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
+                                         <Button onClick={() => fileInputRef.current?.click()} className="w-full" disabled={isSubmitting}>
+                                              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Choose File'}
+                                         </Button>
+                                      </div>
+                                  </DialogContent>
+                              </Dialog>
+                               <Button variant="outline" onClick={handleExport}>
+                                  <Download className="mr-2 h-4 w-4" />
+                                  Export
+                              </Button>
+                              <Dialog open={isAddDialogOpen} onOpenChange={(open) => { setAddDialogOpen(open); if(!open) resetForm(); }}>
+                                  <DialogTrigger asChild>
+                                      <Button>
+                                          <Plus className="mr-2 h-4 w-4" /> Add Goods Issue
+                                      </Button>
+                                  </DialogTrigger>
+                                  <DialogContent>
+                                      <DialogHeader>
+                                          <DialogTitle>Add Goods Issue</DialogTitle>
+                                      </DialogHeader>
+                                      <div className="grid gap-4 py-4">
+                                           <div className="grid grid-cols-4 items-center gap-4">
+                                              <Label htmlFor="nodocument" className="text-right">No. Document</Label>
+                                              <Input id="nodocument" name="nodocument" value={newDocument.nodocument} className="col-span-3 bg-muted" readOnly />
+                                          </div>
+                                          <div className="grid grid-cols-4 items-center gap-4">
+                                              <Label htmlFor="barcode" className="text-right">Barcode</Label>
+                                              <Input id="barcode" name="barcode" value={newDocument.barcode} onChange={handleInputChange} className="col-span-3" placeholder="Scan or enter barcode" />
+                                          </div>
+                                          <div className="grid grid-cols-4 items-center gap-4">
+                                              <Label htmlFor="sku" className="text-right">SKU</Label>
+                                              <Input id="sku" name="sku" value={newDocument.sku} className="col-span-3 bg-muted" readOnly />
+                                          </div>
+                                          <div className="grid grid-cols-4 items-center gap-4">
+                                              <Label htmlFor="expdate" className="text-right">EXP Date</Label>
+                                              <Input id="expdate" name="expdate" value={newDocument.expdate ? format(new Date(newDocument.expdate), 'yyyy-MM-dd') : ''} className="col-span-3 bg-muted" readOnly />
+                                          </div>
+                                           <div className="grid grid-cols-4 items-center gap-4">
+                                              <Label htmlFor="location" className="text-right">Location</Label>
+                                              <Input id="location" name="location" value={newDocument.location} className="col-span-3 bg-muted" readOnly />
+                                          </div>
+                                          <div className="grid grid-cols-4 items-center gap-4">
+                                              <Label htmlFor="qty" className="text-right">Quantity</Label>
+                                              <div className="col-span-3">
+                                                  <Input id="qty" name="qty" type="number" value={newDocument.qty} onChange={handleInputChange} placeholder="0" />
+                                                  {availableStock && <p className="text-xs text-muted-foreground mt-1">Available Stock: {availableStock.stock.toLocaleString()}</p>}
+                                              </div>
+                                          </div>
+                                          <div className="grid grid-cols-4 items-center gap-4">
+                                              <Label htmlFor="status" className="text-right">Status</Label>
+                                              <Select value={newDocument.status} onValueChange={handleSelectChange}>
+                                                  <SelectTrigger className="col-span-3">
+                                                      <SelectValue placeholder="Select status" />
+                                                  </SelectTrigger>
+                                                  <SelectContent>
+                                                      <SelectItem value="Issue - Order">Issue - Order</SelectItem>
+                                                      <SelectItem value="Issue - Internal Transfer">Issue - Internal Transfer</SelectItem>
+                                                      <SelectItem value="Issue - Adjustment Manual">Issue - Adjustment Manual</SelectItem>
+                                                  </SelectContent>
+                                              </Select>
+                                          </div>
+                                      </div>
+                                      <DialogFooter>
+                                          <Button variant="outline" onClick={() => { setAddDialogOpen(false); resetForm(); }}>Cancel</Button>
+                                          <Button onClick={handleAddDocument} disabled={isSubmitting}>
+                                              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                              Submit
+                                          </Button>
+                                      </DialogFooter>
+                                  </DialogContent>
+                              </Dialog>
+                            </>
+                           )}
                         </div>
                     </CardHeader>
                     <CardContent>
@@ -529,3 +534,5 @@ export default function ProductOutPage() {
         </MainLayout>
     );
 }
+
+    

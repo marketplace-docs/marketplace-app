@@ -44,6 +44,7 @@ export default function MonitoringManpowerPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'Super Admin';
   
   const fetchTasks = useCallback(async () => {
     setLoading(true);
@@ -184,13 +185,13 @@ export default function MonitoringManpowerPage() {
                     <TableHead>Shift</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Date</TableHead>
-                    <TableHead className="text-right actions-column">Actions</TableHead>
+                    {isSuperAdmin && <TableHead className="text-right actions-column">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                      <TableRow>
-                        <TableCell colSpan={6} className="h-24 text-center">
+                        <TableCell colSpan={isSuperAdmin ? 6 : 5} className="h-24 text-center">
                             <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                         </TableCell>
                     </TableRow>
@@ -202,24 +203,26 @@ export default function MonitoringManpowerPage() {
                         <TableCell>{task.shift}</TableCell>
                         <TableCell>{task.status}</TableCell>
                         <TableCell>{format(new Date(task.date), "eee, dd/MMM/yyyy HH:mm")}</TableCell>
-                        <TableCell className="text-right actions-column">
-                            <div className="flex items-center justify-end gap-2">
-                                <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(task)}>
-                                    <Pencil className="h-4 w-4" />
-                                    <span className="sr-only">Edit</span>
-                                </Button>
-                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" onClick={() => handleOpenDeleteDialog(task)}>
-                                    <Trash2 className="h-4 w-4" />
-                                    <span className="sr-only">Delete</span>
-                                </Button>
-                            </div>
-                        </TableCell>
+                        {isSuperAdmin && (
+                            <TableCell className="text-right actions-column">
+                                <div className="flex items-center justify-end gap-2">
+                                    <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(task)}>
+                                        <Pencil className="h-4 w-4" />
+                                        <span className="sr-only">Edit</span>
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" onClick={() => handleOpenDeleteDialog(task)}>
+                                        <Trash2 className="h-4 w-4" />
+                                        <span className="sr-only">Delete</span>
+                                    </Button>
+                                </div>
+                            </TableCell>
+                        )}
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
                       <TableCell
-                        colSpan={6}
+                        colSpan={isSuperAdmin ? 6 : 5}
                         className="h-24 text-center text-muted-foreground"
                       >
                         No tasks created yet. Go to the Create Task page to add one.
@@ -390,3 +393,5 @@ export default function MonitoringManpowerPage() {
     </MainLayout>
   );
 }
+
+    

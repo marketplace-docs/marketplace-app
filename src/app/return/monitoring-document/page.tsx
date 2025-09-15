@@ -54,6 +54,7 @@ export default function MonitoringReturnPage() {
   const { toast } = useToast();
   const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isSuperAdmin = user?.role === 'Super Admin';
 
 
   const [searchDocument, setSearchDocument] = useState('');
@@ -287,31 +288,35 @@ export default function MonitoringReturnPage() {
                     onChange={(e) => setSearchBarcode(e.target.value)}
                     className="flex-1 md:flex-auto md:w-auto"
                 />
-                <Dialog open={isUploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-                    <DialogTrigger asChild>
-                        <Button variant="outline"><Upload className="h-4 w-4 mr-2" />Upload</Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Upload CSV</DialogTitle>
-                            <DialogDescription>
-                                Select a CSV file to bulk upload return documents. The file must contain the headers: no_document, sku, barcode, brand, reason, received_by, qty, status.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="py-4">
-                           <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
-                           <Button onClick={() => fileInputRef.current?.click()} className="w-full" disabled={isSubmitting}>
-                                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Choose File'}
-                           </Button>
-                           <p className="text-xs text-muted-foreground mt-2">
-                                Don't have a template? <a href="/templates/return_documents_template.csv" download className="underline text-primary">Download CSV template</a>
-                           </p>
-                        </div>
-                    </DialogContent>
-                </Dialog>
-                <Button variant="outline" onClick={handleExport}>
-                    <Download className="h-4 w-4 mr-2" /> Export
-                </Button>
+                {isSuperAdmin && (
+                  <>
+                    <Dialog open={isUploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline"><Upload className="h-4 w-4 mr-2" />Upload</Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Upload CSV</DialogTitle>
+                                <DialogDescription>
+                                    Select a CSV file to bulk upload return documents. The file must contain the headers: no_document, sku, barcode, brand, reason, received_by, qty, status.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="py-4">
+                               <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
+                               <Button onClick={() => fileInputRef.current?.click()} className="w-full" disabled={isSubmitting}>
+                                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Choose File'}
+                               </Button>
+                               <p className="text-xs text-muted-foreground mt-2">
+                                    Don't have a template? <a href="/templates/return_documents_template.csv" download className="underline text-primary">Download CSV template</a>
+                               </p>
+                            </div>
+                        </DialogContent>
+                    </Dialog>
+                    <Button variant="outline" onClick={handleExport}>
+                        <Download className="h-4 w-4 mr-2" /> Export
+                    </Button>
+                  </>
+                )}
             </div>
           </CardHeader>
           <CardContent>
@@ -328,13 +333,13 @@ export default function MonitoringReturnPage() {
                     <TableHead>Received By</TableHead>
                     <TableHead>QTY</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    {isSuperAdmin && <TableHead className="text-right">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                      <TableRow>
-                        <TableCell colSpan={10} className="h-24 text-center">
+                        <TableCell colSpan={isSuperAdmin ? 10 : 9} className="h-24 text-center">
                             <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                         </TableCell>
                     </TableRow>
@@ -352,24 +357,26 @@ export default function MonitoringReturnPage() {
                         <TableCell>
                           <Badge variant={statusVariantMap[doc.status] || 'default'}>{doc.status}</Badge>
                         </TableCell>
-                        <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                                <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(doc)}>
-                                    <Pencil className="h-4 w-4" />
-                                    <span className="sr-only">Edit</span>
-                                </Button>
-                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" onClick={() => handleOpenDeleteDialog(doc)}>
-                                    <Trash2 className="h-4 w-4" />
-                                    <span className="sr-only">Delete</span>
-                                </Button>
-                            </div>
-                        </TableCell>
+                        {isSuperAdmin && (
+                            <TableCell className="text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                    <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(doc)}>
+                                        <Pencil className="h-4 w-4" />
+                                        <span className="sr-only">Edit</span>
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" onClick={() => handleOpenDeleteDialog(doc)}>
+                                        <Trash2 className="h-4 w-4" />
+                                        <span className="sr-only">Delete</span>
+                                    </Button>
+                                </div>
+                            </TableCell>
+                        )}
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
                       <TableCell
-                        colSpan={10}
+                        colSpan={isSuperAdmin ? 10 : 9}
                         className="h-24 text-center text-muted-foreground"
                       >
                         No documents found.
@@ -511,3 +518,5 @@ export default function MonitoringReturnPage() {
     </MainLayout>
   );
 }
+
+    

@@ -92,6 +92,7 @@ export default function BacklogPage() {
   const [isUploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<BacklogItem | null>(null);
   const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'Super Admin';
 
 
   const fetchBacklogItems = useCallback(async () => {
@@ -341,39 +342,41 @@ export default function BacklogPage() {
       <div className="w-full space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold">Backlog Marketplace</h1>
-          <div className="flex items-center gap-2">
-              <Dialog open={isUploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-                  <DialogTrigger asChild>
-                      <Button variant="outline" disabled={isSubmitting}>
-                          <Upload className="mr-2 h-4 w-4" /> Import
-                      </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                      <DialogHeader>
-                          <DialogTitle>Upload Backlog CSV</DialogTitle>
-                          <DialogDescription>
-                              Select a CSV file to bulk upload backlog items. The file must contain the headers: store name, payment accepted, marketplace.
-                          </DialogDescription>
-                      </DialogHeader>
-                      <div className="py-4">
-                         <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
-                         <Button onClick={() => fileInputRef.current?.click()} className="w-full" disabled={isSubmitting}>
-                              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Choose File'}
-                         </Button>
-                         <p className="text-xs text-muted-foreground mt-2">
-                              Don't have a template? <a href="/templates/backlog_items_template.csv" download className="underline text-primary">Download CSV template</a>
-                         </p>
-                      </div>
-                  </DialogContent>
-              </Dialog>
-              <Button variant="outline" onClick={handleEditToggle} disabled={isSubmitting}>
-                {isEditing ? (isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />) : <Pencil className="mr-2 h-4 w-4" />}
-                {isEditing ? 'Save' : 'Edit'}
-              </Button>
-              <Button variant="default" onClick={handleExport}>
-                  <Download className="mr-2 h-4 w-4" /> Export
-              </Button>
-          </div>
+          {isSuperAdmin && (
+            <div className="flex items-center gap-2">
+                <Dialog open={isUploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+                    <DialogTrigger asChild>
+                        <Button variant="outline" disabled={isSubmitting}>
+                            <Upload className="mr-2 h-4 w-4" /> Import
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Upload Backlog CSV</DialogTitle>
+                            <DialogDescription>
+                                Select a CSV file to bulk upload backlog items. The file must contain the headers: store name, payment accepted, marketplace.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="py-4">
+                           <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
+                           <Button onClick={() => fileInputRef.current?.click()} className="w-full" disabled={isSubmitting}>
+                                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Choose File'}
+                           </Button>
+                           <p className="text-xs text-muted-foreground mt-2">
+                                Don't have a template? <a href="/templates/backlog_items_template.csv" download className="underline text-primary">Download CSV template</a>
+                           </p>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+                <Button variant="outline" onClick={handleEditToggle} disabled={isSubmitting}>
+                  {isEditing ? (isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />) : <Pencil className="mr-2 h-4 w-4" />}
+                  {isEditing ? 'Save' : 'Edit'}
+                </Button>
+                <Button variant="default" onClick={handleExport}>
+                    <Download className="mr-2 h-4 w-4" /> Export
+                </Button>
+            </div>
+          )}
         </div>
 
         {error && (
@@ -399,13 +402,13 @@ export default function BacklogPage() {
                             <TableHead>STORE NAME</TableHead>
                             <TableHead>PAYMENT ACCEPTED</TableHead>
                             <TableHead>MARKETPLACE</TableHead>
-                            <TableHead className="text-right">ACTIONS</TableHead>
+                            {isSuperAdmin && <TableHead className="text-right">ACTIONS</TableHead>}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={4} className="h-24 text-center">
+                                    <TableCell colSpan={isSuperAdmin ? 4 : 3} className="h-24 text-center">
                                         <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                                     </TableCell>
                                 </TableRow>
@@ -413,7 +416,7 @@ export default function BacklogPage() {
                             paginatedItems.map((item) => (
                                 <TableRow key={item.id}>
                                 <TableCell className="font-medium">
-                                  {isEditing ? (
+                                  {isEditing && isSuperAdmin ? (
                                     <Input 
                                       type="text"
                                       value={editedItems[item.id]?.store_name ?? item.store_name} 
@@ -425,7 +428,7 @@ export default function BacklogPage() {
                                   )}
                                 </TableCell>
                                 <TableCell>
-                                  {isEditing ? (
+                                  {isEditing && isSuperAdmin ? (
                                     <Input 
                                       type="number"
                                       value={editedItems[item.id]?.payment_accepted ?? item.payment_accepted} 
@@ -437,7 +440,7 @@ export default function BacklogPage() {
                                   )}
                                 </TableCell>
                                 <TableCell>
-                                {isEditing ? (
+                                {isEditing && isSuperAdmin ? (
                                     <Input 
                                       type="text"
                                       value={editedItems[item.id]?.marketplace ?? item.marketplace} 
@@ -448,17 +451,19 @@ export default function BacklogPage() {
                                     item.marketplace
                                   )}
                                 </TableCell>
-                                <TableCell className="text-right">
-                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" onClick={() => handleOpenDeleteDialog(item)}>
-                                        <Trash2 className="h-4 w-4" />
-                                        <span className="sr-only">Delete</span>
-                                    </Button>
-                                </TableCell>
+                                {isSuperAdmin && (
+                                    <TableCell className="text-right">
+                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" onClick={() => handleOpenDeleteDialog(item)}>
+                                            <Trash2 className="h-4 w-4" />
+                                            <span className="sr-only">Delete</span>
+                                        </Button>
+                                    </TableCell>
+                                )}
                                 </TableRow>
                             ))
                             ) : (
                             <TableRow>
-                                <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                                <TableCell colSpan={isSuperAdmin ? 4 : 3} className="h-24 text-center text-muted-foreground">
                                 No backlog data available.
                                 </TableCell>
                             </TableRow>
@@ -645,3 +650,5 @@ export default function BacklogPage() {
     </MainLayout>
   );
 }
+
+    

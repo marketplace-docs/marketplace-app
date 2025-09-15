@@ -47,6 +47,7 @@ export default function MonitoringStorePage() {
   const { toast } = useToast();
   const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isSuperAdmin = user?.role === 'Super Admin';
 
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -269,32 +270,36 @@ export default function MonitoringStorePage() {
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="flex-1 md:flex-auto md:w-auto"
                 />
-                 <Dialog open={isUploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-                    <DialogTrigger asChild>
-                        <Button variant="outline"><Upload className="h-4 w-4 mr-2" />Upload</Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Upload CSV</DialogTitle>
-                            <DialogDescription>
-                                Select a CSV file to bulk upload marketplace stores. The file must contain the headers: marketplace_name, store_name, platform.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="py-4">
-                           <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
-                           <Button onClick={() => fileInputRef.current?.click()} className="w-full" disabled={isSubmitting}>
-                                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Choose File'}
-                           </Button>
-                           <p className="text-xs text-muted-foreground mt-2">
-                                Don't have a template? <a href="/templates/marketplace_stores_template.csv" download className="underline text-primary">Download CSV template</a>
-                           </p>
-                        </div>
-                    </DialogContent>
-                </Dialog>
-                <Button variant="outline" onClick={handleExport}>
-                    <Download className="h-4 w-4 mr-2" />
-                    Export
-                </Button>
+                 {isSuperAdmin && (
+                   <>
+                    <Dialog open={isUploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline"><Upload className="h-4 w-4 mr-2" />Upload</Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Upload CSV</DialogTitle>
+                                <DialogDescription>
+                                    Select a CSV file to bulk upload marketplace stores. The file must contain the headers: marketplace_name, store_name, platform.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="py-4">
+                               <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
+                               <Button onClick={() => fileInputRef.current?.click()} className="w-full" disabled={isSubmitting}>
+                                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Choose File'}
+                               </Button>
+                               <p className="text-xs text-muted-foreground mt-2">
+                                    Don't have a template? <a href="/templates/marketplace_stores_template.csv" download className="underline text-primary">Download CSV template</a>
+                               </p>
+                            </div>
+                        </DialogContent>
+                    </Dialog>
+                    <Button variant="outline" onClick={handleExport}>
+                        <Download className="h-4 w-4 mr-2" />
+                        Export
+                    </Button>
+                   </>
+                 )}
             </div>
           </CardHeader>
           <CardContent>
@@ -306,13 +311,13 @@ export default function MonitoringStorePage() {
                     <TableHead>Store Name</TableHead>
                     <TableHead>Platform</TableHead>
                     <TableHead>Created At</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    {isSuperAdmin && <TableHead className="text-right">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                        <TableCell colSpan={5} className="h-24 text-center">
+                        <TableCell colSpan={isSuperAdmin ? 5 : 4} className="h-24 text-center">
                             <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                         </TableCell>
                     </TableRow>
@@ -323,24 +328,26 @@ export default function MonitoringStorePage() {
                         <TableCell>{store.store_name}</TableCell>
                         <TableCell>{store.platform}</TableCell>
                         <TableCell>{format(new Date(store.created_at), "eee, dd/MMM/yyyy HH:mm")}</TableCell>
-                        <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                                <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(store)}>
-                                    <Pencil className="h-4 w-4" />
-                                    <span className="sr-only">Edit</span>
-                                </Button>
-                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" onClick={() => handleOpenDeleteDialog(store)}>
-                                    <Trash2 className="h-4 w-4" />
-                                    <span className="sr-only">Delete</span>
-                                </Button>
-                            </div>
-                        </TableCell>
+                        {isSuperAdmin && (
+                            <TableCell className="text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                    <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(store)}>
+                                        <Pencil className="h-4 w-4" />
+                                        <span className="sr-only">Edit</span>
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" onClick={() => handleOpenDeleteDialog(store)}>
+                                        <Trash2 className="h-4 w-4" />
+                                        <span className="sr-only">Delete</span>
+                                    </Button>
+                                </div>
+                            </TableCell>
+                        )}
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
                       <TableCell
-                        colSpan={5}
+                        colSpan={isSuperAdmin ? 5 : 4}
                         className="h-24 text-center text-muted-foreground"
                       >
                         No stores found. Go to Create to add one.
@@ -448,3 +455,5 @@ export default function MonitoringStorePage() {
     </MainLayout>
   );
 }
+
+    
