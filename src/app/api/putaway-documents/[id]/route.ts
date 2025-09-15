@@ -59,15 +59,34 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     const { qty: originalQty, location: originalLocation, exp_date: originalExpDate } = originalDoc;
     const { qty: qtyToUpdate, location: newLocation, exp_date: newExpDate } = update;
     
-    // IMPORTANT: Use the ID from the original document in the body, not from the URL params.
-    const originalDocId = originalDoc.id;
+    // IMPORTANT: The ID from the batch product is a composite key, we need to find the putaway doc.
+    // Let's find the original putaway document based on its unique properties.
+    // A single batch might be composed of multiple putaway documents. For this action, we'll target the latest one to split from.
+    const { data: sourcePutawayDoc, error: findError } = await supabaseService
+        .from('putaway_documents')
+        .select('id, qty')
+        .eq('barcode', originalDoc.barcode)
+        .eq('location', originalDoc.location)
+        .eq('exp_date', originalDoc.exp_date)
+        .order('date', { ascending: false })
+        .limit(1)
+        .single();
+    
+    if (findError || !sourcePutawayDoc) {
+        console.error("Supabase PATCH (find source doc) error:", findError);
+        return NextResponse.json({ error: "Could not find the source putaway document to split or update." }, { status: 404 });
+    }
+    
+    const originalDocId = sourcePutawayDoc.id;
+    const sourceQty = sourcePutawayDoc.qty;
 
-    // --- LOGIC: If qtyToUpdate is the same as originalQty, it's a simple UPDATE, not a split. ---
-    if (qtyToUpdate === originalQty) {
+
+    // --- LOGIC: If qtyToUpdate is the same as sourceQty, it's a simple UPDATE, not a split. ---
+    if (qtyToUpdate === sourceQty) {
       const { data, error } = await supabaseService
         .from('putaway_documents')
         .update({ location: newLocation, exp_date: newExpDate })
-        .eq('id', originalDocId) // Use the correct ID from the body
+        .eq('id', originalDocId)
         .select()
         .single();
       
@@ -94,14 +113,14 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       return NextResponse.json(data);
     }
 
-    // --- LOGIC: If qtyToUpdate is less than originalQty, it's a SPLIT. ---
-    const newOriginalQty = originalQty - qtyToUpdate;
+    // --- LOGIC: If qtyToUpdate is less than sourceQty, it's a SPLIT. ---
+    const newOriginalQty = sourceQty - qtyToUpdate;
 
     // 1. Update the original document to reduce its quantity
     const { error: updateError } = await supabaseService
       .from('putaway_documents')
       .update({ qty: newOriginalQty })
-      .eq('id', originalDocId); // Use the correct ID from the body
+      .eq('id', originalDocId);
 
     if (updateError) {
       console.error("Supabase PATCH (update original) error:", updateError);
