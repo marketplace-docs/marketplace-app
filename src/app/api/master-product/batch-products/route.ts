@@ -4,13 +4,30 @@ import { NextResponse } from 'next/server';
 import { format } from 'date-fns';
 
 type ProductDoc = {
-    id: string; // Ensure id is part of the type for selection
+    id: string;
     sku: string;
     barcode: string;
     brand: string;
     exp_date: string;
     location: string;
     qty: number;
+    date: string; 
+};
+
+type ProductOutDoc = {
+    id: string;
+    sku: string;
+    barcode: string;
+    expdate: string;
+    location: string;
+    qty: number;
+    date: string; 
+};
+
+type CombinedDoc = {
+    type: 'IN' | 'OUT';
+    date: Date;
+    doc: ProductDoc | ProductOutDoc;
 };
 
 type AggregatedProduct = {
@@ -23,10 +40,14 @@ type AggregatedProduct = {
     stock: number;
 };
 
-// Helper function to create a consistent key for grouping
 const createStockKey = (barcode: string, location: string, exp_date: string): string => {
-    const formattedExpDate = exp_date ? format(new Date(exp_date), 'yyyy-MM-dd') : 'no-exp-date';
-    return `${barcode}|${location}|${formattedExpDate}`;
+    try {
+        const formattedExpDate = exp_date ? format(new Date(exp_date), 'yyyy-MM-dd') : 'no-exp-date';
+        return `${barcode}|${location}|${formattedExpDate}`;
+    } catch (e) {
+        // Handle invalid date format gracefully
+        return `${barcode}|${location}|invalid-date`;
+    }
 };
 
 
@@ -36,8 +57,8 @@ export async function GET() {
             { data: putawayData, error: putawayError },
             { data: productOutData, error: productOutError }
         ] = await Promise.all([
-            supabaseService.from('putaway_documents').select('id, sku, barcode, brand, exp_date, location, qty'),
-            supabaseService.from('product_out_documents').select('sku, barcode, location, qty, expdate')
+            supabaseService.from('putaway_documents').select('id, sku, barcode, brand, exp_date, location, qty, date'),
+            supabaseService.from('product_out_documents').select('id, sku, barcode, location, qty, expdate, date')
         ]);
 
         if (putawayError) throw putawayError;
@@ -45,43 +66,64 @@ export async function GET() {
         
         const stockMap = new Map<string, AggregatedProduct>();
 
-        // Process incoming stock from putaway_documents
+        // Initialize map with all possible batches from putaway documents
         (putawayData as ProductDoc[]).forEach(doc => {
-            if (!doc.barcode || !doc.location || !doc.exp_date) return; // Skip incomplete records
+            if (!doc.barcode || !doc.location || !doc.exp_date) return;
             const key = createStockKey(doc.barcode, doc.location, doc.exp_date);
-
-            if (stockMap.has(key)) {
-                const existing = stockMap.get(key)!;
-                existing.stock += doc.qty;
-            } else {
+            if (!stockMap.has(key)) {
                 stockMap.set(key, {
-                    id: doc.id,
+                    id: doc.id, 
                     sku: doc.sku,
                     barcode: doc.barcode,
                     brand: doc.brand,
                     exp_date: doc.exp_date,
                     location: doc.location,
-                    stock: doc.qty,
+                    stock: 0, 
                 });
             }
         });
-        
-        // Process outgoing stock from product_out_documents
-        (productOutData as any[]).forEach((doc: any) => {
-             if (!doc.barcode || !doc.location || !doc.expdate) return; // Skip incomplete records
-             const key = createStockKey(doc.barcode, doc.location, doc.expdate);
-             if (stockMap.has(key)) {
-                const existing = stockMap.get(key)!;
-                existing.stock -= doc.qty;
-             } else {
-                // This case handles stock going out that might not have a matching putaway doc (e.g., initial stock)
-                // For accurate aggregation, we mainly rely on putaway docs as the source of truth for batch details.
-                // Creating a negative entry here could be confusing. We will assume product_out reduces existing stock.
-                console.warn(`Outgoing stock for barcode ${doc.barcode} has no matching incoming batch. This may lead to inaccurate stock counts.`);
-             }
+
+        // Combine and sort all transactions by date
+        const combinedTransactions: CombinedDoc[] = [
+            ...(putawayData as ProductDoc[]).map(doc => ({ type: 'IN' as const, date: new Date(doc.date), doc })),
+            ...(productOutData as ProductOutDoc[]).map(doc => ({ type: 'OUT' as const, date: new Date(doc.date), doc }))
+        ].sort((a, b) => a.date.getTime() - b.date.getTime());
+
+
+        // Process transactions chronologically
+        combinedTransactions.forEach(tx => {
+            const doc = tx.doc;
+            const exp_date = tx.type === 'IN' ? (doc as ProductDoc).exp_date : (doc as ProductOutDoc).expdate;
+            
+            if (!doc.barcode || !doc.location || !exp_date) return;
+
+            const key = createStockKey(doc.barcode, doc.location, exp_date);
+
+            if (stockMap.has(key)) {
+                const entry = stockMap.get(key)!;
+                if (tx.type === 'IN') {
+                    entry.stock += doc.qty;
+                } else { // 'OUT'
+                    entry.stock -= doc.qty;
+                }
+            } else {
+                 if (tx.type === 'OUT') {
+                    console.warn(`Outgoing stock for key ${key} has no corresponding putaway record. Stock might appear negative.`);
+                    // Create a dummy entry to show the negative stock, which indicates a data issue
+                    stockMap.set(key, {
+                        id: `out-${doc.id}`,
+                        sku: doc.sku,
+                        barcode: doc.barcode,
+                        brand: '', // Brand might not be available on out-doc
+                        exp_date: exp_date,
+                        location: doc.location,
+                        stock: -doc.qty,
+                    });
+                 }
+            }
         });
 
-        // Do not filter out items with 0 stock
+
         const finalInventory = Array.from(stockMap.values());
 
         return NextResponse.json(finalInventory);
