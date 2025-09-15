@@ -360,6 +360,10 @@ export default function ProductOutPage() {
         const reader = new FileReader();
         reader.onload = async (e) => {
             const text = e.target?.result as string;
+            let successfulUploads = 0;
+            let failedRows: { row: number, reason: string }[] = [];
+            const validDocs = [];
+
             try {
                 const lines = text.split('\n').filter(line => line.trim() !== '');
                 if (lines.length <= 1) throw new Error("CSV is empty or has only a header.");
@@ -369,62 +373,84 @@ export default function ProductOutPage() {
                 if (!requiredHeaders.every(h => header.includes(h))) {
                     throw new Error(`Invalid CSV. Required headers: ${requiredHeaders.join(', ')}`);
                 }
-    
-                const docsToUpload = await Promise.all(lines.slice(1).map(async (line) => {
+
+                for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i];
                     const values = line.split(',');
                     const entry: { [key: string]: string } = {};
-                    header.forEach((h, i) => entry[h] = values[i]?.trim().replace(/"/g, ''));
-                    
-                    // Fetch best batch for each row
-                    const stockResponse = await fetch(`/api/master-product/batch-products/${entry.barcode}`);
-                    if (!stockResponse.ok) {
-                        console.warn(`Skipping row, barcode not found: ${entry.barcode}`);
-                        return null;
-                    }
-                    const batches: AggregatedProduct[] = await stockResponse.json();
-                     const sortedBatches = batches
-                        .filter(batch => batch.stock > 0)
-                        .sort((a, b) => new Date(a.exp_date).getTime() - new Date(b.exp_date).getTime());
+                    header.forEach((h, j) => entry[h] = values[j]?.trim().replace(/"/g, ''));
 
-                    if (sortedBatches.length === 0) {
-                        console.warn(`Skipping row, no stock for barcode: ${entry.barcode}`);
-                        return null;
+                    const qty = parseInt(entry.qty, 10);
+                    if (!entry.barcode || isNaN(qty) || !entry.status) {
+                        failedRows.push({ row: i + 1, reason: 'Missing required data (barcode, qty, or status).' });
+                        continue;
                     }
                     
-                    const bestBatch = sortedBatches[0];
-                    
-                    return {
-                        sku: bestBatch.sku,
-                        barcode: entry.barcode,
-                        expdate: bestBatch.exp_date,
-                        location: bestBatch.location,
-                        qty: parseInt(entry.qty, 10),
-                        status: entry.status as ProductOutStatus,
-                        date: new Date().toISOString(),
-                        validatedby: user.name,
-                    };
-                }));
-                
-                const validDocs = docsToUpload.filter((doc): doc is NonNullable<typeof doc> => doc !== null);
-    
-                if(validDocs.length === 0) {
-                    throw new Error("No valid documents to upload from the CSV.");
+                    try {
+                        const stockResponse = await fetch(`/api/master-product/batch-products/${entry.barcode}`);
+                        if (!stockResponse.ok) {
+                            failedRows.push({ row: i + 1, reason: `Barcode ${entry.barcode} not found.` });
+                            continue;
+                        }
+                        const batches: AggregatedProduct[] = await stockResponse.json();
+                        const sortedBatches = batches
+                            .filter(batch => batch.stock > 0)
+                            .sort((a, b) => new Date(a.exp_date).getTime() - new Date(b.exp_date).getTime());
+
+                        if (sortedBatches.length === 0) {
+                            failedRows.push({ row: i + 1, reason: `No available stock for barcode ${entry.barcode}.` });
+                            continue;
+                        }
+                        
+                        const bestBatch = sortedBatches[0];
+                        
+                         if (qty > bestBatch.stock) {
+                            failedRows.push({ row: i + 1, reason: `Qty ${qty} exceeds stock ${bestBatch.stock} for barcode ${entry.barcode}.` });
+                            continue;
+                        }
+
+                        validDocs.push({
+                            sku: bestBatch.sku,
+                            barcode: entry.barcode,
+                            expdate: bestBatch.exp_date,
+                            location: bestBatch.location,
+                            qty: qty,
+                            status: entry.status as ProductOutStatus,
+                            date: new Date().toISOString(),
+                            validatedby: user.name,
+                        });
+                    } catch (fetchError) {
+                        failedRows.push({ row: i + 1, reason: `Error processing barcode ${entry.barcode}.` });
+                    }
                 }
-
-                const response = await fetch('/api/product-out-documents', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ documents: validDocs, user })
-                });
     
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Failed to upload data');
+                if (validDocs.length > 0) {
+                    const response = await fetch('/api/product-out-documents', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ documents: validDocs, user })
+                    });
+        
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || 'Failed to save valid documents to the database.');
+                    }
+                    successfulUploads = validDocs.length;
                 }
     
                 await fetchData();
                 setUploadDialogOpen(false);
-                toast({ title: "Success", description: `${validDocs.length} documents uploaded.` });
+                
+                if(failedRows.length > 0) {
+                    toast({ 
+                        variant: "destructive",
+                        title: "Partial Upload Success",
+                        description: `${successfulUploads} documents uploaded. ${failedRows.length} rows failed. Check console for details.` 
+                    });
+                    console.error("Failed CSV Rows:", failedRows);
+                } else {
+                     toast({ title: "Success", description: `${successfulUploads} documents uploaded.` });
+                }
     
             } catch (error: any) {
                 toast({ variant: "destructive", title: "Upload Failed", description: error.message });
