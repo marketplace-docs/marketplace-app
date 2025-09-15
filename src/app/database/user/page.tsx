@@ -50,9 +50,9 @@ type User = {
 
 const initialUsers: User[] = [
     { id: 1, name: 'Arlan Saputra', status: 'Staff', role: 'Super Admin' },
-    { id: 2, name: 'Rudi Setiawan', status: 'Reguler', role: 'Admin' },
-    { id: 3, name: 'Nova Aurelia', status: 'Reguler', role: 'Admin' },
-    { id: 4, name: 'Nurul Tanzilla', status: 'Event', role: 'Event Staff' },
+    { id: 2, name: 'Rudi Setiawan', status: 'Reguler', role: 'Manager' },
+    { id: 3, name: 'Nova Aurelia', status: 'Reguler', role: 'Supervisor' },
+    { id: 4, name: 'Nurul Tanzilla', status: 'Event', role: 'Admin' },
     { id: 5, name: 'Regina Rifana', status: 'Staff', role: 'Captain' },
 ];
 
@@ -242,7 +242,19 @@ export default function DatabaseUserPage() {
                             </div>
                             <div className="grid grid-cols-4 items-center gap-4">
                                 <Label htmlFor="role" className="text-right">Role</Label>
-                                <Input id="role" value={selectedUser.role} className="col-span-3" onChange={(e) => setSelectedUser({ ...selectedUser, role: e.target.value })}/>
+                                <Select value={selectedUser.role} onValueChange={(value: string) => setSelectedUser({ ...selectedUser, role: value })}>
+                                      <SelectTrigger className="col-span-3">
+                                          <SelectValue placeholder="Select Role" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                          <SelectItem value="Super Admin">Super Admin</SelectItem>
+                                          <SelectItem value="Supervisor">Supervisor</SelectItem>
+                                          <SelectItem value="Manager">Manager</SelectItem>
+                                          <SelectItem value="Captain">Captain</SelectItem>
+                                          <SelectItem value="Admin">Admin</SelectItem>
+                                          <SelectItem value="Staff">Staff</SelectItem>
+                                      </SelectContent>
+                                  </Select>
                             </div>
                         </div>
                     )}
@@ -273,3 +285,5 @@ export default function DatabaseUserPage() {
       </MainLayout>
     )
 }
+
+    

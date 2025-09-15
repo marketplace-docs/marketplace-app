@@ -70,7 +70,7 @@ export default function DatabaseUserPage() {
     const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
     
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
-    const [newUser, setNewUser] = useState<NewUser>({ name: '', email: '', status: 'Reguler', role: 'Admin' });
+    const [newUser, setNewUser] = useState<NewUser>({ name: '', email: '', status: 'Reguler', role: 'Staff' });
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const { toast } = useToast();
@@ -173,7 +173,7 @@ export default function DatabaseUserPage() {
             
             await fetchUsers();
             setAddDialogOpen(false);
-            setNewUser({ name: '', email: '', status: 'Reguler', role: 'Admin' });
+            setNewUser({ name: '', email: '', status: 'Reguler', role: 'Staff' });
             toast({ title: "Success", description: "New user added." });
         } catch (error: any) {
             toast({ variant: 'destructive', title: "Error", description: error.message || "Could not add user." });
@@ -242,7 +242,7 @@ export default function DatabaseUserPage() {
                               </div>
                                <div className="grid grid-cols-4 items-center gap-4">
                                   <Label htmlFor="new-status" className="text-right">Status</Label>
-                                  <Select value={newUser.status} onValueChange={(value: User['status']) => setNewUser({ ...newUser, status: value })}>
+                                  <Select value={newUser.status} onValueChange={(value: 'Staff' | 'Reguler' | 'Event') => setNewUser({ ...newUser, status: value })}>
                                       <SelectTrigger className="col-span-3">
                                           <SelectValue placeholder="Select Status" />
                                       </SelectTrigger>
@@ -261,10 +261,11 @@ export default function DatabaseUserPage() {
                                       </SelectTrigger>
                                       <SelectContent>
                                           <SelectItem value="Super Admin">Super Admin</SelectItem>
-                                          <SelectItem value="Admin">Admin</SelectItem>
                                           <SelectItem value="Supervisor">Supervisor</SelectItem>
+                                          <SelectItem value="Manager">Manager</SelectItem>
                                           <SelectItem value="Captain">Captain</SelectItem>
-                                          <SelectItem value="Event Staff">Event Staff</SelectItem>
+                                          <SelectItem value="Admin">Admin</SelectItem>
+                                          <SelectItem value="Staff">Staff</SelectItem>
                                       </SelectContent>
                                   </Select>
                               </div>
@@ -413,7 +414,7 @@ export default function DatabaseUserPage() {
                             </div>
                              <div className="grid grid-cols-4 items-center gap-4">
                                 <Label htmlFor="status" className="text-right">Status</Label>
-                                <Select value={selectedUser.status} onValueChange={(value: User['status']) => setSelectedUser({ ...selectedUser, status: value })}>
+                                <Select value={selectedUser.status} onValueChange={(value: 'Staff' | 'Reguler' | 'Event') => setSelectedUser({ ...selectedUser, status: value })}>
                                     <SelectTrigger className="col-span-3">
                                         <SelectValue placeholder="Select Status" />
                                     </SelectTrigger>
@@ -432,10 +433,11 @@ export default function DatabaseUserPage() {
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="Super Admin">Super Admin</SelectItem>
-                                        <SelectItem value="Admin">Admin</SelectItem>
                                         <SelectItem value="Supervisor">Supervisor</SelectItem>
+                                        <SelectItem value="Manager">Manager</SelectItem>
                                         <SelectItem value="Captain">Captain</SelectItem>
-                                        <SelectItem value="Event Staff">Event Staff</SelectItem>
+                                        <SelectItem value="Admin">Admin</SelectItem>
+                                        <SelectItem value="Staff">Staff</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -474,5 +476,7 @@ export default function DatabaseUserPage() {
       </MainLayout>
     )
 }
+
+    
 
     

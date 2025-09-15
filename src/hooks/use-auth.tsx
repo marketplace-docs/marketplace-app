@@ -21,10 +21,11 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const allowedUsers: User[] = [
     { email: 'arlan.saputra@marketplace.com', name: 'Arlan Saputra', role: 'Super Admin' },
-    { email: 'rudi.setiawan@marketplace.com', name: 'Rudi Setiawan', role: 'Admin' },
-    { email: 'nova.aurelia@marketplace.com', name: 'Nova Aurelia', role: 'Admin' },
-    { email: 'nurul.tanzilla@marketplace.com', name: 'Nurul Tanzilla', role: 'Event Staff' },
-    { email: 'regina.rifana@marketplace.com', name: 'Regina Rifana', role: 'Captain' }
+    { email: 'rudi.setiawan@marketplace.com', name: 'Rudi Setiawan', role: 'Manager' },
+    { email: 'nova.aurelia@marketplace.com', name: 'Nova Aurelia', role: 'Supervisor' },
+    { email: 'nurul.tanzilla@marketplace.com', name: 'Nurul Tanzilla', role: 'Admin' },
+    { email: 'regina.rifana@marketplace.com', name: 'Regina Rifana', role: 'Captain' },
+    { email: 'staff@marketplace.com', name: 'Staff Gudang', role: 'Staff' }
 ];
 
 const validPassword = 'Marketplace@soco123!!!';
@@ -101,3 +102,5 @@ export function useAuth() {
   }
   return context;
 }
+
+    
