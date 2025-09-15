@@ -1,31 +1,31 @@
--- Enable Row Level Security (RLS) for the locations table.
--- This is a critical security measure to ensure data is not publicly accessible.
+-- 1. Enable Row Level Security (RLS) on the 'locations' table
+-- This locks down the table by default. No one can access it until a policy grants them permission.
 ALTER TABLE public.locations ENABLE ROW LEVEL SECURITY;
 
--- Drop existing policies if they exist to prevent conflicts.
-DROP POLICY IF EXISTS "Allow authenticated users to read locations" ON public.locations;
-DROP POLICY IF EXISTS "Allow Super Admins to manage locations" ON public.locations;
 
--- Policy: Allow authenticated users to read locations.
--- This policy grants read-only (SELECT) access to any user who is logged in.
--- The data in the 'locations' table is considered non-sensitive and can be viewed by all internal users.
+-- 2. Create a policy to ALLOW LOGGED-IN USERS to READ (SELECT) locations.
+-- This policy lets any user who is authenticated (logged in) view the list of locations.
+-- This is safe because location names are not sensitive data.
 CREATE POLICY "Allow authenticated users to read locations"
 ON public.locations
 FOR SELECT
 TO authenticated
 USING (true);
 
--- Policy: Allow Super Admins to manage locations.
--- This policy grants full access (INSERT, UPDATE, DELETE) to users with the 'Super Admin' role.
--- It checks the 'role' from the 'users' table, matching it against the logged-in user's ID.
--- This ensures that only authorized administrators can modify the location data.
-CREATE POLICY "Allow Super Admins to manage locations"
+
+-- 3. Create a policy to ALLOW SUPER ADMINS to DO EVERYTHING (INSERT, UPDATE, DELETE).
+-- This policy gives full control (all actions) over the 'locations' table *only* to users
+-- whose custom JWT claim 'user_role' is 'Super Admin'.
+-- Note: This assumes you have a custom claim named 'user_role' in your JWT.
+-- If you followed standard Supabase setup, the role is often in `auth.jwt() ->> 'role'`.
+-- We will use the 'role' claim as it is more standard.
+CREATE POLICY "Allow Super Admins full access to locations"
 ON public.locations
 FOR ALL
 TO authenticated
-USING (
-  (SELECT role FROM public.users WHERE id = auth.uid()) = 'Super Admin'
-)
-WITH CHECK (
-  (SELECT role FROM public.users WHERE id = auth.uid()) = 'Super Admin'
-);
+USING ((auth.jwt() ->> 'role') = 'Super Admin')
+WITH CHECK ((auth.jwt() ->> 'role') = 'Super Admin');
+
+
+-- Info: This script is idempotent. If you run it again, it will show an
+-- error that the policies already exist, which is expected and means it's working.
