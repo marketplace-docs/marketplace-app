@@ -282,7 +282,7 @@ export default function BatchProductPage() {
                     </CardHeader>
                     <CardContent>
                        <div className="border rounded-lg">
-                            <Accordion type="multiple" value={openAccordion} onValueChange={setOpenAccordion} className="w-full">
+                            <Accordion type="multiple" value={openAccordion} onValueChange={setOpenAccordion} asChild>
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
@@ -293,15 +293,15 @@ export default function BatchProductPage() {
                                             <TableHead className="w-12 text-right"></TableHead>
                                         </TableRow>
                                     </TableHeader>
-                                </Table>
-                                {loading ? (
-                                    <div className="h-24 flex items-center justify-center">
-                                        <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
-                                    </div>
-                                ) : paginatedData.length > 0 ? (
-                                    <Table>
-                                        <TableBody>
-                                            {paginatedData.map((product) => (
+                                    <TableBody>
+                                        {loading ? (
+                                            <TableRow>
+                                                <TableCell colSpan={5} className="h-24 text-center">
+                                                    <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+                                                </TableCell>
+                                            </TableRow>
+                                        ) : paginatedData.length > 0 ? (
+                                            paginatedData.map((product) => (
                                             <AccordionItem value={product.sku} key={product.sku} asChild>
                                                 <>
                                                 <TableRow>
@@ -314,7 +314,7 @@ export default function BatchProductPage() {
                                                         </Badge>
                                                     </TableCell>
                                                     <TableCell className="w-12 text-right">
-                                                        <AccordionTrigger className="p-0 [&[data-state=open]>svg]:rotate-180">
+                                                        <AccordionTrigger className="p-2 -mr-2 [&[data-state=open]>svg]:rotate-180">
                                                             <ChevronDown className="h-5 w-5 transition-transform duration-200" />
                                                         </AccordionTrigger>
                                                     </TableCell>
@@ -378,15 +378,19 @@ export default function BatchProductPage() {
                                                 </TableRow>
                                                 </>
                                             </AccordionItem>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                ) : (
-                                    <div className="h-24 flex flex-col items-center justify-center gap-2 text-muted-foreground">
-                                         <PackageSearch className="h-8 w-8" />
-                                         <span>No inventory data found.</span>
-                                    </div>
-                                )}
+                                            ))
+                                        ) : (
+                                            <TableRow>
+                                                <TableCell colSpan={5} className="h-24 text-center">
+                                                    <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                                                         <PackageSearch className="h-8 w-8" />
+                                                         <span>No inventory data found.</span>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
                             </Accordion>
                        </div>
                         <div className="flex items-center justify-end space-x-2 py-4">
