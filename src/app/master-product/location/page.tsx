@@ -206,15 +206,23 @@ export default function LocationPage() {
                 }
 
                 const newLocations = lines.map(line => {
-                    const values = line.split(',');
+                    const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                     const name = values[nameIndex]?.trim().replace(/"/g, '');
-                    const type = values[typeIndex]?.trim().replace(/"/g, '') as LocationType;
+                    const typeRaw = values[typeIndex]?.trim().replace(/"/g, '');
+                    
+                    // Convert to Title Case to match LocationType
+                    const type = typeRaw.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ') as LocationType;
 
                     if (name && Object.keys(typeVariantMap).includes(type)) {
                         return { name, type };
                     }
+                    console.warn(`Skipping invalid row: ${line}. Name: ${name}, Type: ${type}`);
                     return null;
                 }).filter((l): l is { name: string; type: LocationType } => l !== null);
+
+                if(newLocations.length === 0){
+                    throw new Error("No valid locations found in the CSV file.");
+                }
 
                 const response = await fetch('/api/locations', {
                     method: 'POST',
@@ -491,3 +499,4 @@ export default function LocationPage() {
         </MainLayout>
     );
 }
+
