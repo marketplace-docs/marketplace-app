@@ -19,7 +19,7 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/use-auth';
 import { format } from 'date-fns';
 
-type LocationType = 'Sellable' | 'Expiring' | 'Expired' | 'Quarantine' | 'Empty' | 'Sensitive MP';
+type LocationType = 'Sellable' | 'Expiring' | 'Expired' | 'Quarantine' | 'Empty' | 'Sensitive MP' | 'Marketplace' | 'Damaged';
 type LocationFilterType = 'All' | LocationType;
 
 type LocationData = {
@@ -36,6 +36,8 @@ const typeVariantMap: Record<LocationType, 'default' | 'secondary' | 'destructiv
     'Quarantine': 'outline',
     'Empty': 'outline',
     'Sensitive MP': 'secondary',
+    'Marketplace': 'default',
+    'Damaged': 'destructive',
 };
 
 
@@ -194,7 +196,7 @@ export default function LocationPage() {
                     throw new Error("CSV file is empty or has no header.");
                 }
                 
-                const headers = headerLine.split(',').map(h => h.trim().replace(/"/g, ''));
+                const headers = headerLine.split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
                 
                 const nameIndex = headers.indexOf('name');
                 const typeIndex = headers.indexOf('type');
@@ -333,6 +335,8 @@ export default function LocationPage() {
                                                         <SelectItem value="Expired">Expired</SelectItem>
                                                         <SelectItem value="Quarantine">Quarantine</SelectItem>
                                                         <SelectItem value="Sensitive MP">Sensitive MP</SelectItem>
+                                                        <SelectItem value="Marketplace">Marketplace</SelectItem>
+                                                        <SelectItem value="Damaged">Damaged</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                             </div>
@@ -377,12 +381,14 @@ export default function LocationPage() {
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="All">All Types</SelectItem>
+                                        <SelectItem value="Empty">Empty</SelectItem>
                                         <SelectItem value="Sellable">Sellable</SelectItem>
                                         <SelectItem value="Expiring">Expiring</SelectItem>
                                         <SelectItem value="Expired">Expired</SelectItem>
                                         <SelectItem value="Quarantine">Quarantine</SelectItem>
-                                        <SelectItem value="Empty">Empty</SelectItem>
                                         <SelectItem value="Sensitive MP">Sensitive MP</SelectItem>
+                                        <SelectItem value="Marketplace">Marketplace</SelectItem>
+                                        <SelectItem value="Damaged">Damaged</SelectItem>
                                     </SelectContent>
                                 </Select>
                                 <Input 
@@ -419,7 +425,8 @@ export default function LocationPage() {
                                                         className={cn({
                                                             'bg-green-500 hover:bg-green-500/80 text-white': location.type === 'Sellable',
                                                             'bg-yellow-500 hover:bg-yellow-500/80 text-black': location.type === 'Expiring',
-                                                            'bg-purple-500 hover:bg-purple-500/80': location.type === 'Sensitive MP',
+                                                            'bg-purple-500 hover:bg-purple-500/80 text-white': location.type === 'Sensitive MP',
+                                                            'bg-blue-500 hover:bg-blue-500/80 text-white': location.type === 'Marketplace',
                                                         })}
                                                     >
                                                         {location.type}

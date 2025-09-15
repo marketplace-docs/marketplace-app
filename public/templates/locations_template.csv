@@ -1,2 +1,7 @@
 name,type
-CK1.MP1.M02.R12.S02.B01,Marketplace
+CK1.MP1.M02.R12.S02.B01,marketplace
+CK1.DM1.MD1.R01.S01.B01,damaged
+CK1.SM1.M01.R06.S02.B01,sensitive_mp
+CK1.QR1.MP1.R01.S01.V01,quarantine
+CK1.QR1.MP1.R01.S01.B01,quarantine
+CK1.XM1.H01.R03.S04.B01,expired
