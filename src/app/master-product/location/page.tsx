@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -10,55 +11,21 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { differenceInMonths, isBefore, format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
-
-type BatchProduct = {
-    id: string;
-    sku: string;
-    barcode: string;
-    brand: string;
-    exp_date: string;
-    location: string;
-    stock: number;
-    status: 'Sellable' | 'Expiring' | 'Expired' | 'Out of Stock';
-};
+import { useAuth } from '@/hooks/use-auth';
+import { format } from 'date-fns';
 
 type LocationType = 'Sellable' | 'Expiring' | 'Expired' | 'Quarantine' | 'Mixed' | 'Empty';
 type LocationFilterType = 'All' | LocationType;
 
 type LocationData = {
+    id: number;
     name: string;
     type: LocationType;
-};
-
-const getProductStatus = (expDate: string, stock: number): BatchProduct['status'] => {
-    if (stock <= 0) return 'Out of Stock';
-    const today = new Date();
-    const expiryDate = new Date(expDate);
-    if (isBefore(expiryDate, today)) return 'Expired';
-    const monthsUntilExpiry = differenceInMonths(expiryDate, today);
-    if (monthsUntilExpiry < 3) return 'Expiring';
-    return 'Sellable';
-};
-
-
-const getLocationType = (location: string, productsInLocation: BatchProduct[]): LocationType => {
-    if (location.toLowerCase().includes('quarantine')) {
-        return 'Quarantine';
-    }
-    const productStatuses = new Set(productsInLocation.map(p => p.status).filter(s => s !== 'Out of Stock'));
-
-    if (productStatuses.size === 0) return 'Empty';
-    if (productStatuses.size > 1) return 'Mixed';
-    if (productStatuses.has('Expired')) return 'Expired';
-    if (productStatuses.has('Expiring')) return 'Expiring';
-    if (productStatuses.has('Sellable')) return 'Sellable';
-
-    return 'Mixed'; // Fallback
+    created_at: string;
 };
 
 const typeVariantMap: Record<LocationType, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -81,6 +48,7 @@ export default function LocationPage() {
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const { user } = useAuth();
 
     const [isAddDialogOpen, setAddDialogOpen] = useState(false);
     const [isUploadDialogOpen, setUploadDialogOpen] = useState(false);
@@ -92,31 +60,10 @@ export default function LocationPage() {
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch('/api/master-product/batch-products');
-            if (!response.ok) throw new Error('Failed to fetch product data');
-            const products: Omit<BatchProduct, 'status'>[] = await response.json();
-
-            const productsWithStatus: BatchProduct[] = products.map(p => ({
-                ...p,
-                status: getProductStatus(p.exp_date, p.stock),
-            }));
-
-            const locationsMap = new Map<string, BatchProduct[]>();
-            productsWithStatus.forEach(p => {
-                if (!p.location) return;
-                if (!locationsMap.has(p.location)) {
-                    locationsMap.set(p.location, []);
-                }
-                locationsMap.get(p.location)!.push(p);
-            });
-            
-            const processedLocations: LocationData[] = Array.from(locationsMap.entries()).map(([location, products]) => ({
-                name: location,
-                type: getLocationType(location, products),
-            }));
-
-            setLocationsData(processedLocations);
-
+            const response = await fetch('/api/locations');
+            if (!response.ok) throw new Error('Failed to fetch location data');
+            const data: LocationData[] = await response.json();
+            setLocationsData(data);
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -165,26 +112,42 @@ export default function LocationPage() {
         }, { total: 0, sellable: 0, expiring: 0, expired: 0, quarantine: 0, mixed: 0 });
     }, [locationsData]);
     
-    const handleAddLocation = () => {
+    const handleAddLocation = async () => {
         if (!newLocationName.trim()) {
             toast({ variant: 'destructive', title: 'Error', description: 'Location name cannot be empty.' });
             return;
         }
-        if (locationsData.some(loc => loc.name.toLowerCase() === newLocationName.trim().toLowerCase())) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Location already exists.' });
+        if (!user) {
+            toast({ variant: 'destructive', title: 'Error', description: 'You are not logged in.' });
             return;
         }
 
-        const newLocation: LocationData = {
-            name: newLocationName.trim(),
-            type: newLocationType,
-        };
+        setIsSubmitting(true);
+        try {
+            const response = await fetch('/api/locations', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    locations: [{ name: newLocationName.trim(), type: newLocationType }],
+                    user,
+                }),
+            });
 
-        setLocationsData(prev => [newLocation, ...prev].sort((a, b) => a.name.localeCompare(b.name)));
-        toast({ title: 'Success', description: `Location "${newLocation.name}" has been added.` });
-        setNewLocationName('');
-        setNewLocationType('Empty');
-        setAddDialogOpen(false);
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to add location.');
+            }
+            
+            await fetchLocations(); // Refetch from DB
+            toast({ title: 'Success', description: `Location "${newLocationName.trim()}" has been added.` });
+            setNewLocationName('');
+            setNewLocationType('Empty');
+            setAddDialogOpen(false);
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Error', description: error.message });
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const handleExport = () => {
@@ -219,10 +182,10 @@ export default function LocationPage() {
 
     const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
-        if (!file) return;
+        if (!file || !user) return;
         setIsSubmitting(true);
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             const text = e.target?.result as string;
             try {
                 const lines = text.split('\n').filter(line => line.trim() !== '');
@@ -237,13 +200,24 @@ export default function LocationPage() {
                     const name = values[headers.indexOf('name')]?.trim().replace(/"/g, '');
                     const type = values[headers.indexOf('type')]?.trim().replace(/"/g, '') as LocationType;
 
-                    if (name && Object.keys(typeVariantMap).includes(type) && !locationsData.some(loc => loc.name.toLowerCase() === name.toLowerCase())) {
+                    if (name && Object.keys(typeVariantMap).includes(type)) {
                         return { name, type };
                     }
                     return null;
-                }).filter((l): l is LocationData => l !== null);
+                }).filter((l): l is { name: string; type: LocationType } => l !== null);
 
-                setLocationsData(prev => [...prev, ...newLocations].sort((a,b) => a.name.localeCompare(b.name)));
+                const response = await fetch('/api/locations', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ locations: newLocations, user }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to upload locations.');
+                }
+                
+                await fetchLocations();
                 setUploadDialogOpen(false);
                 toast({ title: "Success", description: `${newLocations.length} new locations uploaded.` });
 
@@ -357,7 +331,10 @@ export default function LocationPage() {
                                         </div>
                                         <DialogFooter>
                                             <Button variant="outline" onClick={() => setAddDialogOpen(false)}>Cancel</Button>
-                                            <Button onClick={handleAddLocation}>Submit</Button>
+                                            <Button onClick={handleAddLocation} disabled={isSubmitting}>
+                                                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                                                Submit
+                                            </Button>
                                         </DialogFooter>
                                     </DialogContent>
                                 </Dialog>
@@ -424,7 +401,7 @@ export default function LocationPage() {
                                         </TableRow>
                                     ) : paginatedData.length > 0 ? (
                                         paginatedData.map((location) => (
-                                            <TableRow key={location.name}>
+                                            <TableRow key={location.id}>
                                                 <TableCell className="font-medium">{location.name}</TableCell>
                                                 <TableCell>
                                                     <Badge variant={typeVariantMap[location.type]}
