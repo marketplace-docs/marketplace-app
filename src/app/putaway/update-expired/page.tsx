@@ -44,8 +44,8 @@ export default function UpdateExpiredPage() {
     const { toast } = useToast();
     const { user } = useAuth();
     
-    const fetchProductData = useCallback(async () => {
-        if (!barcode) {
+    const fetchProductData = useCallback(async (searchBarcode: string) => {
+        if (!searchBarcode) {
             setOriginalBatches([]);
             setSelectedBatch(null);
             return;
@@ -55,7 +55,7 @@ export default function UpdateExpiredPage() {
         setOriginalBatches([]);
 
         try {
-            const response = await fetch(`/api/master-product/batch-products/${barcode}`);
+            const response = await fetch(`/api/master-product/batch-products/${searchBarcode}`);
             if (response.status === 404) {
                 toast({ variant: "destructive", title: "Not Found", description: "Product with this barcode not found in any batch." });
                 return;
@@ -71,11 +71,16 @@ export default function UpdateExpiredPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [barcode, toast]);
+    }, [toast]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
-            fetchProductData();
+            if(barcode) {
+                fetchProductData(barcode);
+            } else {
+                 setOriginalBatches([]);
+                 setSelectedBatch(null);
+            }
         }, 500);
 
         return () => clearTimeout(timer);
@@ -117,7 +122,7 @@ export default function UpdateExpiredPage() {
         try {
             const payload = {
                 originalDoc: {
-                    id: selectedBatch.id, // We need to pass the original putaway doc ID
+                    id: selectedBatch.id,
                     qty: selectedBatch.stock,
                     location: selectedBatch.location,
                     exp_date: selectedBatch.exp_date,
@@ -166,49 +171,49 @@ export default function UpdateExpiredPage() {
                         <CardDescription>Scan barcode to find all batches of a product. Select a batch to update its location, expiration date, or split it.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <form onSubmit={handleSubmit}>
-                             <div className="space-y-2 mb-6">
-                                <Label htmlFor="barcode">Barcode</Label>
-                                <div className="relative">
-                                    <Input id="barcode" placeholder="Scan or enter product barcode" value={barcode} onChange={(e) => setBarcode(e.target.value)} />
-                                    {isLoading && <Loader2 className="absolute right-2 top-2.5 h-5 w-5 animate-spin text-muted-foreground" />}
-                                </div>
+                         <div className="space-y-2 mb-6">
+                            <Label htmlFor="barcode">Barcode</Label>
+                            <div className="relative">
+                                <Input id="barcode" placeholder="Scan or enter product barcode" value={barcode} onChange={(e) => setBarcode(e.target.value)} />
+                                {isLoading && <Loader2 className="absolute right-2 top-2.5 h-5 w-5 animate-spin text-muted-foreground" />}
                             </div>
+                        </div>
 
-                             {originalBatches.length > 0 && (
-                                <Card className="bg-muted/50 mb-6">
-                                    <CardHeader>
-                                        <CardTitle className="text-lg">Available Batches</CardTitle>
-                                        <CardDescription>Select the batch you want to modify.</CardDescription>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Location</TableHead>
-                                                    <TableHead>Exp Date</TableHead>
-                                                    <TableHead>Stock</TableHead>
-                                                    <TableHead className="text-right">Action</TableHead>
+                         {originalBatches.length > 0 && (
+                            <Card className="bg-muted/50 mb-6">
+                                <CardHeader>
+                                    <CardTitle className="text-lg">Available Batches</CardTitle>
+                                    <CardDescription>Select the batch you want to modify.</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Location</TableHead>
+                                                <TableHead>Exp Date</TableHead>
+                                                <TableHead>Stock</TableHead>
+                                                <TableHead className="text-right">Action</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {originalBatches.map((batch) => (
+                                                <TableRow key={`${batch.id}-${batch.location}-${batch.exp_date}`} className={selectedBatch?.id === batch.id ? "bg-accent" : ""}>
+                                                    <TableCell>{batch.location}</TableCell>
+                                                    <TableCell>{format(new Date(batch.exp_date), 'dd/MM/yyyy')}</TableCell>
+                                                    <TableCell>{batch.stock.toLocaleString()}</TableCell>
+                                                    <TableCell className="text-right">
+                                                        <Button type="button" size="sm" onClick={() => handleSelectBatch(batch)}>Select</Button>
+                                                    </TableCell>
                                                 </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {originalBatches.map((batch) => (
-                                                    <TableRow key={`${batch.id}-${batch.location}-${batch.exp_date}`} className={selectedBatch?.id === batch.id ? "bg-accent" : ""}>
-                                                        <TableCell>{batch.location}</TableCell>
-                                                        <TableCell>{format(new Date(batch.exp_date), 'dd/MM/yyyy')}</TableCell>
-                                                        <TableCell>{batch.stock.toLocaleString()}</TableCell>
-                                                        <TableCell className="text-right">
-                                                            <Button type="button" size="sm" onClick={() => handleSelectBatch(batch)}>Select</Button>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                    </CardContent>
-                                </Card>
-                             )}
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </CardContent>
+                            </Card>
+                         )}
 
-                            {selectedBatch && (
+                        {selectedBatch && (
+                            <form onSubmit={handleSubmit}>
                                 <div className="border-t pt-6 space-y-4">
                                      <h3 className="text-md font-semibold text-foreground">Update Details for Batch at <span className="text-primary">{selectedBatch.location}</span></h3>
                                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -232,8 +237,8 @@ export default function UpdateExpiredPage() {
                                         </Button>
                                     </div>
                                 </div>
-                            )}
-                        </form>
+                            </form>
+                        )}
                     </CardContent>
                 </Card>
             </div>
