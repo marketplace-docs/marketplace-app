@@ -46,6 +46,12 @@ type PutawayDocument = {
   check_by: string;
 };
 
+type Location = {
+  id: number;
+  name: string;
+  type: string;
+};
+
 const statusVariantMap: { [key in PutawayDocument['status']]: "default" | "secondary" } = {
     'Done': 'default',
     'Pending': 'secondary',
@@ -63,6 +69,7 @@ const formatDateSafely = (dateString: string | null | undefined, formatString: s
 
 export default function MonitoringPutawayPage() {
   const [documents, setDocuments] = useState<PutawayDocument[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -87,14 +94,24 @@ export default function MonitoringPutawayPage() {
   const [searchBarcode, setSearchBarcode] = useState('');
   const [rowSelection, setRowSelection] = useState({});
 
-  const fetchDocuments = useCallback(async () => {
+  const fetchInitialData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/putaway-documents');
-      if (!response.ok) throw new Error('Failed to fetch documents');
-      const data = await response.json();
-      setDocuments(data);
+      const [docsResponse, locsResponse] = await Promise.all([
+        fetch('/api/putaway-documents'),
+        fetch('/api/locations'),
+      ]);
+
+      if (!docsResponse.ok) throw new Error('Failed to fetch documents');
+      if (!locsResponse.ok) throw new Error('Failed to fetch locations');
+
+      const docsData = await docsResponse.json();
+      const locsData = await locsResponse.json();
+
+      setDocuments(docsData);
+      setLocations(locsData);
+
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -103,8 +120,8 @@ export default function MonitoringPutawayPage() {
   }, []);
 
   useEffect(() => {
-    fetchDocuments();
-  }, [fetchDocuments]);
+    fetchInitialData();
+  }, [fetchInitialData]);
 
   const filteredDocuments = useMemo(() => {
     return documents.filter(doc => 
@@ -157,7 +174,7 @@ export default function MonitoringPutawayPage() {
       });
       if (!response.ok) throw new Error('Failed to update document');
 
-      await fetchDocuments();
+      await fetchInitialData();
       setEditDialogOpen(false);
       setSelectedDoc(null);
       toast({ title: "Success", description: "Document has been updated successfully." });
@@ -178,7 +195,7 @@ export default function MonitoringPutawayPage() {
       });
       if (!response.ok) throw new Error('Failed to delete document');
 
-      await fetchDocuments();
+      await fetchInitialData();
       setDeleteDialogOpen(false);
       setSelectedDoc(null);
       toast({ title: "Success", description: "Document has been deleted.", variant: "destructive" });
@@ -266,7 +283,7 @@ export default function MonitoringPutawayPage() {
             throw new Error(errorData.error || "Failed to upload documents.");
         }
 
-        await fetchDocuments();
+        await fetchInitialData();
         setUploadDialogOpen(false);
         toast({ title: "Success", description: `${newDocs.length} documents uploaded.` });
       } catch (error: any) {
@@ -523,10 +540,21 @@ export default function MonitoringPutawayPage() {
                           <Label htmlFor="exp_date" className="text-right">EXP Date</Label>
                           <Input id="exp_date" type="date" value={selectedDoc.exp_date} className="col-span-3" onChange={(e) => setSelectedDoc({ ...selectedDoc, exp_date: e.target.value })} />
                       </div>
-                      <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="location" className="text-right">Location</Label>
-                          <Input id="location" value={selectedDoc.location || ''} className="col-span-3" onChange={(e) => setSelectedDoc({ ...selectedDoc, location: e.target.value })} />
-                      </div>
+                       <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="location" className="text-right">Location</Label>
+                            <Select value={selectedDoc.location || ''} onValueChange={(value) => setSelectedDoc({ ...selectedDoc, location: value })}>
+                                <SelectTrigger id="location" className="col-span-3">
+                                    <SelectValue placeholder="Select Location" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {locations.map((loc) => (
+                                        <SelectItem key={loc.id} value={loc.name}>
+                                            {loc.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
                       <div className="grid grid-cols-4 items-center gap-4">
                           <Label htmlFor="check_by" className="text-right">Check By</Label>
                           <Input id="check_by" value={selectedDoc.check_by} className="col-span-3" onChange={(e) => setSelectedDoc({ ...selectedDoc, check_by: e.target.value })} />

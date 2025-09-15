@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Card,
   CardContent,
@@ -38,6 +38,12 @@ type NewPutawayDocument = {
     check_by: string;
 };
 
+type Location = {
+  id: number;
+  name: string;
+  type: string;
+};
+
 export default function CreatePutawayPage() {
   const { user } = useAuth();
   const [newDocument, setNewDocument] = React.useState<NewPutawayDocument>({
@@ -51,6 +57,7 @@ export default function CreatePutawayPage() {
     location: '',
     check_by: '',
   });
+  const [locations, setLocations] = useState<Location[]>([]);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const { toast } = useToast();
   const router = useRouter();
@@ -58,7 +65,6 @@ export default function CreatePutawayPage() {
   const canCreate = user?.role === 'Super Admin';
 
   useEffect(() => {
-    // Generate document number on component mount
     const generateDocNumber = async () => {
         try {
             const response = await fetch('/api/putaway-documents/generate-number');
@@ -69,8 +75,20 @@ export default function CreatePutawayPage() {
             toast({ variant: 'destructive', title: 'Error', description: 'Could not generate document number.' });
         }
     };
+     const fetchLocations = async () => {
+      try {
+        const response = await fetch('/api/locations');
+        if (!response.ok) throw new Error('Failed to fetch locations');
+        const data = await response.json();
+        setLocations(data);
+      } catch (error) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not load locations.' });
+      }
+    };
+
     if (canCreate) {
         generateDocNumber();
+        fetchLocations();
     }
   }, [canCreate, toast]);
   
@@ -82,7 +100,7 @@ export default function CreatePutawayPage() {
   };
   
   const handleSelectChange = (name: string, value: string) => {
-    setNewDocument(prev => ({ ...prev, [name]: value as 'Done' | 'Pending' }));
+    setNewDocument(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -209,14 +227,19 @@ export default function CreatePutawayPage() {
                   />
                 </div>
                  <div className="space-y-2">
-                  <Label htmlFor="location">Location</Label>
-                  <Input
-                    id="location"
-                    name="location"
-                    placeholder="Enter location"
-                    value={newDocument.location}
-                    onChange={handleInputChange}
-                  />
+                    <Label htmlFor="location">Location</Label>
+                    <Select name="location" value={newDocument.location} onValueChange={(value) => handleSelectChange('location', value)}>
+                        <SelectTrigger id="location">
+                            <SelectValue placeholder="Select Location" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {locations.map((loc) => (
+                                <SelectItem key={loc.id} value={loc.name}>
+                                    {loc.name}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="check_by">Check By</Label>
@@ -241,7 +264,7 @@ export default function CreatePutawayPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="status">Status</Label>
-                  <Select name="status" value={newDocument.status} onValueChange={(value) => handleSelectChange('status', value)}>
+                  <Select name="status" value={newDocument.status} onValueChange={(value) => handleSelectChange('status', value as 'Done' | 'Pending')}>
                     <SelectTrigger id="status">
                       <SelectValue placeholder="Select Status" />
                     </SelectTrigger>
