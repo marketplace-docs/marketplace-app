@@ -206,18 +206,18 @@ export default function ProductOutPage() {
             status: newDocument.status,
             date: new Date().toISOString(),
             validatedby: user.name,
-            user: { name: user.name, email: user.email }
         };
 
         try {
             const response = await fetch('/api/product-out-documents', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ documents: [docToAdd] }),
+                body: JSON.stringify({ documents: [docToAdd], user }),
             });
 
             if (!response.ok) {
-                throw new Error('Failed to save document to database.');
+                 const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to save document to database.');
             }
 
             await fetchData();
@@ -308,7 +308,7 @@ export default function ProductOutPage() {
                 const response = await fetch('/api/product-out-documents', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ documents: docsToUpload, user: { name: user.name, email: user.email } })
+                    body: JSON.stringify({ documents: docsToUpload, user })
                 });
     
                 if (!response.ok) {
@@ -534,5 +534,7 @@ export default function ProductOutPage() {
         </MainLayout>
     );
 }
+
+    
 
     
