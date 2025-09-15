@@ -41,13 +41,16 @@ type AggregatedProduct = {
 };
 
 const createStockKey = (barcode: string, location: string, exp_date: string): string => {
+    const loc = location || 'no-location';
+    let exp = 'no-exp-date';
     try {
-        const formattedExpDate = exp_date ? format(new Date(exp_date), 'yyyy-MM-dd') : 'no-exp-date';
-        return `${barcode}|${location}|${formattedExpDate}`;
+        if (exp_date) {
+            exp = format(new Date(exp_date), 'yyyy-MM-dd');
+        }
     } catch (e) {
-        // Handle invalid date format gracefully
-        return `${barcode}|${location}|invalid-date`;
+        exp = 'invalid-date';
     }
+    return `${barcode}|${loc}|${exp}`;
 };
 
 
@@ -73,7 +76,6 @@ export async function GET() {
         
         // Initialize map with all possible batches from ALL documents
         allDocs.forEach(doc => {
-            if (!doc.barcode || !doc.location || !doc.expDate) return;
             const key = createStockKey(doc.barcode, doc.location, doc.expDate);
             if (!stockMap.has(key)) {
                 stockMap.set(key, {
@@ -103,8 +105,6 @@ export async function GET() {
             const doc = tx.doc;
             const exp_date = tx.type === 'IN' ? (doc as ProductDoc).exp_date : (doc as ProductOutDoc).expdate;
             
-            if (!doc.barcode || !doc.location || !exp_date) return;
-
             const key = createStockKey(doc.barcode, doc.location, exp_date);
 
             if (stockMap.has(key)) {
