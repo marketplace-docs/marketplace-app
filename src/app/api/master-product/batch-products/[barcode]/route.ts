@@ -51,22 +51,28 @@ export async function GET(request: Request, { params }: { params: { barcode: str
         
         const stockMap = new Map<string, AggregatedProduct>();
 
+        // Process incoming stock from putaway_documents
         (putawayData as (ProductDoc & {id: string})[]).forEach(doc => {
             if (!doc.barcode || !doc.location || !doc.exp_date) return;
             const key = createStockKey(doc.barcode, doc.location, doc.exp_date);
 
-            // Use the putaway document ID as the unique ID for the batch
-            stockMap.set(key, {
-                id: doc.id,
-                sku: doc.sku,
-                barcode: doc.barcode,
-                brand: doc.brand,
-                exp_date: doc.exp_date,
-                location: doc.location,
-                stock: (stockMap.get(key)?.stock || 0) + doc.qty,
-            });
+            if (stockMap.has(key)) {
+                const existing = stockMap.get(key)!;
+                existing.stock += doc.qty;
+            } else {
+                stockMap.set(key, {
+                    id: doc.id, // Use the ID of the first putaway doc for this batch
+                    sku: doc.sku,
+                    barcode: doc.barcode,
+                    brand: doc.brand,
+                    exp_date: doc.exp_date,
+                    location: doc.location,
+                    stock: doc.qty,
+                });
+            }
         });
         
+        // Process outgoing stock from product_out_documents
         (productOutData as any[]).forEach((doc: any) => {
              if (!doc.barcode || !doc.location || !doc.expdate) return;
              const key = createStockKey(doc.barcode, doc.location, doc.expdate);
