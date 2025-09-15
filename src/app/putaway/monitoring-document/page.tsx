@@ -240,6 +240,11 @@ export default function MonitoringPutawayPage() {
         if (lines.length <= 1) throw new Error("CSV is empty or has only a header.");
         
         const header = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
+        const requiredHeaders = ['no_document', 'sku', 'barcode', 'brand', 'exp_date', 'location', 'check_by', 'qty', 'status'];
+
+        if (!requiredHeaders.every(h => header.includes(h))) {
+            throw new Error(`Invalid CSV headers. Required: ${requiredHeaders.join(', ')}`);
+        }
         
         const newDocs = lines.slice(1).map(line => {
             const values = line.split(',');
