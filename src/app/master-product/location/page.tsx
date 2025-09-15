@@ -19,7 +19,7 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/use-auth';
 import { format } from 'date-fns';
 
-type LocationType = 'Sellable' | 'Expiring' | 'Expired' | 'Quarantine' | 'Mixed' | 'Empty';
+type LocationType = 'Sellable' | 'Expiring' | 'Expired' | 'Quarantine' | 'Empty';
 type LocationFilterType = 'All' | LocationType;
 
 type LocationData = {
@@ -34,7 +34,6 @@ const typeVariantMap: Record<LocationType, 'default' | 'secondary' | 'destructiv
     'Expiring': 'secondary',
     'Expired': 'destructive',
     'Quarantine': 'outline',
-    'Mixed': 'outline',
     'Empty': 'outline',
 };
 
@@ -108,9 +107,8 @@ export default function LocationPage() {
             if (loc.type === 'Expiring') acc.expiring += 1;
             if (loc.type === 'Expired') acc.expired += 1;
             if (loc.type === 'Quarantine') acc.quarantine += 1;
-            if (loc.type === 'Mixed') acc.mixed += 1;
             return acc;
-        }, { total: 0, sellable: 0, expiring: 0, expired: 0, quarantine: 0, mixed: 0 });
+        }, { total: 0, sellable: 0, expiring: 0, expired: 0, quarantine: 0 });
     }, [locationsData]);
     
     const handleAddLocation = async () => {
@@ -281,10 +279,10 @@ export default function LocationPage() {
                     </Card>
                      <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Mixed Locations</CardTitle>
+                            <CardTitle className="text-sm font-medium">Quarantine Locations</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{kpiData.mixed.toLocaleString()}</div>}
+                            {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{kpiData.quarantine.toLocaleString()}</div>}
                         </CardContent>
                     </Card>
                 </div>
@@ -333,7 +331,6 @@ export default function LocationPage() {
                                                         <SelectItem value="Expiring">Expiring</SelectItem>
                                                         <SelectItem value="Expired">Expired</SelectItem>
                                                         <SelectItem value="Quarantine">Quarantine</SelectItem>
-                                                        <SelectItem value="Mixed">Mixed</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                             </div>
@@ -382,7 +379,6 @@ export default function LocationPage() {
                                         <SelectItem value="Expiring">Expiring</SelectItem>
                                         <SelectItem value="Expired">Expired</SelectItem>
                                         <SelectItem value="Quarantine">Quarantine</SelectItem>
-                                        <SelectItem value="Mixed">Mixed</SelectItem>
                                         <SelectItem value="Empty">Empty</SelectItem>
                                     </SelectContent>
                                 </Select>
