@@ -1,3 +1,4 @@
+
 'use server';
 
 import { supabaseService } from '@/lib/supabase-service';
@@ -54,20 +55,16 @@ export async function GET(request: Request, { params }: { params: { barcode: str
             if (!doc.barcode || !doc.location || !doc.exp_date) return;
             const key = createStockKey(doc.barcode, doc.location, doc.exp_date);
 
-            if (stockMap.has(key)) {
-                const existing = stockMap.get(key)!;
-                existing.stock += doc.qty;
-            } else {
-                stockMap.set(key, {
-                    id: doc.id,
-                    sku: doc.sku,
-                    barcode: doc.barcode,
-                    brand: doc.brand,
-                    exp_date: doc.exp_date,
-                    location: doc.location,
-                    stock: doc.qty,
-                });
-            }
+            // Use the putaway document ID as the unique ID for the batch
+            stockMap.set(key, {
+                id: doc.id,
+                sku: doc.sku,
+                barcode: doc.barcode,
+                brand: doc.brand,
+                exp_date: doc.exp_date,
+                location: doc.location,
+                stock: (stockMap.get(key)?.stock || 0) + doc.qty,
+            });
         });
         
         (productOutData as any[]).forEach((doc: any) => {
@@ -82,7 +79,7 @@ export async function GET(request: Request, { params }: { params: { barcode: str
         const finalInventory = Array.from(stockMap.values()).filter(p => p.stock > 0);
 
         if (finalInventory.length === 0) {
-             return NextResponse.json({ error: 'Product not found in any batch' }, { status: 404 });
+             return NextResponse.json({ error: 'Product not found in any batch or stock is zero.' }, { status: 404 });
         }
 
         return NextResponse.json(finalInventory);

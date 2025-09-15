@@ -107,6 +107,45 @@ export default function ProductOutPage() {
     useEffect(() => {
         fetchData();
     }, [fetchData]);
+    
+    // This effect now fetches all batches for a barcode and applies FEFO logic
+    useEffect(() => {
+        const fetchAndSetBestBatch = async () => {
+            if (newDocument.barcode) {
+                try {
+                    const response = await fetch(`/api/master-product/batch-products/${newDocument.barcode}`);
+                    if (!response.ok) {
+                        setAvailableStock(null);
+                        setNewDocument(prev => ({ ...prev, sku: '', expdate: '', location: '' }));
+                        return;
+                    }
+                    const allBatchesForBarcode: AggregatedProduct[] = await response.json();
+                    
+                    if (allBatchesForBarcode.length > 0) {
+                        // FEFO logic: sort by nearest expiration date
+                        const sortedBatches = allBatchesForBarcode.sort((a, b) => 
+                            new Date(a.exp_date).getTime() - new Date(b.exp_date).getTime()
+                        );
+                        const bestBatch = sortedBatches[0];
+                        setAvailableStock(bestBatch);
+                        setNewDocument(prev => ({ ...prev, sku: bestBatch.sku, expdate: bestBatch.exp_date, location: bestBatch.location }));
+                    } else {
+                        setAvailableStock(null);
+                        setNewDocument(prev => ({ ...prev, sku: '', expdate: '', location: '' }));
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch batches for barcode", error);
+                    setAvailableStock(null);
+                    setNewDocument(prev => ({ ...prev, sku: '', expdate: '', location: '' }));
+                }
+            } else {
+                setAvailableStock(null);
+                 setNewDocument(prev => ({ ...prev, sku: '', expdate: '', location: '' }));
+            }
+        };
+        fetchAndSetBestBatch();
+    }, [newDocument.barcode]);
+
 
     const totalPages = Math.ceil(documents.length / rowsPerPage);
     const paginatedDocuments = documents.slice(
@@ -156,28 +195,6 @@ export default function ProductOutPage() {
         }
     }, [isAddDialogOpen, newDocument.status, generateDocNumber]);
     
-    useEffect(() => {
-        if (newDocument.barcode) {
-            const allBatchesForBarcode = productInStock.filter(p => p.barcode === newDocument.barcode && p.stock > 0);
-            
-            if (allBatchesForBarcode.length > 0) {
-                 // FEFO logic: sort by nearest expiration date
-                const sortedBatches = allBatchesForBarcode.sort((a, b) => 
-                    new Date(a.exp_date).getTime() - new Date(b.exp_date).getTime()
-                );
-                const bestBatch = sortedBatches[0];
-                setAvailableStock(bestBatch);
-                setNewDocument(prev => ({ ...prev, sku: bestBatch.sku, expdate: bestBatch.exp_date, location: bestBatch.location }));
-            } else {
-                setAvailableStock(null);
-                setNewDocument(prev => ({ ...prev, sku: '', expdate: '', location: '' }));
-            }
-        } else {
-            setAvailableStock(null);
-            setNewDocument(prev => ({ ...prev, sku: '', expdate: '', location: '' }));
-        }
-    }, [newDocument.barcode, productInStock]);
-
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setNewDocument(prev => ({...prev, [name]: value}));
