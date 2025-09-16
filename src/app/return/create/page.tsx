@@ -270,7 +270,7 @@ export default function CreateReturnPage() {
               </div>
               <div className="flex justify-end pt-4 space-x-2">
                 {canCreate && (
-                <Button type="submit" disabled={isSubmitting || !newDocument.no_document}>
+                <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Submit
                 </Button>
