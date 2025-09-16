@@ -60,10 +60,17 @@ const REAL_STOCK_OUT_STATUSES = [
     'Issue - Order',
     'Issue - Internal Transfer',
     'Issue - Adjustment Manual',
-    'Issue - Return',
+    'Adjustment - Loc',
+    'Adjustment - SKU',
     'Issue - Putaway',
+    'Receipt - Putaway',
+    'Issue - Return',
     'Issue - Return Putaway',
-    'Issue - Update Expired'
+    'Issue - Update Expired',
+    'Receipt - Update Expired',
+    'Receipt - Outbound Return',
+    'Receipt',
+    'Adjusment - Loc'
 ];
 
 
