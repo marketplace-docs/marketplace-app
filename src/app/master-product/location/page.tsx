@@ -80,7 +80,7 @@ export default function LocationPage() {
             setLocationsData(data);
             setTotalLocationCount(countData.count);
 
-        } catch (err: any) -> any) {
+        } catch (err: any) {
             setError(err.message);
         } finally {
             setLoading(false);
