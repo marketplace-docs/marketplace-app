@@ -82,27 +82,27 @@ export default function CreatePutawayPage() {
     }
   }, [canCreate, generateDocNumber]);
   
-  useEffect(() => {
-    if (newItem.barcode) {
-      const product = (masterData as ProductMaster[]).find(p => p.barcode === newItem.barcode);
-      if (product) {
-        setNewItem(prev => ({ ...prev, sku: product.sku, brand: product.brand }));
-      }
-    }
-  }, [newItem.barcode]);
-
-  useEffect(() => {
-    if (newItem.sku) {
-      const product = (masterData as ProductMaster[]).find(p => p.sku.toLowerCase() === newItem.sku.toLowerCase());
-      if (product) {
-        setNewItem(prev => ({ ...prev, barcode: product.barcode, brand: product.brand }));
-      }
-    }
-  }, [newItem.sku]);
-
   const handleItemInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setNewItem((prev) => ({ ...prev, [name]: value }));
+
+    setNewItem(prev => {
+        const updatedItem = { ...prev, [name]: value };
+
+        if (name === 'barcode' && value) {
+            const product = (masterData as ProductMaster[]).find(p => p.barcode === value);
+            if (product) {
+                updatedItem.sku = product.sku;
+                updatedItem.brand = product.brand;
+            }
+        } else if (name === 'sku' && value) {
+            const product = (masterData as ProductMaster[]).find(p => p.sku.toLowerCase() === value.toLowerCase());
+            if (product) {
+                updatedItem.barcode = product.barcode;
+                updatedItem.brand = product.brand;
+            }
+        }
+        return updatedItem;
+    });
   };
 
   const handleAddItem = () => {
@@ -111,7 +111,7 @@ export default function CreatePutawayPage() {
         toast({ variant: 'destructive', title: 'Error', description: 'Please fill all item fields with valid data.' });
         return;
     }
-
+    
     setStagedItems(prev => [...prev, { ...newItem, qty }]);
     setNewItem({ sku: '', barcode: '', brand: '', exp_date: '', location: '', qty: '' }); // Reset form
   };
@@ -202,7 +202,7 @@ export default function CreatePutawayPage() {
 
           const qty = parseInt(itemData.qty || '0', 10);
           const parsedDate = parse(itemData.exp_date, 'dd/MM/yyyy', new Date());
-
+          
           if (itemData.sku && itemData.barcode && itemData.location && isValid(parsedDate) && !isNaN(qty)) {
             const parsedItem = {
               sku: itemData.sku,
@@ -378,3 +378,5 @@ export default function CreatePutawayPage() {
     </MainLayout>
   );
 }
+
+    
