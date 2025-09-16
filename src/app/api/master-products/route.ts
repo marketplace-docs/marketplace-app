@@ -5,20 +5,7 @@ import { NextResponse } from 'next/server';
 import { logActivity } from '@/lib/logger';
 
 const ALLOWED_ROLES = ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin'];
-
-export async function GET() {
-  const { data, error } = await supabaseService
-    .from('master_products')
-    .select('*')
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error('Error fetching master products:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json(data);
-}
+const BATCH_SIZE = 1000; // Process 1000 rows at a time
 
 export async function POST(request: Request) {
     const formData = await request.formData();
@@ -28,7 +15,7 @@ export async function POST(request: Request) {
     if (!userJson) {
         return NextResponse.json({ error: 'User data is missing.' }, { status: 400 });
     }
-     const user = JSON.parse(userJson);
+    const user = JSON.parse(userJson);
 
     if (!user?.role || !ALLOWED_ROLES.includes(user.role)) {
         return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
@@ -54,48 +41,58 @@ export async function POST(request: Request) {
     const barcodeIndex = header.indexOf('barcode');
     const brandIndex = header.indexOf('brand');
 
-    let successCount = 0;
-    const errors: { row: number, line: string, error: string }[] = [];
-
-    const productsToInsert = lines.map((line, index) => {
+    let totalSuccessCount = 0;
+    const allErrors: { row: number, line: string, error: string }[] = [];
+    
+    const allProducts = lines.map((line, index) => {
         const values = line.split(',');
         const sku = values[skuIndex]?.trim().replace(/"/g, '');
         const barcode = values[barcodeIndex]?.trim().replace(/"/g, '');
         const brand = values[brandIndex]?.trim().replace(/"/g, '');
         
         if (!sku || !barcode || !brand) {
-            errors.push({ row: index + 2, line, error: 'Missing required fields (sku, barcode, or brand).' });
+            allErrors.push({ row: index + 2, line, error: 'Missing required fields (sku, barcode, or brand).' });
             return null;
         }
 
         return { sku, barcode, brand };
     }).filter((p): p is { sku: string, barcode: string, brand: string } => p !== null);
 
-    if (productsToInsert.length > 0) {
-        const { error: insertError } = await supabaseService
-            .from('master_products')
-            .upsert(productsToInsert, { onConflict: 'sku', ignoreDuplicates: false });
 
-        if (insertError) {
-             console.error('Supabase bulk insert error:', insertError);
-            return NextResponse.json({ error: `Database error: ${insertError.message}` }, { status: 500 });
+    for (let i = 0; i < allProducts.length; i += BATCH_SIZE) {
+        const batch = allProducts.slice(i, i + BATCH_SIZE);
+        
+        if (batch.length > 0) {
+            const { error: insertError } = await supabaseService
+                .from('master_products')
+                .upsert(batch, { onConflict: 'sku', ignoreDuplicates: false });
+
+            if (insertError) {
+                console.error('Supabase bulk insert error:', insertError);
+                // If a batch fails, we can either stop or continue. Let's stop and report.
+                return NextResponse.json({ 
+                    error: `Database error on a batch: ${insertError.message}. Uploaded ${totalSuccessCount} products before failure.` 
+                }, { status: 500 });
+            }
+            totalSuccessCount += batch.length;
         }
-        successCount = productsToInsert.length;
     }
     
-    if (successCount > 0) {
+    if (totalSuccessCount > 0) {
         await logActivity({
             userName: user.name,
             userEmail: user.email,
             action: 'BULK_UPLOAD',
-            details: `Uploaded ${successCount} master products.`,
+            details: `Uploaded ${totalSuccessCount} master products.`,
         });
     }
 
     return NextResponse.json({
         message: 'CSV processed.',
-        successCount,
-        errorCount: errors.length,
-        errors,
+        successCount: totalSuccessCount,
+        errorCount: allErrors.length,
+        errors: allErrors,
     });
 }
+
+    

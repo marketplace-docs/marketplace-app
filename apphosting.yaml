@@ -5,3 +5,8 @@ runConfig:
   # Increase this value if you'd like to automatically spin up
   # more instances in response to increased traffic.
   maxInstances: 1
+  # Set the timeout for server-side operations to 2 minutes (120 seconds)
+  # to allow for large file uploads and processing.
+  timeoutSeconds: 120
+
+    
