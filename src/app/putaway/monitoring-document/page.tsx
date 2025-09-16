@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
@@ -72,6 +73,9 @@ export default function MonitoringPutawayPage() {
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isUploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [isBulkUpdateDialogOpen, setBulkUpdateDialogOpen] = useState(false);
+  const [bulkUpdateStatus, setBulkUpdateStatus] = useState<'Done' | 'Pending'>('Done');
+
   const [selectedDoc, setSelectedDoc] = useState<PutawayDocument | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
@@ -85,7 +89,7 @@ export default function MonitoringPutawayPage() {
 
   const [searchDocument, setSearchDocument] = useState('');
   const [searchBarcode, setSearchBarcode] = useState('');
-  const [rowSelection, setRowSelection] = useState({});
+  const [rowSelection, setRowSelection] = useState<{[key: string]: boolean}>({});
 
   const fetchInitialData = useCallback(async () => {
     setLoading(true);
@@ -134,6 +138,7 @@ export default function MonitoringPutawayPage() {
   
   React.useEffect(() => {
     setCurrentPage(1);
+    setRowSelection({});
   }, [rowsPerPage, searchDocument, searchBarcode]);
 
   const handleOpenEditDialog = (doc: PutawayDocument) => {
@@ -287,6 +292,43 @@ export default function MonitoringPutawayPage() {
     };
     reader.readAsText(file);
   };
+  
+    const handleBulkUpdate = async () => {
+    const selectedIds = Object.keys(rowSelection).filter(id => rowSelection[id]);
+    if (selectedIds.length === 0 || !user) {
+      toast({ variant: 'destructive', title: 'Error', description: 'No documents selected or user not logged in.' });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch('/api/putaway-documents/bulk-update', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          ids: selectedIds, 
+          status: bulkUpdateStatus, 
+          userName: user.name, 
+          userEmail: user.email, 
+          userRole: user.role 
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update documents');
+      }
+
+      await fetchInitialData();
+      setRowSelection({});
+      setBulkUpdateDialogOpen(false);
+      toast({ title: 'Success', description: `${selectedIds.length} documents have been updated.` });
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Update Failed', description: error.message });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
 
   return (
@@ -307,6 +349,40 @@ export default function MonitoringPutawayPage() {
               <CardDescription>A list of all putaway documents.</CardDescription>
             </div>
             <div className="flex w-full md:w-auto items-center gap-2">
+                {Object.keys(rowSelection).length > 0 && canUpdate && (
+                  <Dialog open={isBulkUpdateDialogOpen} onOpenChange={setBulkUpdateDialogOpen}>
+                    <DialogTrigger asChild>
+                       <Button variant="secondary">Update Selected</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Bulk Update Status</DialogTitle>
+                        <DialogDescription>
+                          You are about to update the status for {Object.keys(rowSelection).length} selected document(s).
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="py-4">
+                        <Label htmlFor="bulk-status">New Status</Label>
+                        <Select value={bulkUpdateStatus} onValueChange={(value: 'Done' | 'Pending') => setBulkUpdateStatus(value)}>
+                            <SelectTrigger id="bulk-status" className="w-full">
+                                <SelectValue placeholder="Select Status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Done">Done</SelectItem>
+                                <SelectItem value="Pending">Pending</SelectItem>
+                            </SelectContent>
+                        </Select>
+                      </div>
+                      <DialogFooter>
+                         <Button variant="outline" onClick={() => setBulkUpdateDialogOpen(false)}>Cancel</Button>
+                         <Button onClick={handleBulkUpdate} disabled={isSubmitting}>
+                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Save Changes
+                          </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                )}
                 <Input 
                     placeholder="Search document..." 
                     value={searchDocument}
@@ -355,20 +431,18 @@ export default function MonitoringPutawayPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                     <TableHead padding="checkbox">
+                     <TableHead className="px-2">
                         <Checkbox
-                            checked={
-                                Object.keys(rowSelection).length > 0 &&
-                                Object.keys(rowSelection).length === paginatedDocs.length
-                            }
+                            checked={paginatedDocs.length > 0 && paginatedDocs.every(doc => rowSelection[doc.id])}
                             onCheckedChange={(value) => {
-                                const newSelection: { [key: string]: boolean } = {};
-                                if (value) {
-                                    paginatedDocs.forEach(doc => newSelection[doc.id] = true);
-                                }
+                                const newSelection: { [key: string]: boolean } = {...rowSelection};
+                                paginatedDocs.forEach(doc => {
+                                    if(value) newSelection[doc.id] = true;
+                                    else delete newSelection[doc.id];
+                                });
                                 setRowSelection(newSelection);
                             }}
-                            aria-label="Select all"
+                            aria-label="Select all current page"
                         />
                     </TableHead>
                     <TableHead>No. Document</TableHead>
@@ -387,22 +461,22 @@ export default function MonitoringPutawayPage() {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                        <TableCell colSpan={(canUpdate || canDelete) ? 12 : 11} className="h-24 text-center">
+                        <TableCell colSpan={12} className="h-24 text-center">
                             <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                         </TableCell>
                     </TableRow>
                   ) : paginatedDocs.length > 0 ? (
                     paginatedDocs.map((doc) => (
-                      <TableRow key={doc.id} data-state={rowSelection[doc.id as keyof typeof rowSelection] && "selected"}>
-                        <TableCell padding="checkbox">
+                      <TableRow key={doc.id} data-state={rowSelection[doc.id] && "selected"}>
+                        <TableCell className="px-2">
                            <Checkbox
-                                checked={rowSelection[doc.id as keyof typeof rowSelection] || false}
+                                checked={rowSelection[doc.id] || false}
                                 onCheckedChange={(value) => {
                                     const newSelection = { ...rowSelection };
                                     if (value) {
-                                        newSelection[doc.id as keyof typeof rowSelection] = true;
+                                        newSelection[doc.id] = true;
                                     } else {
-                                        delete newSelection[doc.id as keyof typeof rowSelection];
+                                        delete newSelection[doc.id];
                                     }
                                     setRowSelection(newSelection);
                                 }}
@@ -444,7 +518,7 @@ export default function MonitoringPutawayPage() {
                   ) : (
                     <TableRow>
                       <TableCell
-                        colSpan={(canUpdate || canDelete) ? 12 : 11}
+                        colSpan={12}
                         className="h-24 text-center text-muted-foreground"
                       >
                         No documents found.
@@ -589,5 +663,3 @@ export default function MonitoringPutawayPage() {
     </MainLayout>
   );
 }
-
-    
