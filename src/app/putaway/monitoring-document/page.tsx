@@ -21,7 +21,7 @@ import {
 import { MainLayout } from '@/components/layout/main-layout';
 import { format, parse } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Pencil, Trash2, Loader2, AlertCircle, Upload, Download } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pencil, Trash2, Loader2, AlertCircle, Upload, Download, Route } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -31,6 +31,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuth } from '@/hooks/use-auth';
 import { Checkbox } from '@/components/ui/checkbox';
+import Link from 'next/link';
 
 type PutawayDocument = {
   id: string;
@@ -88,8 +89,7 @@ export default function MonitoringPutawayPage() {
   const canCreate = canUpdate;
 
 
-  const [searchDocument, setSearchDocument] = useState('');
-  const [searchBarcode, setSearchBarcode] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [rowSelection, setRowSelection] = useState<{[key: string]: boolean}>({});
 
   const fetchInitialData = useCallback(async () => {
@@ -117,10 +117,11 @@ export default function MonitoringPutawayPage() {
 
   const filteredDocuments = useMemo(() => {
     return documents.filter(doc => 
-      doc.no_document.toLowerCase().includes(searchDocument.toLowerCase()) &&
-      doc.barcode.toLowerCase().includes(searchBarcode.toLowerCase())
+      doc.no_document.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      doc.barcode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      doc.sku.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [documents, searchDocument, searchBarcode]);
+  }, [documents, searchTerm]);
 
 
   const totalPages = Math.ceil(filteredDocuments.length / rowsPerPage);
@@ -140,7 +141,7 @@ export default function MonitoringPutawayPage() {
   React.useEffect(() => {
     setCurrentPage(1);
     setRowSelection({});
-  }, [rowsPerPage, searchDocument, searchBarcode]);
+  }, [rowsPerPage, searchTerm]);
 
   const handleOpenEditDialog = (doc: PutawayDocument) => {
     const formattedDoc = {
@@ -447,15 +448,9 @@ export default function MonitoringPutawayPage() {
                   </>
                 )}
                 <Input 
-                    placeholder="Search document..." 
-                    value={searchDocument}
-                    onChange={(e) => setSearchDocument(e.target.value)}
-                    className="flex-1 md:flex-auto md:w-auto"
-                />
-                <Input 
-                    placeholder="Search barcode..." 
-                    value={searchBarcode}
-                    onChange={(e) => setSearchBarcode(e.target.value)}
+                    placeholder="Search SKU, Barcode, Document..." 
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
                     className="flex-1 md:flex-auto md:w-auto"
                 />
                 {canCreate && (
@@ -484,6 +479,11 @@ export default function MonitoringPutawayPage() {
                     </Dialog>
                     <Button variant="outline" onClick={handleExport}>
                         <Download className="h-4 w-4 mr-2" /> Export
+                    </Button>
+                     <Button asChild variant="outline">
+                        <Link href="/putaway/go-putaway">
+                            <Route className="h-4 w-4 mr-2" /> Go-Putaway
+                        </Link>
                     </Button>
                   </>
                 )}

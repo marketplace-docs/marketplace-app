@@ -55,12 +55,14 @@ const createStockKey = (barcode: string, location: string, exp_date: string): st
     return `${barcode}|${loc}|${exp}`;
 };
 
-// Define statuses that represent a true stock deduction from the warehouse
 const REAL_STOCK_OUT_STATUSES = [
     'Issue - Order',
     'Issue - Internal Transfer',
     'Issue - Adjustment Manual',
-    'Issue - Return'
+    'Issue - Return',
+    'Issue - Putaway',
+    'Issue - Return Putaway',
+    'Issue - Update Expired'
 ];
 
 
@@ -77,7 +79,6 @@ export async function GET(request: Request, { params }: { params: { barcode: str
             { data: productOutData, error: productOutError }
         ] = await Promise.all([
             supabaseService.from('putaway_documents').select('id, sku, barcode, brand, exp_date, location, qty, date').eq('barcode', barcode),
-            // We still select all product_out docs initially to correctly identify batches
             supabaseService.from('product_out_documents').select('id, sku, barcode, location, qty, expdate, date, status').eq('barcode', barcode)
         ]);
 
@@ -96,31 +97,26 @@ export async function GET(request: Request, { params }: { params: { barcode: str
             const key = createStockKey(doc.barcode, doc.location, doc.expDate);
             if (!stockMap.has(key)) {
                 stockMap.set(key, {
-                    // Use the key itself as the unique ID
                     id: key,
                     sku: doc.sku,
                     barcode: doc.barcode,
-                    brand: (doc as ProductDoc).brand || '', // Brand might not be on OUT docs
+                    brand: (doc as ProductDoc).brand || '',
                     exp_date: doc.expDate,
                     location: doc.location,
-                    stock: 0, // Start with 0, will calculate chronologically
+                    stock: 0,
                 });
             }
         });
 
 
-        // Combine and sort all transactions by date
         const combinedTransactions: CombinedDoc[] = [
             ...(putawayData as ProductDoc[]).map(doc => ({ type: 'IN' as const, date: new Date(doc.date), doc })),
-             // CRITICAL FIX: Only include documents that represent a true stock out in the calculation
             ...(productOutData as (ProductOutDoc & { status: string })[])
               .filter(doc => REAL_STOCK_OUT_STATUSES.includes(doc.status))
               .map(doc => ({ type: 'OUT' as const, date: new Date(doc.date), doc }))
         ].sort((a, b) => a.date.getTime() - b.date.getTime());
 
-        // Stock levels are already reset to 0 during initialization.
 
-        // Process transactions chronologically
         combinedTransactions.forEach(tx => {
             const doc = tx.doc as ProductDoc | (ProductOutDoc & { status: string });
             const exp_date = tx.type === 'IN' ? (doc as ProductDoc).exp_date : (doc as ProductOutDoc).expdate;
@@ -131,15 +127,13 @@ export async function GET(request: Request, { params }: { params: { barcode: str
                 const entry = stockMap.get(key)!;
                 if (tx.type === 'IN') {
                     entry.stock += doc.qty;
-                } else { // 'OUT'
+                } else {
                     entry.stock -= doc.qty;
                 }
-                 // Fill in potentially missing info from putaway docs
                 if (tx.type === 'IN' && !(entry.brand)) {
                     entry.brand = (doc as ProductDoc).brand;
                 }
             }
-            // 'else' case is not needed because all batches are pre-initialized.
         });
 
         const finalInventory = Array.from(stockMap.values());
