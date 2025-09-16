@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Card,
   CardContent,
@@ -22,80 +22,86 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { MainLayout } from '@/components/layout/main-layout';
 import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
-type NewPutawayDocument = {
-    no_document: string;
-    qty: string;
-    status: 'Done' | 'Pending';
+type PutawayItem = {
     sku: string;
     barcode: string;
     brand: string;
     exp_date: string;
     location: string;
-    check_by: string;
+    qty: number;
 };
 
 export default function CreatePutawayPage() {
   const { user } = useAuth();
-  const [newDocument, setNewDocument] = React.useState<NewPutawayDocument>({
-    no_document: '',
-    qty: '',
-    status: 'Pending',
-    sku: '',
-    barcode: '',
-    brand: '',
-    exp_date: '',
-    location: '',
-    check_by: '',
+  const [stagedItems, setStagedItems] = useState<PutawayItem[]>([]);
+  const [newItem, setNewItem] = useState<Omit<PutawayItem, 'qty'> & { qty: string }>({
+    sku: '', barcode: '', brand: '', exp_date: '', location: '', qty: ''
   });
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [docDetails, setDocDetails] = useState({
+    no_document: '',
+    date: new Date(),
+    check_by: '',
+    status: 'Pending' as 'Done' | 'Pending',
+  });
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
   const canCreate = user?.role === 'Super Admin';
 
+  const generateDocNumber = useCallback(async () => {
+    try {
+        const response = await fetch('/api/putaway-documents/generate-number');
+        if (!response.ok) throw new Error('Failed to generate document number.');
+        const data = await response.json();
+        setDocDetails(prev => ({ ...prev, no_document: data.newDocNumber }));
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not generate document number.' });
+    }
+  }, [toast]);
+
+
   useEffect(() => {
-    const generateDocNumber = async () => {
-        try {
-            const response = await fetch('/api/putaway-documents/generate-number');
-            if (!response.ok) throw new Error('Failed to generate document number.');
-            const data = await response.json();
-            setNewDocument(prev => ({ ...prev, no_document: data.newDocNumber }));
-        } catch (error) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Could not generate document number.' });
-        }
-    };
-    
     if (canCreate) {
         generateDocNumber();
     }
-  }, [canCreate, toast]);
+  }, [canCreate, generateDocNumber]);
   
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleItemInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setNewDocument((prev) => ({ ...prev, [name]: value }));
-  };
-  
-  const handleSelectChange = (name: string, value: string) => {
-    setNewDocument(prev => ({ ...prev, [name]: value }));
+    setNewItem((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newDocument.no_document || !newDocument.qty || !newDocument.sku || !newDocument.barcode || !newDocument.brand || !newDocument.exp_date || !newDocument.check_by || !newDocument.location) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Please fill out all fields.',
-      });
-      return;
+  const handleAddItem = () => {
+    const qty = parseInt(newItem.qty, 10);
+    if (!newItem.sku || !newItem.barcode || !newItem.location || !newItem.exp_date || isNaN(qty) || qty <= 0) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Please fill all item fields with valid data.' });
+        return;
     }
+    setStagedItems(prev => [...prev, { ...newItem, qty }]);
+    setNewItem({ sku: '', barcode: '', brand: '', exp_date: '', location: '', qty: '' }); // Reset form
+  };
 
+  const handleRemoveItem = (index: number) => {
+    setStagedItems(prev => prev.filter((_, i) => i !== index));
+  };
+
+
+  const handleSubmitDocument = async () => {
+    if (stagedItems.length === 0) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Please add at least one item to the document.' });
+        return;
+    }
+    if (!docDetails.check_by) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Please enter who checked the document.' });
+        return;
+    }
     if (!user) {
       toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
       return;
@@ -103,12 +109,18 @@ export default function CreatePutawayPage() {
     
     setIsSubmitting(true);
     try {
+        const documentsToCreate = stagedItems.map(item => ({
+            ...item,
+            no_document: docDetails.no_document,
+            status: docDetails.status,
+            check_by: docDetails.check_by,
+        }));
+
         const response = await fetch('/api/putaway-documents', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                ...newDocument,
-                qty: parseInt(newDocument.qty, 10),
+                documents: documentsToCreate,
                 user: { name: user.name, email: user.email, role: user.role }
             })
         });
@@ -120,7 +132,7 @@ export default function CreatePutawayPage() {
 
         toast({
             title: 'Success',
-            description: 'New putaway document has been created.',
+            description: `Document ${docDetails.no_document} with ${stagedItems.length} items has been created.`,
         });
         router.push('/putaway/monitoring-document');
 
@@ -143,124 +155,103 @@ export default function CreatePutawayPage() {
           <CardHeader>
             <CardTitle>Create Document</CardTitle>
             <CardDescription>
-              Fill out the form below to create a new putaway document.
+              Add one or more items to a document and submit them all at once.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="no_document">No. Document</Label>
-                  <Input
-                    id="no_document"
-                    name="no_document"
-                    value={newDocument.no_document}
-                    readOnly
-                    className="bg-muted"
-                  />
+          <CardContent className="space-y-6">
+             {/* Document Details Form */}
+            <div className="space-y-4 p-4 border rounded-lg">
+                <h3 className="text-lg font-medium">Document Details</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                     <div className="space-y-2">
+                        <Label htmlFor="no_document">No. Document</Label>
+                        <Input id="no_document" value={docDetails.no_document} readOnly className="bg-muted"/>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="date">Date</Label>
+                        <Input id="date" value={format(docDetails.date, "dd/MM/yyyy HH:mm")} disabled />
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="check_by">Check By</Label>
+                        <Input id="check_by" placeholder="Checked by name" value={docDetails.check_by} onChange={(e) => setDocDetails(prev => ({ ...prev, check_by: e.target.value }))} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="status">Status</Label>
+                        <Select value={docDetails.status} onValueChange={(value) => setDocDetails(prev => ({ ...prev, status: value as 'Done' | 'Pending' }))}>
+                            <SelectTrigger id="status"><SelectValue placeholder="Select Status" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Done">Done</SelectItem>
+                                <SelectItem value="Pending">Pending</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
-                 <div className="space-y-2">
-                  <Label htmlFor="date">Date</Label>
-                  <Input
-                    id="date"
-                    name="date"
-                    value={format(new Date(), "dd/MM/yyyy HH:mm")}
-                    disabled
-                  />
+            </div>
+
+            {/* Add Item Form */}
+            <div className="space-y-4 p-4 border rounded-lg">
+                <h3 className="text-lg font-medium">Add Item to Document</h3>
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                    <div className="space-y-2"><Label htmlFor="sku">SKU</Label><Input id="sku" name="sku" placeholder="Enter SKU" value={newItem.sku} onChange={handleItemInputChange}/></div>
+                    <div className="space-y-2"><Label htmlFor="barcode">Barcode</Label><Input id="barcode" name="barcode" placeholder="Enter barcode" value={newItem.barcode} onChange={handleItemInputChange}/></div>
+                    <div className="space-y-2"><Label htmlFor="brand">Brand</Label><Input id="brand" name="brand" placeholder="Enter brand" value={newItem.brand} onChange={handleItemInputChange}/></div>
+                    <div className="space-y-2"><Label htmlFor="exp_date">EXP Date</Label><Input id="exp_date" name="exp_date" type="date" value={newItem.exp_date} onChange={handleItemInputChange}/></div>
+                    <div className="space-y-2"><Label htmlFor="location">Location</Label><Input id="location" name="location" placeholder="Enter location" value={newItem.location} onChange={handleItemInputChange}/></div>
+                    <div className="space-y-2"><Label htmlFor="qty">QTY</Label><Input id="qty" name="qty" type="number" placeholder="Enter quantity" value={newItem.qty} onChange={handleItemInputChange}/></div>
+                    <Button type="button" onClick={handleAddItem} disabled={!canCreate} className="w-full lg:w-auto"><Plus className="mr-2 h-4 w-4" /> Add Item</Button>
                 </div>
-                 <div className="space-y-2">
-                  <Label htmlFor="sku">SKU</Label>
-                  <Input
-                    id="sku"
-                    name="sku"
-                    placeholder="Enter SKU"
-                    value={newDocument.sku}
-                    onChange={handleInputChange}
-                  />
+            </div>
+            
+            {/* Staged Items Table */}
+            <div className="space-y-4">
+                <h3 className="text-lg font-medium">Document Items ({stagedItems.length})</h3>
+                <div className="border rounded-lg">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>SKU</TableHead>
+                                <TableHead>Barcode</TableHead>
+                                <TableHead>Location</TableHead>
+                                <TableHead>EXP Date</TableHead>
+                                <TableHead>QTY</TableHead>
+                                <TableHead className="text-right">Action</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {stagedItems.length > 0 ? (
+                                stagedItems.map((item, index) => (
+                                    <TableRow key={index}>
+                                        <TableCell>{item.sku}</TableCell>
+                                        <TableCell>{item.barcode}</TableCell>
+                                        <TableCell>{item.location}</TableCell>
+                                        <TableCell>{format(new Date(item.exp_date), 'dd/MM/yyyy')}</TableCell>
+                                        <TableCell>{item.qty.toLocaleString()}</TableCell>
+                                        <TableCell className="text-right">
+                                            <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(index)}>
+                                                <Trash2 className="h-4 w-4 text-destructive" />
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">No items added yet.</TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
                 </div>
-                 <div className="space-y-2">
-                  <Label htmlFor="barcode">Barcode</Label>
-                  <Input
-                    id="barcode"
-                    name="barcode"
-                    placeholder="Enter barcode"
-                    value={newDocument.barcode}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                 <div className="space-y-2">
-                  <Label htmlFor="brand">Brand</Label>
-                  <Input
-                    id="brand"
-                    name="brand"
-                    placeholder="Enter brand"
-                    value={newDocument.brand}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                 <div className="space-y-2">
-                  <Label htmlFor="exp_date">EXP Date</Label>
-                  <Input
-                    id="exp_date"
-                    name="exp_date"
-                    type="date"
-                    value={newDocument.exp_date}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="location">Location</Label>
-                    <Input
-                      id="location"
-                      name="location"
-                      placeholder="Enter location"
-                      value={newDocument.location}
-                      onChange={handleInputChange}
-                    />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="check_by">Check By</Label>
-                  <Input
-                    id="check_by"
-                    name="check_by"
-                    placeholder="Checked by name"
-                    value={newDocument.check_by}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                 <div className="space-y-2">
-                  <Label htmlFor="qty">QTY</Label>
-                  <Input
-                    id="qty"
-                    name="qty"
-                    type="number"
-                    placeholder="Enter quantity"
-                    value={newDocument.qty}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="status">Status</Label>
-                  <Select name="status" value={newDocument.status} onValueChange={(value) => handleSelectChange('status', value as 'Done' | 'Pending')}>
-                    <SelectTrigger id="status">
-                      <SelectValue placeholder="Select Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Done">Done</SelectItem>
-                      <SelectItem value="Pending">Pending</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="flex justify-end pt-4 space-x-2">
+            </div>
+
+             <div className="flex justify-end pt-4">
                 {canCreate && (
-                <Button type="submit" disabled={isSubmitting || !newDocument.no_document}>
+                <Button size="lg" onClick={handleSubmitDocument} disabled={isSubmitting || stagedItems.length === 0}>
                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                   Submit
+                   Submit Document
                 </Button>
                 )}
               </div>
-            </form>
+
           </CardContent>
         </Card>
       </div>
