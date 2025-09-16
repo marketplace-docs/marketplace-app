@@ -7,6 +7,20 @@ import { logActivity } from '@/lib/logger';
 const ALLOWED_ROLES = ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin'];
 const BATCH_SIZE = 1000; // Process 1000 rows at a time
 
+export async function GET() {
+    const { data, error } = await supabaseService
+        .from('master_products')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json(data);
+}
+
+
 export async function POST(request: Request) {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
@@ -94,5 +108,4 @@ export async function POST(request: Request) {
         errors: allErrors,
     });
 }
-
     
