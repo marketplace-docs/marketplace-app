@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Card,
   CardContent,
@@ -22,10 +22,11 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { MainLayout } from '@/components/layout/main-layout';
 import { useRouter } from 'next/navigation';
-import { Loader2, Plus, Trash2 } from 'lucide-react';
+import { Loader2, Plus, Trash2, Upload } from 'lucide-react';
 import { format } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 type PutawayItem = {
     sku: string;
@@ -50,8 +51,11 @@ export default function CreatePutawayPage() {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploadDialogOpen, setUploadDialogOpen] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
 
   const canCreate = user?.role === 'Super Admin';
 
@@ -160,6 +164,79 @@ export default function CreatePutawayPage() {
         setIsSubmitting(false);
     }
   };
+  
+    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsSubmitting(true);
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const text = e.target?.result as string;
+      try {
+        const lines = text.split('\n').filter(line => line.trim() !== '');
+        if (lines.length <= 1) throw new Error("CSV is empty or has only a header.");
+        
+        const header = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
+        const requiredHeaders = ['sku', 'barcode', 'brand', 'exp_date', 'location', 'qty'];
+        if (!requiredHeaders.every(h => header.includes(h))) {
+            throw new Error(`Invalid CSV. Required headers: ${requiredHeaders.join(', ')}`);
+        }
+
+        const newItems: PutawayItem[] = [];
+        const duplicates: string[] = [];
+
+        lines.slice(1).forEach(line => {
+          const values = line.split(',');
+          const itemData: any = {};
+          header.forEach((col, index) => itemData[col] = values[index]?.trim().replace(/"/g, ''));
+
+          const qty = parseInt(itemData.qty || '0', 10);
+          if (itemData.sku && itemData.barcode && itemData.location && itemData.exp_date && !isNaN(qty)) {
+            const parsedItem = {
+              sku: itemData.sku,
+              barcode: itemData.barcode,
+              brand: itemData.brand,
+              exp_date: itemData.exp_date,
+              location: itemData.location,
+              qty: qty,
+            };
+
+            const isDuplicate = stagedItems.some(i => i.barcode === parsedItem.barcode && i.location === parsedItem.location) ||
+                                newItems.some(i => i.barcode === parsedItem.barcode && i.location === parsedItem.location);
+            
+            if (isDuplicate) {
+              duplicates.push(`${parsedItem.barcode} at ${parsedItem.location}`);
+            } else {
+              newItems.push(parsedItem);
+            }
+          }
+        });
+
+        if (duplicates.length > 0) {
+          toast({
+            variant: "destructive",
+            title: "Skipped Duplicates",
+            description: `Skipped ${duplicates.length} duplicate items from CSV.`,
+          });
+        }
+        
+        setStagedItems(prev => [...prev, ...newItems]);
+        setUploadDialogOpen(false);
+        toast({
+          title: "Upload Successful",
+          description: `${newItems.length} items have been added to the document.`,
+        });
+
+      } catch (error: any) {
+        toast({ variant: 'destructive', title: 'Upload Failed', description: error.message });
+      } finally {
+        setIsSubmitting(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    };
+    reader.readAsText(file);
+  };
 
   return (
     <MainLayout>
@@ -212,7 +289,31 @@ export default function CreatePutawayPage() {
                     <div className="space-y-2"><Label htmlFor="exp_date">EXP Date</Label><Input id="exp_date" name="exp_date" type="date" value={newItem.exp_date} onChange={handleItemInputChange}/></div>
                     <div className="space-y-2"><Label htmlFor="location">Location</Label><Input id="location" name="location" placeholder="Enter location" value={newItem.location} onChange={handleItemInputChange}/></div>
                     <div className="space-y-2"><Label htmlFor="qty">QTY</Label><Input id="qty" name="qty" type="number" placeholder="Enter quantity" value={newItem.qty} onChange={handleItemInputChange}/></div>
-                    <Button type="button" onClick={handleAddItem} disabled={!canCreate} className="w-full lg:w-auto"><Plus className="mr-2 h-4 w-4" /> Add Item</Button>
+                    <div className="flex gap-2">
+                      <Button type="button" onClick={handleAddItem} disabled={!canCreate} className="w-full lg:w-auto flex-1"><Plus className="mr-2 h-4 w-4" /> Add Item</Button>
+                      <Dialog open={isUploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" disabled={!canCreate}><Upload className="h-4 w-4"/></Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                              <DialogTitle>Upload Items CSV</DialogTitle>
+                              <DialogDescription>
+                                  Select a CSV file to add multiple items to this document. Required headers: sku, barcode, brand, exp_date, location, qty.
+                              </DialogDescription>
+                          </DialogHeader>
+                           <div className="py-4">
+                               <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
+                               <Button onClick={() => fileInputRef.current?.click()} className="w-full" disabled={isSubmitting}>
+                                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Choose File'}
+                               </Button>
+                               <p className="text-xs text-muted-foreground mt-2">
+                                    Don't have a template? <a href="/templates/putaway_items_template.csv" download className="underline text-primary">Download CSV template</a>
+                               </p>
+                            </div>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
                 </div>
             </div>
             
@@ -272,3 +373,5 @@ export default function CreatePutawayPage() {
     </MainLayout>
   );
 }
+
+    
