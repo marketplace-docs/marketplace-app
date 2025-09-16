@@ -20,14 +20,31 @@ type PutawayDocument = {
 };
 
 type ProductOutDocument = {
-  id: string; nodocument: string; sku: string; barcode: string; expdate: string; qty: number; status: 'Issue - Order' | 'Issue - Internal Transfer' | 'Issue - Adjustment Manual'; date: string; location: string; validatedby: string;
+  id: string; nodocument: string; sku: string; barcode: string; expdate: string; qty: number; status: ProductOutStatus; date: string; location: string; validatedby: string;
 };
+
+type ProductOutStatus = 
+    | 'Issue - Order' 
+    | 'Issue - Internal Transfer' 
+    | 'Issue - Adjustment Manual'
+    | 'Adjustment - Loc'
+    | 'Adjustment - SKU'
+    | 'Issue - Putaway'
+    | 'Receipt - Putaway'
+    | 'Issue - Return'
+    | 'Issue - Return Putaway'
+    | 'Issue - Update Expired'
+    | 'Receipt - Update Expired'
+    | 'Receipt - Outbound Return'
+    | 'Receipt'
+    | 'Adjusment - Loc';
 
 type StockLogEntry = {
     id: string;
     date: string;
     no_document: string;
     barcode: string;
+    sku: string;
     location: string;
     qty_before: number;
     qty_change: number;
@@ -36,6 +53,31 @@ type StockLogEntry = {
     validated_by: string;
     type: 'IN' | 'OUT';
 };
+
+const STOCK_OUT_STATUSES: ProductOutStatus[] = [
+    'Issue - Order', 
+    'Issue - Internal Transfer', 
+    'Issue - Adjustment Manual',
+    'Adjustment - Loc',
+    'Adjustment - SKU',
+    'Issue - Putaway',
+    // 'Receipt - Putaway', // This is IN
+    'Issue - Return',
+    'Issue - Return Putaway',
+    'Issue - Update Expired',
+    // 'Receipt - Update Expired', // This is IN
+    // 'Receipt - Outbound Return', // This is IN
+    // 'Receipt', // This is IN
+    'Adjusment - Loc' // Typo, but might exist in old data
+];
+
+const STOCK_IN_STATUSES: ProductOutStatus[] = [
+    'Receipt - Putaway',
+    'Receipt - Update Expired',
+    'Receipt - Outbound Return',
+    'Receipt'
+];
+
 
 export default function StockLogPage() {
     const [putawayDocs, setPutawayDocs] = useState<PutawayDocument[]>([]);
@@ -77,51 +119,60 @@ export default function StockLogPage() {
 
     const stockLogData = useMemo(() => {
         const combinedDocs = [
-            ...putawayDocs.map(doc => ({ ...doc, nodocument: doc.no_document, type: 'IN' as const, originalDate: new Date(doc.date), validatedby: doc.check_by })),
-            ...productOutDocs.map(doc => ({ ...doc, type: 'OUT' as const, originalDate: new Date(doc.date) })),
-        ].sort((a, b) => a.originalDate.getTime() - b.originalDate.getTime());
+             // All original putaway documents are IN
+            ...putawayDocs.map(doc => ({ 
+                id: `putaway-${doc.id}`, 
+                date: doc.date,
+                no_document: doc.no_document, 
+                barcode: doc.barcode, 
+                sku: doc.sku,
+                location: doc.location,
+                qty: doc.qty, 
+                status: 'Putaway',
+                validated_by: doc.check_by,
+                type: 'IN' as const 
+            })),
+            // Product Out documents can be IN or OUT based on status
+            ...productOutDocs.map(doc => {
+                 const type = STOCK_IN_STATUSES.includes(doc.status) ? 'IN' : 'OUT';
+                 return {
+                    id: `out-${doc.id}`,
+                    date: doc.date,
+                    no_document: doc.nodocument,
+                    barcode: doc.barcode,
+                    sku: doc.sku,
+                    location: doc.location,
+                    qty: doc.qty,
+                    status: doc.status,
+                    validated_by: doc.validatedby,
+                    type,
+                 }
+            })
+        ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-        const stockLevels = new Map<string, number>();
+        const stockLevels = new Map<string, number>(); // Key: barcode
         const logEntries: StockLogEntry[] = [];
 
         combinedDocs.forEach(doc => {
             const barcode = doc.barcode;
             const currentStock = stockLevels.get(barcode) || 0;
-            const change = doc.qty;
+            const change = doc.type === 'IN' ? doc.qty : -doc.qty;
 
-            if (doc.type === 'IN') {
-                const putawayDoc = doc as PutawayDocument & { no_document: string };
-                logEntries.push({
-                    id: `in-${putawayDoc.id}`,
-                    date: putawayDoc.date,
-                    no_document: putawayDoc.no_document,
-                    barcode: barcode,
-                    location: putawayDoc.location,
-                    qty_before: currentStock,
-                    qty_change: change,
-                    qty_after: currentStock + change,
-                    status: 'Putaway',
-                    validated_by: putawayDoc.check_by,
-                    type: 'IN',
-                });
-                stockLevels.set(barcode, currentStock + change);
-            } else { // type === 'OUT'
-                const outDoc = doc as ProductOutDocument;
-                logEntries.push({
-                    id: `out-${outDoc.id}`,
-                    date: outDoc.date,
-                    no_document: outDoc.nodocument,
-                    barcode: barcode,
-                    location: outDoc.location,
-                    qty_before: currentStock,
-                    qty_change: -change,
-                    qty_after: currentStock - change,
-                    status: outDoc.status,
-                    validated_by: outDoc.validatedby,
-                    type: 'OUT',
-                });
-                stockLevels.set(barcode, currentStock - change);
-            }
+            logEntries.push({
+                id: doc.id,
+                date: doc.date,
+                no_document: doc.no_document,
+                barcode: barcode,
+                sku: doc.sku,
+                location: doc.location,
+                qty_before: currentStock,
+                qty_change: change,
+                qty_after: currentStock + change,
+                status: doc.status,
+                validated_by: doc.validated_by,
+                type: doc.type,
+            });
+            stockLevels.set(barcode, currentStock + change);
         });
 
         // Sort descending by date for display
@@ -132,7 +183,8 @@ export default function StockLogPage() {
         if (!searchTerm) return stockLogData;
         return stockLogData.filter(log =>
             log.barcode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            log.no_document.toLowerCase().includes(searchTerm.toLowerCase())
+            log.no_document.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            log.sku.toLowerCase().includes(searchTerm.toLowerCase())
         );
     }, [stockLogData, searchTerm]);
 
@@ -159,12 +211,13 @@ export default function StockLogPage() {
             toast({ variant: "destructive", title: "No Data", description: "There is no data to export." });
             return;
         }
-        const headers = ["Date", "No. Document", "Barcode", "Location", "Qty Before", "Qty Change", "Qty After", "Status", "Validate By"];
+        const headers = ["Date", "No. Document", "SKU", "Barcode", "Location", "Qty Before", "Qty Change", "Qty After", "Status", "Validate By"];
         const csvContent = [
             headers.join(","),
             ...filteredData.map(log => [
                 `"${format(new Date(log.date), "yyyy-MM-dd HH:mm:ss")}"`,
                 `"${log.no_document}"`,
+                `"${log.sku}"`,
                 `"${log.barcode}"`,
                 `"${log.location}"`,
                 log.qty_before,
@@ -214,7 +267,7 @@ export default function StockLogPage() {
                                     </Button>
                                 )}
                                 <Input 
-                                    placeholder="Search Barcode or Document No..." 
+                                    placeholder="Search SKU, Barcode, or Document No..." 
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     className="w-full md:w-auto md:max-w-sm"
@@ -256,7 +309,7 @@ export default function StockLogPage() {
                                                 <TableCell>
                                                     <Badge variant={log.type === 'IN' ? 'default' : 'destructive'} className="gap-1">
                                                         {log.type === 'IN' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
-                                                        {log.qty_change.toLocaleString()}
+                                                        {Math.abs(log.qty_change).toLocaleString()}
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell>{log.qty_after.toLocaleString()}</TableCell>
@@ -321,5 +374,3 @@ export default function StockLogPage() {
         </MainLayout>
     );
 }
-
-    
