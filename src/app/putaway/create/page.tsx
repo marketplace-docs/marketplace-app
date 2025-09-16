@@ -84,6 +84,20 @@ export default function CreatePutawayPage() {
         toast({ variant: 'destructive', title: 'Error', description: 'Please fill all item fields with valid data.' });
         return;
     }
+
+    const isDuplicate = stagedItems.some(
+      item => item.barcode === newItem.barcode && item.location === newItem.location
+    );
+
+    if (isDuplicate) {
+        toast({
+            variant: 'destructive',
+            title: 'Duplicate Item',
+            description: 'This item with the same barcode and location already exists in the document.',
+        });
+        return;
+    }
+
     setStagedItems(prev => [...prev, { ...newItem, qty }]);
     setNewItem({ sku: '', barcode: '', brand: '', exp_date: '', location: '', qty: '' }); // Reset form
   };
@@ -121,7 +135,7 @@ export default function CreatePutawayPage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 documents: documentsToCreate,
-                user: { name: user.name, email: user.email, role: user.role }
+                user
             })
         });
 
