@@ -85,20 +85,20 @@ export default function CreatePutawayPage() {
   useEffect(() => {
     if (newItem.sku) {
         const product = (masterData as ProductMaster[]).find(p => p.sku.toLowerCase() === newItem.sku.toLowerCase());
-        if (product) {
+        if (product && (product.barcode !== newItem.barcode || product.brand !== newItem.brand)) {
             setNewItem(prev => ({ ...prev, barcode: product.barcode, brand: product.brand }));
         }
     }
-  }, [newItem.sku]);
+  }, [newItem.sku, newItem.barcode, newItem.brand]);
 
   useEffect(() => {
     if (newItem.barcode) {
         const product = (masterData as ProductMaster[]).find(p => p.barcode === newItem.barcode);
-        if (product) {
+        if (product && (product.sku !== newItem.sku || product.brand !== newItem.brand)) {
             setNewItem(prev => ({ ...prev, sku: product.sku, brand: product.brand }));
         }
     }
-  }, [newItem.barcode]);
+  }, [newItem.barcode, newItem.sku, newItem.brand]);
 
   const handleItemInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -280,16 +280,16 @@ export default function CreatePutawayPage() {
                 <h3 className="text-lg font-medium">Add Item to Document</h3>
                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                     <div className="space-y-2">
-                        <Label htmlFor="sku">SKU</Label>
-                        <Input id="sku" name="sku" placeholder="Enter SKU" value={newItem.sku} onChange={handleItemInputChange} />
-                    </div>
-                    <div className="space-y-2">
                         <Label htmlFor="barcode">Barcode</Label>
                         <Input id="barcode" name="barcode" placeholder="Enter barcode" value={newItem.barcode} onChange={handleItemInputChange} />
                     </div>
                     <div className="space-y-2">
+                        <Label htmlFor="sku">SKU</Label>
+                        <Input id="sku" name="sku" placeholder="Enter SKU" value={newItem.sku} onChange={handleItemInputChange} />
+                    </div>
+                    <div className="space-y-2">
                         <Label htmlFor="brand">Brand</Label>
-                        <Input id="brand" name="brand" placeholder="Product brand" value={newItem.brand} onChange={handleItemInputChange}/>
+                        <Input id="brand" name="brand" placeholder="Product brand" value={newItem.brand} onChange={handleItemInputChange} className="bg-muted" readOnly />
                     </div>
                     <div className="space-y-2"><Label htmlFor="exp_date">EXP Date</Label><Input id="exp_date" name="exp_date" type="date" value={newItem.exp_date} onChange={handleItemInputChange}/></div>
                     <div className="space-y-2"><Label htmlFor="location">Location</Label><Input id="location" name="location" placeholder="Enter location" value={newItem.location} onChange={handleItemInputChange}/></div>
@@ -378,3 +378,5 @@ export default function CreatePutawayPage() {
     </MainLayout>
   );
 }
+
+    
