@@ -27,7 +27,7 @@ import { format, parse, isValid } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import masterData from '@/lib/product-master-data.json';
+import masterData from '@/lib/marketplace-product-data.json';
 
 type PutawayItem = {
     sku: string;
@@ -86,15 +86,19 @@ export default function CreatePutawayPage() {
     const { name, value } = e.target;
     let updatedItem = { ...newItem, [name]: value };
 
-    if (name === 'barcode') {
+    if (name === 'barcode' && value) {
         const product = (masterData as ProductMaster[]).find(p => p.barcode === value);
         if (product) {
             updatedItem = { ...updatedItem, sku: product.sku, brand: product.brand };
+        } else {
+            updatedItem = { ...updatedItem, sku: '', brand: '' };
         }
-    } else if (name === 'sku') {
+    } else if (name === 'sku' && value) {
         const product = (masterData as ProductMaster[]).find(p => p.sku.toLowerCase() === value.toLowerCase());
         if (product) {
             updatedItem = { ...updatedItem, barcode: product.barcode, brand: product.brand };
+        } else {
+             updatedItem = { ...updatedItem, barcode: '', brand: '' };
         }
     }
     
