@@ -72,6 +72,7 @@ export default function MonitoringPutawayPage() {
   
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isBulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [isUploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [isBulkUpdateDialogOpen, setBulkUpdateDialogOpen] = useState(false);
   const [bulkUpdateStatus, setBulkUpdateStatus] = useState<'Done' | 'Pending'>('Done');
@@ -332,6 +333,42 @@ export default function MonitoringPutawayPage() {
     }
   };
 
+   const handleBulkDelete = async () => {
+    const selectedIds = Object.keys(rowSelection).filter(id => rowSelection[id]);
+    if (selectedIds.length === 0 || !user) {
+      toast({ variant: 'destructive', title: 'Error', description: 'No documents selected or user not logged in.' });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch('/api/putaway-documents/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          ids: selectedIds, 
+          userName: user.name, 
+          userEmail: user.email, 
+          userRole: user.role 
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete documents');
+      }
+
+      await fetchInitialData();
+      setRowSelection({});
+      setBulkDeleteDialogOpen(false);
+      toast({ title: 'Success', description: `${selectedIds.length} documents have been deleted.`, variant: 'destructive' });
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Delete Failed', description: error.message });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
 
   return (
     <MainLayout>
@@ -351,39 +388,63 @@ export default function MonitoringPutawayPage() {
               <CardDescription>A list of all putaway documents.</CardDescription>
             </div>
             <div className="flex w-full md:w-auto items-center gap-2">
-                {Object.keys(rowSelection).length > 0 && canUpdate && (
-                  <Dialog open={isBulkUpdateDialogOpen} onOpenChange={setBulkUpdateDialogOpen}>
-                    <DialogTrigger asChild>
-                       <Button variant="secondary">Update Selected</Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Bulk Update Status</DialogTitle>
-                        <DialogDescription>
-                          You are about to update the status for {Object.keys(rowSelection).length} selected document(s).
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="py-4">
-                        <Label htmlFor="bulk-status">New Status</Label>
-                        <Select value={bulkUpdateStatus} onValueChange={(value: 'Done' | 'Pending') => setBulkUpdateStatus(value)}>
-                            <SelectTrigger id="bulk-status" className="w-full">
-                                <SelectValue placeholder="Select Status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="Done">Done</SelectItem>
-                                <SelectItem value="Pending">Pending</SelectItem>
-                            </SelectContent>
-                        </Select>
-                      </div>
-                      <DialogFooter>
-                         <Button variant="outline" onClick={() => setBulkUpdateDialogOpen(false)}>Cancel</Button>
-                         <Button onClick={handleBulkUpdate} disabled={isSubmitting}>
-                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Save Changes
-                          </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
+                {Object.keys(rowSelection).filter(k => rowSelection[k]).length > 0 && canUpdate && (
+                  <>
+                    <Dialog open={isBulkUpdateDialogOpen} onOpenChange={setBulkUpdateDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="secondary">Update Selected</Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Bulk Update Status</DialogTitle>
+                          <DialogDescription>
+                            You are about to update the status for {Object.keys(rowSelection).filter(k => rowSelection[k]).length} selected document(s).
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="py-4">
+                          <Label htmlFor="bulk-status">New Status</Label>
+                          <Select value={bulkUpdateStatus} onValueChange={(value: 'Done' | 'Pending') => setBulkUpdateStatus(value)}>
+                              <SelectTrigger id="bulk-status" className="w-full">
+                                  <SelectValue placeholder="Select Status" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                  <SelectItem value="Done">Done</SelectItem>
+                                  <SelectItem value="Pending">Pending</SelectItem>
+                              </SelectContent>
+                          </Select>
+                        </div>
+                        <DialogFooter>
+                          <Button variant="outline" onClick={() => setBulkUpdateDialogOpen(false)}>Cancel</Button>
+                          <Button onClick={handleBulkUpdate} disabled={isSubmitting}>
+                              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                              Save Changes
+                            </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                     {canDelete && (
+                       <Dialog open={isBulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
+                        <DialogTrigger asChild>
+                           <Button variant="destructive">Delete Selected</Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Bulk Delete Documents</DialogTitle>
+                            <DialogDescription>
+                              Are you sure you want to delete {Object.keys(rowSelection).filter(k => rowSelection[k]).length} selected document(s)? This action cannot be undone.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <DialogFooter>
+                            <Button variant="outline" onClick={() => setBulkDeleteDialogOpen(false)}>Cancel</Button>
+                            <Button variant="destructive" onClick={handleBulkDelete} disabled={isSubmitting}>
+                                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Delete Documents
+                              </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                     )}
+                  </>
                 )}
                 <Input 
                     placeholder="Search document..." 
@@ -437,11 +498,12 @@ export default function MonitoringPutawayPage() {
                         <Checkbox
                             checked={paginatedDocs.length > 0 && paginatedDocs.every(doc => rowSelection[doc.id])}
                             onCheckedChange={(value) => {
-                                const newSelection: { [key: string]: boolean } = {...rowSelection};
-                                paginatedDocs.forEach(doc => {
-                                    if(value) newSelection[doc.id] = true;
-                                    else delete newSelection[doc.id];
-                                });
+                                const newSelection: { [key: string]: boolean } = {};
+                                if(value) {
+                                  paginatedDocs.forEach(doc => {
+                                      newSelection[doc.id] = true;
+                                  });
+                                }
                                 setRowSelection(newSelection);
                             }}
                             aria-label="Select all current page"
@@ -532,7 +594,7 @@ export default function MonitoringPutawayPage() {
             </div>
              <div className="flex items-center justify-end space-x-2 py-4">
                 <div className="flex-1 text-sm text-muted-foreground">
-                    {Object.keys(rowSelection).length} of {filteredDocuments.length} row(s) selected.
+                    {Object.keys(rowSelection).filter(k => rowSelection[k]).length} of {filteredDocuments.length} row(s) selected.
                 </div>
                 <div className="flex items-center space-x-2">
                     <span className="text-sm text-muted-foreground">Rows per page:</span>
