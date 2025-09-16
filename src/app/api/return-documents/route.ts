@@ -36,7 +36,7 @@ export async function POST(request: Request) {
       barcode: doc.barcode,
       brand: doc.brand,
       reason: doc.reason,
-      received_by: doc.received_by,
+      receivedby: doc.receivedby,
     }));
 
     const { data, error } = await supabaseService
@@ -61,11 +61,11 @@ export async function POST(request: Request) {
 
 
   // Handle single document creation
-  const { no_document, qty, status, sku, barcode, brand, reason, received_by } = singleDoc;
+  const { nodocument, qty, status, sku, barcode, brand, reason, receivedby } = singleDoc;
 
   const { data, error } = await supabaseService
     .from('return_documents')
-    .insert([{ nodocument: no_document, qty, status, sku, barcode, brand, reason, received_by }])
+    .insert([{ nodocument, qty, status, sku, barcode, brand, reason, receivedby }])
     .select()
     .single();
 
@@ -78,7 +78,7 @@ export async function POST(request: Request) {
         userName: user.name,
         userEmail: user.email,
         action: 'CREATE',
-        details: `Return Document: ${no_document}`,
+        details: `Return Document: ${nodocument}`,
     });
   }
 

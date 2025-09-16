@@ -9,5 +9,5 @@ export type ReturnDocument = {
   barcode: string;
   brand: string;
   reason: string;
-  received_by: string;
+  receivedby: string;
 };

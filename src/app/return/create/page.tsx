@@ -38,14 +38,14 @@ type ProductMaster = {
 
 export default function CreateReturnPage() {
   const [newDocument, setNewDocument] = React.useState<Omit<NewReturnDocument, 'qty'> & { qty: string }>({
-    no_document: '',
+    nodocument: '',
     qty: '',
     status: 'Pending',
     sku: '',
     barcode: '',
     brand: '',
     reason: '',
-    received_by: '',
+    receivedby: '',
   });
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isProductLoading, setIsProductLoading] = useState(false);
@@ -55,14 +55,13 @@ export default function CreateReturnPage() {
   const canCreate = user?.role === 'Super Admin';
 
   useEffect(() => {
-    // Generate document number on component mount
     const generateDocNumber = async () => {
         try {
             const response = await fetch('/api/return-documents/generate-number');
             if (!response.ok) throw new Error('Failed to generate document number.');
             const data = await response.json();
             if (data.error) throw new Error(data.error);
-            setNewDocument(prev => ({ ...prev, no_document: data.newDocNumber }));
+            setNewDocument(prev => ({ ...prev, nodocument: data.newDocNumber }));
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Error', description: error.message || 'Could not generate document number.' });
         }
@@ -107,7 +106,7 @@ export default function CreateReturnPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newDocument.no_document || !newDocument.qty || !newDocument.sku || !newDocument.barcode || !newDocument.brand || !newDocument.received_by) {
+    if (!newDocument.nodocument || !newDocument.qty || !newDocument.sku || !newDocument.barcode || !newDocument.brand || !newDocument.receivedby) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -144,7 +143,7 @@ export default function CreateReturnPage() {
           title: 'Success',
           description: 'New return document has been created.',
       });
-      setNewDocument({ no_document: '', qty: '', status: 'Pending', sku: '', barcode: '', brand: '', reason: '', received_by: '' });
+      setNewDocument({ nodocument: '', qty: '', status: 'Pending', sku: '', barcode: '', brand: '', reason: '', receivedby: '' });
       router.push('/return/monitoring-document');
 
     } catch (error: any) {
@@ -173,11 +172,11 @@ export default function CreateReturnPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="no_document">No. Document</Label>
+                  <Label htmlFor="nodocument">No. Document</Label>
                   <Input
-                    id="no_document"
-                    name="no_document"
-                    value={newDocument.no_document}
+                    id="nodocument"
+                    name="nodocument"
+                    value={newDocument.nodocument}
                     readOnly
                     className="bg-muted"
                   />
@@ -224,12 +223,12 @@ export default function CreateReturnPage() {
                   {isProductLoading && <Loader2 className="absolute right-2 top-8 h-4 w-4 animate-spin" />}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="received_by">Received By</Label>
+                  <Label htmlFor="receivedby">Received By</Label>
                   <Input
-                    id="received_by"
-                    name="received_by"
+                    id="receivedby"
+                    name="receivedby"
                     placeholder="Received by name"
-                    value={newDocument.received_by}
+                    value={newDocument.receivedby}
                     onChange={handleInputChange}
                   />
                 </div>
@@ -270,7 +269,7 @@ export default function CreateReturnPage() {
               </div>
               <div className="flex justify-end pt-4 space-x-2">
                 {canCreate && (
-                <Button type="submit" disabled={isSubmitting}>
+                <Button type="submit" disabled={isSubmitting || !newDocument.nodocument}>
                   {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Submit
                 </Button>
