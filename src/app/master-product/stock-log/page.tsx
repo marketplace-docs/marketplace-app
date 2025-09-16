@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -54,24 +53,8 @@ type StockLogEntry = {
     type: 'IN' | 'OUT';
 };
 
-const STOCK_OUT_STATUSES: ProductOutStatus[] = [
-    'Issue - Order', 
-    'Issue - Internal Transfer', 
-    'Issue - Adjustment Manual',
-    'Adjustment - Loc',
-    'Adjustment - SKU',
-    'Issue - Putaway',
-    // 'Receipt - Putaway', // This is IN
-    'Issue - Return',
-    'Issue - Return Putaway',
-    'Issue - Update Expired',
-    // 'Receipt - Update Expired', // This is IN
-    // 'Receipt - Outbound Return', // This is IN
-    // 'Receipt', // This is IN
-    'Adjusment - Loc' // Typo, but might exist in old data
-];
-
-const STOCK_IN_STATUSES: ProductOutStatus[] = [
+const REAL_STOCK_IN_STATUSES: (string | ProductOutStatus)[] = [
+    'Putaway', // from original putaway docs
     'Receipt - Putaway',
     'Receipt - Update Expired',
     'Receipt - Outbound Return',
@@ -128,41 +111,38 @@ export default function StockLogPage() {
                 sku: doc.sku,
                 location: doc.location,
                 qty: doc.qty, 
-                status: 'Putaway',
+                status: 'Putaway' as const,
                 validated_by: doc.check_by,
-                type: 'IN' as const 
             })),
             // Product Out documents can be IN or OUT based on status
-            ...productOutDocs.map(doc => {
-                 const type = STOCK_IN_STATUSES.includes(doc.status) ? 'IN' : 'OUT';
-                 return {
-                    id: `out-${doc.id}`,
-                    date: doc.date,
-                    no_document: doc.nodocument,
-                    barcode: doc.barcode,
-                    sku: doc.sku,
-                    location: doc.location,
-                    qty: doc.qty,
-                    status: doc.status,
-                    validated_by: doc.validatedby,
-                    type,
-                 }
-            })
+            ...productOutDocs.map(doc => ({
+                id: `out-${doc.id}`,
+                date: doc.date,
+                no_document: doc.nodocument,
+                barcode: doc.barcode,
+                sku: doc.sku,
+                location: doc.location,
+                qty: doc.qty,
+                status: doc.status,
+                validated_by: doc.validatedby,
+            }))
         ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-        const stockLevels = new Map<string, number>(); // Key: barcode
+        const stockLevels = new Map<string, number>(); // Key: barcode|location
         const logEntries: StockLogEntry[] = [];
 
         combinedDocs.forEach(doc => {
-            const barcode = doc.barcode;
-            const currentStock = stockLevels.get(barcode) || 0;
-            const change = doc.type === 'IN' ? doc.qty : -doc.qty;
+            const key = `${doc.barcode}|${doc.location}`;
+            const currentStock = stockLevels.get(key) || 0;
+            
+            const isStockIn = REAL_STOCK_IN_STATUSES.includes(doc.status);
+            const change = isStockIn ? doc.qty : -doc.qty;
 
             logEntries.push({
                 id: doc.id,
                 date: doc.date,
                 no_document: doc.no_document,
-                barcode: barcode,
+                barcode: doc.barcode,
                 sku: doc.sku,
                 location: doc.location,
                 qty_before: currentStock,
@@ -170,9 +150,9 @@ export default function StockLogPage() {
                 qty_after: currentStock + change,
                 status: doc.status,
                 validated_by: doc.validated_by,
-                type: doc.type,
+                type: isStockIn ? 'IN' : 'OUT',
             });
-            stockLevels.set(barcode, currentStock + change);
+            stockLevels.set(key, currentStock + change);
         });
 
         // Sort descending by date for display
