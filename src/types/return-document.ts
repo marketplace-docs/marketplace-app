@@ -8,6 +8,7 @@ export type ReturnDocument = {
   sku: string;
   barcode: string;
   brand: string;
+  location: string;
   reason: string;
   receivedby: string;
 };

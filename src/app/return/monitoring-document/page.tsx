@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
@@ -126,7 +125,7 @@ export default function MonitoringReturnPage() {
       const response = await fetch(`/api/return-documents/${selectedDoc.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...selectedDoc, userRole: user.role })
+        body: JSON.stringify({ ...selectedDoc, userRole: user.role, userName: user.name, userEmail: user.email })
       });
       if (!response.ok) throw new Error('Failed to update document');
       
@@ -175,7 +174,7 @@ export default function MonitoringReturnPage() {
       toast({ variant: "destructive", title: "No Data", description: "There is no data to export." });
       return;
     }
-    const headers = ["nodocument", "date", "sku", "barcode", "brand", "reason", "receivedby", "qty", "status"];
+    const headers = ["nodocument", "date", "sku", "barcode", "brand", "location", "reason", "receivedby", "qty", "status"];
     const csvContent = [
       headers.join(","),
       ...filteredDocuments.map(doc => [
@@ -184,6 +183,7 @@ export default function MonitoringReturnPage() {
         `"${doc.sku.replace(/"/g, '""')}"`,
         `"${doc.barcode.replace(/"/g, '""')}"`,
         `"${doc.brand.replace(/"/g, '""')}"`,
+        `"${doc.location.replace(/"/g, '""')}"`,
         `"${doc.reason.replace(/"/g, '""')}"`,
         `"${doc.receivedby.replace(/"/g, '""')}"`,
         doc.qty,
@@ -213,7 +213,7 @@ export default function MonitoringReturnPage() {
       try {
         const lines = text.split('\n').filter(line => line.trim() !== '');
         const headers = lines.shift()?.split(',').map(h => h.trim().replace(/"/g, '')) || [];
-        const requiredHeaders = ["nodocument", "sku", "barcode", "brand", "reason", "receivedby", "qty", "status"];
+        const requiredHeaders = ["nodocument", "sku", "barcode", "brand", "location", "reason", "receivedby", "qty", "status"];
         if (!requiredHeaders.every(h => headers.includes(h))) {
             throw new Error(`Invalid CSV headers. Required: ${requiredHeaders.join(', ')}`);
         }
@@ -230,6 +230,7 @@ export default function MonitoringReturnPage() {
             sku: docData.sku,
             barcode: docData.barcode,
             brand: docData.brand,
+            location: docData.location,
             reason: docData.reason,
             receivedby: docData.receivedby,
             qty: parseInt(docData.qty, 10),
@@ -301,7 +302,7 @@ export default function MonitoringReturnPage() {
                             <DialogHeader>
                                 <DialogTitle>Upload CSV</DialogTitle>
                                 <DialogDescription>
-                                    Select a CSV file to bulk upload return documents. The file must contain the headers: nodocument, sku, barcode, brand, reason, receivedby, qty, status.
+                                    Select a CSV file to bulk upload return documents. The file must contain the headers: nodocument, sku, barcode, brand, location, reason, receivedby, qty, status.
                                 </DialogDescription>
                             </DialogHeader>
                             <div className="py-4">
@@ -331,6 +332,7 @@ export default function MonitoringReturnPage() {
                     <TableHead>Date</TableHead>
                     <TableHead>SKU</TableHead>
                     <TableHead>Barcode</TableHead>
+                    <TableHead>Location</TableHead>
                     <TableHead>Brand</TableHead>
                     <TableHead>Reason</TableHead>
                     <TableHead>Received By</TableHead>
@@ -342,7 +344,7 @@ export default function MonitoringReturnPage() {
                 <TableBody>
                   {loading ? (
                      <TableRow>
-                        <TableCell colSpan={10} className="h-24 text-center">
+                        <TableCell colSpan={11} className="h-24 text-center">
                             <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                         </TableCell>
                     </TableRow>
@@ -353,6 +355,7 @@ export default function MonitoringReturnPage() {
                         <TableCell>{format(new Date(doc.date), "eee, dd/MMM/yyyy HH:mm")}</TableCell>
                         <TableCell>{doc.sku}</TableCell>
                         <TableCell>{doc.barcode}</TableCell>
+                        <TableCell>{doc.location}</TableCell>
                         <TableCell>{doc.brand}</TableCell>
                         <TableCell className="max-w-[200px] truncate">{doc.reason}</TableCell>
                         <TableCell>{doc.receivedby}</TableCell>
@@ -383,7 +386,7 @@ export default function MonitoringReturnPage() {
                   ) : (
                     <TableRow>
                       <TableCell
-                        colSpan={10}
+                        colSpan={11}
                         className="h-24 text-center text-muted-foreground"
                       >
                         No documents found.
@@ -462,6 +465,10 @@ export default function MonitoringReturnPage() {
                       <div className="grid grid-cols-4 items-center gap-4">
                           <Label htmlFor="barcode" className="text-right">Barcode</Label>
                           <Input id="barcode" value={selectedDoc.barcode} className="col-span-3" onChange={(e) => setSelectedDoc({ ...selectedDoc, barcode: e.target.value })} />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="location" className="text-right">Location</Label>
+                          <Input id="location" value={selectedDoc.location} className="col-span-3" onChange={(e) => setSelectedDoc({ ...selectedDoc, location: e.target.value })} />
                       </div>
                       <div className="grid grid-cols-4 items-center gap-4">
                           <Label htmlFor="brand" className="text-right">Brand</Label>

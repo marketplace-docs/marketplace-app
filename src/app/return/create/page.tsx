@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -46,6 +45,7 @@ export default function CreateReturnPage() {
     brand: '',
     reason: '',
     receivedby: '',
+    location: '',
   });
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isProductLoading, setIsProductLoading] = useState(false);
@@ -106,7 +106,7 @@ export default function CreateReturnPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newDocument.nodocument || !newDocument.qty || !newDocument.sku || !newDocument.barcode || !newDocument.brand || !newDocument.receivedby) {
+    if (!newDocument.nodocument || !newDocument.qty || !newDocument.sku || !newDocument.barcode || !newDocument.brand || !newDocument.receivedby || !newDocument.location) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -143,7 +143,7 @@ export default function CreateReturnPage() {
           title: 'Success',
           description: 'New return document has been created.',
       });
-      setNewDocument({ nodocument: '', qty: '', status: 'Pending', sku: '', barcode: '', brand: '', reason: '', receivedby: '' });
+      setNewDocument({ nodocument: '', qty: '', status: 'Pending', sku: '', barcode: '', brand: '', reason: '', receivedby: '', location: '' });
       router.push('/return/monitoring-document');
 
     } catch (error: any) {
@@ -221,6 +221,16 @@ export default function CreateReturnPage() {
                     readOnly
                   />
                   {isProductLoading && <Loader2 className="absolute right-2 top-8 h-4 w-4 animate-spin" />}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="location">Location</Label>
+                  <Input
+                    id="location"
+                    name="location"
+                    placeholder="Return location"
+                    value={newDocument.location}
+                    onChange={handleInputChange}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="receivedby">Received By</Label>

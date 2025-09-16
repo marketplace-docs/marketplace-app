@@ -1,4 +1,3 @@
-
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 import { logActivity } from '@/lib/logger';
@@ -35,6 +34,7 @@ export async function POST(request: Request) {
       sku: doc.sku,
       barcode: doc.barcode,
       brand: doc.brand,
+      location: doc.location,
       reason: doc.reason,
       receivedby: doc.receivedby,
     }));
@@ -61,11 +61,11 @@ export async function POST(request: Request) {
 
 
   // Handle single document creation
-  const { nodocument, qty, status, sku, barcode, brand, reason, receivedby } = singleDoc;
+  const { nodocument, qty, status, sku, barcode, brand, location, reason, receivedby } = singleDoc;
 
   const { data, error } = await supabaseService
     .from('return_documents')
-    .insert([{ nodocument, qty, status, sku, barcode, brand, reason, receivedby }])
+    .insert([{ nodocument, qty, status, sku, barcode, brand, location, reason, receivedby }])
     .select()
     .single();
 

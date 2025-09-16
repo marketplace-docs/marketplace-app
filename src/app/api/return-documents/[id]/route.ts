@@ -8,7 +8,7 @@ const UPDATE_ROLES = ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin'
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const { id } = params;
   const body = await request.json();
-  const { nodocument, qty, status, sku, barcode, brand, reason, receivedby, userName, userEmail, userRole } = body;
+  const { nodocument, qty, status, sku, barcode, brand, location, reason, receivedby, userName, userEmail, userRole } = body;
 
   if (!userRole || !UPDATE_ROLES.includes(userRole)) {
     return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
@@ -16,7 +16,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
   const { data, error } = await supabaseService
     .from('return_documents')
-    .update({ nodocument, qty, status, sku, barcode, brand, reason, receivedby })
+    .update({ nodocument, qty, status, sku, barcode, brand, location, reason, receivedby })
     .eq('id', id)
     .select()
     .single();
