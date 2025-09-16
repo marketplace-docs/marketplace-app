@@ -6,7 +6,7 @@ import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertCircle, ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react";
+import { Loader2, AlertCircle, ChevronLeft, ChevronRight, Pencil, Trash2, Eye } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuth } from '@/hooks/use-auth';
 import type { CycleCountDoc } from '@/types/cycle-count-doc';
@@ -18,6 +18,7 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Dialog
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
+import type { BatchProduct } from '@/types/batch-product';
 
 const statusVariantMap: { [key in CycleCountDoc['status']]: "default" | "secondary" | "destructive" | "outline" } = {
     'Pending': 'secondary',
@@ -25,6 +26,91 @@ const statusVariantMap: { [key in CycleCountDoc['status']]: "default" | "seconda
     'Completed': 'default',
     'Cancelled': 'destructive',
 };
+
+const CountItemsDetail: React.FC<{ doc: CycleCountDoc }> = ({ doc }) => {
+    const [isProductsDialogOpen, setProductsDialogOpen] = useState(false);
+    const [productsInLocation, setProductsInLocation] = useState<BatchProduct[]>([]);
+    const [isLoadingProducts, setIsLoadingProducts] = useState(false);
+    const { toast } = useToast();
+
+    const locationName = doc.count_type === 'By Location' ? doc.items_to_count.split(',')[0].trim() : null;
+
+    const handleViewProducts = async () => {
+        if (!locationName) return;
+        setIsLoadingProducts(true);
+        setProductsDialogOpen(true);
+        try {
+            const response = await fetch('/api/master-product/batch-products');
+            if (!response.ok) throw new Error('Failed to fetch product data.');
+            
+            const allProducts: BatchProduct[] = await response.json();
+            const products = allProducts.filter(p => p.location.toLowerCase() === locationName.toLowerCase() && p.stock > 0);
+            setProductsInLocation(products);
+
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Error', description: error.message });
+            setProductsDialogOpen(false);
+        } finally {
+            setIsLoadingProducts(false);
+        }
+    };
+
+
+    if (doc.count_type === 'By Location' && locationName) {
+        return (
+            <Dialog open={isProductsDialogOpen} onOpenChange={setProductsDialogOpen}>
+                <div className="flex items-center gap-2">
+                    <span className="font-medium">{locationName}</span>
+                    <DialogTrigger asChild>
+                         <Button variant="ghost" size="icon" onClick={handleViewProducts} className="h-7 w-7">
+                            <Eye className="h-4 w-4" />
+                            <span className="sr-only">View Products</span>
+                        </Button>
+                    </DialogTrigger>
+                </div>
+                <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>Products at Location: {locationName}</DialogTitle>
+                        <DialogDescription>List of products with stock at this location according to the system.</DialogDescription>
+                    </DialogHeader>
+                    {isLoadingProducts ? (
+                        <div className="h-48 flex items-center justify-center">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        </div>
+                    ) : productsInLocation.length > 0 ? (
+                        <div className="max-h-96 overflow-y-auto border rounded-lg">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>SKU</TableHead>
+                                        <TableHead>Barcode</TableHead>
+                                        <TableHead>Exp Date</TableHead>
+                                        <TableHead>Stock</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {productsInLocation.map(p => (
+                                        <TableRow key={p.id}>
+                                            <TableCell>{p.sku}</TableCell>
+                                            <TableCell>{p.barcode}</TableCell>
+                                            <TableCell>{format(new Date(p.exp_date), 'dd/MM/yyyy')}</TableCell>
+                                            <TableCell><Badge>{p.stock}</Badge></TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    ) : (
+                        <p className="py-4 text-center text-muted-foreground">No products with stock found at this location.</p>
+                    )}
+                </DialogContent>
+            </Dialog>
+        );
+    }
+
+    return <span className="max-w-xs truncate">{doc.items_to_count}</span>;
+};
+
 
 export default function MonitoringCycleCountPage() {
     const { user } = useAuth();
@@ -170,7 +256,9 @@ export default function MonitoringCycleCountPage() {
                                                 <TableCell>{format(new Date(doc.date), 'dd/MM/yyyy HH:mm')}</TableCell>
                                                 <TableCell>{doc.counter_name}</TableCell>
                                                 <TableCell>{doc.count_type}</TableCell>
-                                                <TableCell className="max-w-xs truncate">{doc.items_to_count}</TableCell>
+                                                <TableCell>
+                                                   <CountItemsDetail doc={doc} />
+                                                </TableCell>
                                                 <TableCell>
                                                     <Badge variant={statusVariantMap[doc.status] || 'default'}>{doc.status}</Badge>
                                                 </TableCell>
@@ -324,3 +412,4 @@ export default function MonitoringCycleCountPage() {
         </MainLayout>
     );
 }
+
