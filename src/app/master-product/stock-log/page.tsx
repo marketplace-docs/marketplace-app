@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -53,14 +54,14 @@ type StockLogEntry = {
     type: 'IN' | 'OUT';
 };
 
-const REAL_STOCK_IN_STATUSES: (string | ProductOutStatus)[] = [
+// Define statuses that represent an INCREASE in stock.
+const REAL_STOCK_IN_STATUSES: string[] = [
     'Putaway', // from original putaway docs
     'Receipt - Putaway',
     'Receipt - Update Expired',
     'Receipt - Outbound Return',
     'Receipt'
 ];
-
 
 export default function StockLogPage() {
     const [putawayDocs, setPutawayDocs] = useState<PutawayDocument[]>([]);
@@ -102,7 +103,7 @@ export default function StockLogPage() {
 
     const stockLogData = useMemo(() => {
         const combinedDocs = [
-             // All original putaway documents are IN
+            // All original putaway documents are IN
             ...putawayDocs.map(doc => ({ 
                 id: `putaway-${doc.id}`, 
                 date: doc.date,

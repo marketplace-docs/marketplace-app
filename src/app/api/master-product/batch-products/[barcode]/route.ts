@@ -24,6 +24,7 @@ type ProductOutDoc = {
     location: string;
     qty: number;
     date: string;
+    status: string;
 };
 
 type CombinedDoc = {
@@ -55,16 +56,17 @@ const createStockKey = (barcode: string, location: string, exp_date: string): st
     return `${barcode}|${loc}|${exp}`;
 };
 
+// Define statuses that represent a DECREASE in stock.
 const REAL_STOCK_OUT_STATUSES = [
     'Issue - Order',
     'Issue - Internal Transfer',
     'Issue - Adjustment Manual',
-    'Issue - Return',
-    'Issue - Putaway',
+    'Issue - Putaway', // Moving stock out of a location
+    'Issue - Return', // Returning goods to a supplier
     'Issue - Return Putaway',
-    'Issue - Update Expired'
+    'Issue - Update Expired',
+    // 'Receipt' statuses are IN, so they are excluded here.
 ];
-
 
 export async function GET(request: Request, { params }: { params: { barcode: string } }) {
     const { barcode } = params;
@@ -87,39 +89,42 @@ export async function GET(request: Request, { params }: { params: { barcode: str
         
         const stockMap = new Map<string, AggregatedProduct>();
 
-        const allDocsForBarcode = [
-            ...(putawayData as ProductDoc[]).map(doc => ({ ...doc, type: 'IN' as const, expDate: doc.exp_date })),
-            ...(productOutData as (ProductOutDoc & { status: string })[]).map(doc => ({ ...doc, type: 'OUT' as const, expDate: doc.expdate }))
-        ];
+        // All putaway documents are IN transactions for this barcode
+        const inTransactions = (putawayData || []).map(doc => ({ type: 'IN' as const, date: new Date(doc.date), doc }));
+
+        // Process product_out documents for this barcode
+        const outOrInFromProductOut = ((productOutData as ProductOutDoc[]) || []).map(doc => {
+            const isOut = REAL_STOCK_OUT_STATUSES.includes(doc.status);
+            return { type: (isOut ? 'OUT' : 'IN') as 'IN' | 'OUT', date: new Date(doc.date), doc };
+        });
+
+        const allTransactions: CombinedDoc[] = [...inTransactions, ...outOrInFromProductOut];
+
 
         // Initialize map with all possible batches for this barcode from ALL documents
-        allDocsForBarcode.forEach(doc => {
-            const key = createStockKey(doc.barcode, doc.location, doc.expDate);
+        allTransactions.forEach(tx => {
+            const doc = tx.doc;
+            const exp_date = 'exp_date' in doc ? doc.exp_date : doc.expdate;
+            const key = createStockKey(doc.barcode, doc.location, exp_date);
             if (!stockMap.has(key)) {
                 stockMap.set(key, {
                     id: key,
                     sku: doc.sku,
                     barcode: doc.barcode,
-                    brand: (doc as ProductDoc).brand || '',
-                    exp_date: doc.expDate,
+                    brand: ('brand' in doc) ? doc.brand || '' : '',
+                    exp_date: exp_date,
                     location: doc.location,
                     stock: 0,
                 });
             }
         });
 
+        // Chronologically process transactions
+        allTransactions.sort((a, b) => a.date.getTime() - b.date.getTime());
 
-        const combinedTransactions: CombinedDoc[] = [
-            ...(putawayData as ProductDoc[]).map(doc => ({ type: 'IN' as const, date: new Date(doc.date), doc })),
-            ...(productOutData as (ProductOutDoc & { status: string })[])
-              .filter(doc => REAL_STOCK_OUT_STATUSES.includes(doc.status))
-              .map(doc => ({ type: 'OUT' as const, date: new Date(doc.date), doc }))
-        ].sort((a, b) => a.date.getTime() - b.date.getTime());
-
-
-        combinedTransactions.forEach(tx => {
-            const doc = tx.doc as ProductDoc | (ProductOutDoc & { status: string });
-            const exp_date = tx.type === 'IN' ? (doc as ProductDoc).exp_date : (doc as ProductOutDoc).expdate;
+        allTransactions.forEach(tx => {
+            const doc = tx.doc;
+            const exp_date = 'exp_date' in doc ? doc.exp_date : doc.expdate;
 
             const key = createStockKey(doc.barcode, doc.location, exp_date);
 
@@ -130,8 +135,8 @@ export async function GET(request: Request, { params }: { params: { barcode: str
                 } else {
                     entry.stock -= doc.qty;
                 }
-                if (tx.type === 'IN' && !(entry.brand)) {
-                    entry.brand = (doc as ProductDoc).brand;
+                if (tx.type === 'IN' && 'brand' in doc && !entry.brand) {
+                    entry.brand = doc.brand;
                 }
             }
         });

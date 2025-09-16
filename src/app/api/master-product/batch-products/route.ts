@@ -56,21 +56,16 @@ const createStockKey = (barcode: string, location: string, exp_date: string): st
     return `${barcode}|${loc}|${exp}`;
 };
 
+// Define statuses that represent a DECREASE in stock.
 const REAL_STOCK_OUT_STATUSES = [
     'Issue - Order',
     'Issue - Internal Transfer',
     'Issue - Adjustment Manual',
-    'Adjustment - Loc',
-    'Adjustment - SKU',
-    'Issue - Putaway',
-    'Receipt - Putaway',
-    'Issue - Return',
+    'Issue - Putaway', // Moving stock out of a location
+    'Issue - Return', // Returning goods to a supplier
     'Issue - Return Putaway',
     'Issue - Update Expired',
-    'Receipt - Update Expired',
-    'Receipt - Outbound Return',
-    'Receipt',
-    'Adjusment - Loc'
+    // 'Receipt' statuses are IN, so they are excluded here.
 ];
 
 
@@ -89,37 +84,41 @@ export async function GET() {
         
         const stockMap = new Map<string, AggregatedProduct>();
 
-        const allDocs = [
-            ...(putawayData as ProductDoc[]).map(doc => ({ ...doc, type: 'IN' as const, expDate: doc.exp_date })),
-            ...(productOutData as ProductOutDoc[]).map(doc => ({ ...doc, type: 'OUT' as const, expDate: doc.expdate }))
-        ];
-        
+        // All putaway documents are IN transactions
+        const inTransactions = putawayData.map(doc => ({ type: 'IN' as const, date: new Date(doc.date), doc }));
+
+        // Process product_out documents to determine if they are IN or OUT
+        const outOrInFromProductOut = (productOutData as ProductOutDoc[]).map(doc => {
+            const isOut = REAL_STOCK_OUT_STATUSES.includes(doc.status);
+            return { type: (isOut ? 'OUT' : 'IN') as 'IN' | 'OUT', date: new Date(doc.date), doc };
+        });
+
+        const allTransactions: CombinedDoc[] = [...inTransactions, ...outOrInFromProductOut];
+
         // Initialize map with all possible batches from ALL documents
-        allDocs.forEach(doc => {
-            const key = createStockKey(doc.barcode, doc.location, doc.expDate);
+        allTransactions.forEach(tx => {
+            const doc = tx.doc;
+            const exp_date = 'exp_date' in doc ? doc.exp_date : doc.expdate;
+            const key = createStockKey(doc.barcode, doc.location, exp_date);
             if (!stockMap.has(key)) {
                 stockMap.set(key, {
                     id: key, 
                     sku: doc.sku,
                     barcode: doc.barcode,
-                    brand: (doc as ProductDoc).brand || '',
-                    exp_date: doc.expDate,
+                    brand: ('brand' in doc) ? doc.brand || '' : '',
+                    exp_date: exp_date,
                     location: doc.location,
                     stock: 0,
                 });
             }
         });
 
-        const combinedTransactions: CombinedDoc[] = [
-            ...(putawayData as ProductDoc[]).map(doc => ({ type: 'IN' as const, date: new Date(doc.date), doc })),
-            ...(productOutData as ProductOutDoc[])
-              .filter(doc => REAL_STOCK_OUT_STATUSES.includes(doc.status))
-              .map(doc => ({ type: 'OUT' as const, date: new Date(doc.date), doc }))
-        ].sort((a, b) => a.date.getTime() - b.date.getTime());
+        // Chronologically process all transactions to calculate final stock
+        allTransactions.sort((a, b) => a.date.getTime() - b.date.getTime());
         
-        combinedTransactions.forEach(tx => {
-            const doc = tx.doc as ProductDoc | ProductOutDoc;
-            const exp_date = tx.type === 'IN' ? (doc as ProductDoc).exp_date : (doc as ProductOutDoc).expdate;
+        allTransactions.forEach(tx => {
+            const doc = tx.doc;
+            const exp_date = 'exp_date' in doc ? doc.exp_date : doc.expdate;
             
             const key = createStockKey(doc.barcode, doc.location, exp_date);
 
@@ -130,8 +129,9 @@ export async function GET() {
                 } else { 
                     entry.stock -= doc.qty;
                 }
-                if (tx.type === 'IN' && !(entry.brand)) {
-                    entry.brand = (doc as ProductDoc).brand;
+                // Fill in brand if it's missing and this is a putaway doc
+                if (tx.type === 'IN' && 'brand' in doc && !entry.brand) {
+                    entry.brand = doc.brand;
                 }
             } 
         });
