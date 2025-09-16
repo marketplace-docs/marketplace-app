@@ -571,19 +571,9 @@
     "brand": "I'm From"
   },
   {
-    "sku": "MST.BB-HPSSG9ALL1",
-    "barcode": "3504105037772",
-    "brand": "Mustela"
-  },
-  {
     "sku": "CX.SC-GUEBALL1",
     "barcode": "3309100054",
     "brand": "COSRX"
-  },
-  {
-    "sku": "YDH.SC-YCTM2101",
-    "barcode": "8809340385684",
-    "brand": "Yadah"
   },
   {
     "sku": "JML.HC-MHNNJIF455001",
@@ -594,11 +584,6 @@
     "sku": "RO.SC-RLDTM1025100ALL1",
     "barcode": "8809657115387",
     "brand": "Round Lab"
-  },
-  {
-    "sku": "KAN.BB-HNBSGTG1401",
-    "barcode": "4992440034539",
-    "brand": "KEANA NADESHIKO"
   },
   {
     "sku": "CX.SC-HMPE50ALL1",
@@ -618,11 +603,6 @@
   {
     "sku": "JML.BB-HNNCHNJ455001",
     "barcode": "8809711716796",
-    "brand": "Jmella"
-  },
-  {
-    "sku": "JML.HC-KEHNNJI15001",
-    "barcode": "8809711716482",
     "brand": "Jmella"
   },
   {
@@ -676,16 +656,6 @@
     "brand": "Sociolla Collection"
   },
   {
-    "sku": "YDH.SC-YPCMPG251",
-    "barcode": "8809340384236",
-    "brand": "Yadah"
-  },
-  {
-    "sku": "YDH.SC-YOMSSM201",
-    "barcode": "8809340383383",
-    "brand": "Yadah"
-  },
-  {
     "sku": "YDH.SC-YVMPG251",
     "barcode": "8809340382416",
     "brand": "Yadah"
@@ -694,11 +664,6 @@
     "sku": "DRG.SC-RBSAM301",
     "barcode": "8809838651109",
     "brand": "Dr.G"
-  },
-  {
-    "sku": "IMF.SC-FCBM100ALL1",
-    "barcode": "8809525930135",
-    "brand": "I'm From"
   },
   {
     "sku": "IMF.SC-LCCALL1",
@@ -791,16 +756,6 @@
     "brand": "Laneige"
   },
   {
-    "sku": "ILY.BB-CACCALL1",
-    "barcode": "8806390500050",
-    "brand": "ILLIYOON"
-  },
-  {
-    "sku": "ILY.BB-CASGALL1",
-    "barcode": "8809643086981",
-    "brand": "ILLIYOON"
-  },
-  {
     "sku": "ILY.BB-CATKALL1",
     "barcode": "8809643071741",
     "brand": "ILLIYOON"
@@ -816,11 +771,6 @@
     "brand": "Yadah"
   },
   {
-    "sku": "YDH.SC-YATEM1001",
-    "barcode": "8809340380313",
-    "brand": "Yadah"
-  },
-  {
     "sku": "UIQ.SC-BBEIPALL1",
     "barcode": "8809771750136",
     "brand": "UIQ"
@@ -831,18 +781,8 @@
     "brand": "UIQ"
   },
   {
-    "sku": "UIQ.SC-BRSCALL1",
-    "barcode": "8809771750235",
-    "brand": "UIQ"
-  },
-  {
     "sku": "UIQ.SC-BREALL1",
     "barcode": "8809771750211",
-    "brand": "UIQ"
-  },
-  {
-    "sku": "UIQ.SC-BBTALL1",
-    "barcode": "8809771750051",
     "brand": "UIQ"
   },
   {
@@ -866,11 +806,6 @@
     "brand": "UIQ"
   },
   {
-    "sku": "IMF.SC-FBEM1501",
-    "barcode": "8809525930166",
-    "brand": "I'm From"
-  },
-  {
     "sku": "UIQ.SC-BBSMP11",
     "barcode": "8809771750082",
     "brand": "UIQ"
@@ -886,11 +821,6 @@
     "brand": "UIQ"
   },
   {
-    "sku": "UIQ.SC-BRMSCALL1",
-    "barcode": "8809771750174",
-    "brand": "UIQ"
-  },
-  {
     "sku": "UIQ.SC-BRTPALL1",
     "barcode": "8809771750198",
     "brand": "UIQ"
@@ -901,11 +831,6 @@
     "brand": "UIQ"
   },
   {
-    "sku": "UIQ.SC-BORWSCALL1",
-    "barcode": "8809771750334",
-    "brand": "UIQ"
-  },
-  {
     "sku": "UIQ.SC-BRPBTM50ALL1",
     "barcode": "8809771750358",
     "brand": "UIQ"
@@ -913,11 +838,6 @@
   {
     "sku": "UIQ.BT-GHADFRISS",
     "barcode": "8809771751171",
-    "brand": "UIQ"
-  },
-  {
-    "sku": "UIQ.BT-GHFRSS",
-    "barcode": "8809771751195",
     "brand": "UIQ"
   },
   {
@@ -959,11 +879,6 @@
     "sku": "UIQ.SC-BRWSCALL1",
     "barcode": "8809771750327",
     "brand": "UIQ"
-  },
-  {
-    "sku": "IMF.SC-LCPALL1",
-    "barcode": "8809525931934",
-    "brand": "I'm From"
   },
   {
     "sku": "JML.HC-JDIFSRNHSM55001",
@@ -1111,11 +1026,6 @@
     "brand": "Nivea"
   },
   {
-    "sku": "NV.BB-EWNNL2001",
-    "barcode": "8999777000110",
-    "brand": "Nivea"
-  },
-  {
     "sku": "NV.BB-HWCF1801",
     "barcode": "8999777015725",
     "brand": "Nivea"
@@ -1141,18 +1051,8 @@
     "brand": "Nivea"
   },
   {
-    "sku": "NV.BB-DIBWROM251",
-    "barcode": "8999777004293",
-    "brand": "Nivea"
-  },
-  {
     "sku": "NV.BB-DIBWFROM501",
     "barcode": "8999777006259",
-    "brand": "Nivea"
-  },
-  {
-    "sku": "NV.MU-LCFFSALL1",
-    "barcode": "8999777850838",
     "brand": "Nivea"
   },
   {
@@ -1161,18 +1061,8 @@
     "brand": "Nivea"
   },
   {
-    "sku": "NV.BB-BLDPS101",
-    "barcode": "8999777005351",
-    "brand": "Nivea"
-  },
-  {
     "sku": "NV.BB-DSEBPFFL1",
     "barcode": "8850029040172",
-    "brand": "Nivea"
-  },
-  {
-    "sku": "NV.BB-HSSDROM501",
-    "barcode": "8999777017620",
     "brand": "Nivea"
   },
   {
@@ -1189,11 +1079,6 @@
     "sku": "HO.MU-MBLPCR51",
     "barcode": "8806334392604",
     "brand": "Holika Holika"
-  },
-  {
-    "sku": "NV.SC-SFPOALL1",
-    "barcode": "8999777014230",
-    "brand": "Nivea"
   },
   {
     "sku": "LO.SC-RLEC151",
@@ -1214,11 +1099,6 @@
     "sku": "ME.MU-TBDSGDB31",
     "barcode": "6902395825258",
     "brand": "Maybelline"
-  },
-  {
-    "sku": "RO.SC-LDECM102530ALL1",
-    "barcode": "8809657114632",
-    "brand": "Round Lab"
   },
   {
     "sku": "DK.SC-MBCC601",
@@ -1246,16 +1126,6 @@
     "brand": "Natracare"
   },
   {
-    "sku": "ME.MU-FMT61",
-    "barcode": "6902395830559",
-    "brand": "Maybelline"
-  },
-  {
-    "sku": "HO.NL-PMGL01ALL1",
-    "barcode": "8806334370336",
-    "brand": "Holika Holika"
-  },
-  {
     "sku": "SU.SC-CGBASG201",
     "barcode": "8809803557375",
     "brand": "Sulwhasoo"
@@ -1271,14 +1141,9 @@
     "brand": "Round Lab"
   },
   {
-    "sku": "DRG.SC-RBSECM301",
-    "barcode": "8809838651086",
-    "brand": "Dr.G"
-  },
-  {
-    "sku": "RO.SC-DCOM10252001",
-    "barcode": "8809738605677",
-    "brand": "Round Lab"
+    "sku": "ILY.BB-CACCALL1",
+    "barcode": "8806390500050",
+    "brand": "ILLIYOON"
   },
   {
     "sku": "ESR.MU-BVFFB23ALL1",
@@ -1331,11 +1196,6 @@
     "brand": "Mediheal"
   },
   {
-    "sku": "MI.SC-MBPALL1",
-    "barcode": "8809615058688",
-    "brand": "Mediheal"
-  },
-  {
     "sku": "DRG.SC-BUSSPM50351",
     "barcode": "8809695361210",
     "brand": "Dr.G"
@@ -1346,18 +1206,8 @@
     "brand": "Dr.G"
   },
   {
-    "sku": "RO.SC-LBJMTM300ALL1",
-    "barcode": "8809738600214",
-    "brand": "Round Lab"
-  },
-  {
     "sku": "ESR.MU-BGVCB23ALL1",
     "barcode": "8809563948765",
-    "brand": "Espoir"
-  },
-  {
-    "sku": "ESR.MU-BGVCI21ALL1",
-    "barcode": "8809563948741",
     "brand": "Espoir"
   },
   {
@@ -1374,11 +1224,6 @@
     "sku": "MI.SC-AACBALL1",
     "barcode": "5526407016",
     "brand": "Mediheal"
-  },
-  {
-    "sku": "CX.SC-ACCFCM150ALL1",
-    "barcode": "8809598450547",
-    "brand": "COSRX"
   },
   {
     "sku": "DRG.SC-RIMCFG381",
@@ -1411,11 +1256,6 @@
     "brand": "Derma Angel"
   },
   {
-    "sku": "DRG.SC-DGREDBSESG1101",
-    "barcode": "8809838656388",
-    "brand": "Dr.G"
-  },
-  {
     "sku": "AU.SC-SPMW1001",
     "barcode": "8809301766613",
     "brand": "Ariul"
@@ -1436,11 +1276,6 @@
     "brand": "Anessa"
   },
   {
-    "sku": "ANE.SC-APUSSGG901",
-    "barcode": "4909978147112",
-    "brand": "ANESSA"
-  },
-  {
     "sku": "ANE.SC-APUSSSG601",
     "barcode": "4909978147853",
     "brand": "Anessa"
@@ -1456,239 +1291,14 @@
     "brand": "Dear Klairs"
   },
   {
-    "sku": "DK.SC-FEAGM351",
-    "barcode": "8809572890062",
-    "brand": "Dear Klairs"
-  },
-  {
     "sku": "SN.SC-BCSB151",
     "barcode": "9327693007552",
     "brand": "Sukin"
   },
   {
-    "sku": "NV.SC-NSWF1001",
-    "barcode": "8999777867249",
-    "brand": "Nivea"
-  },
-  {
-    "sku": "CX.SC-HAIC1001",
-    "barcode": "8809416470122",
-    "brand": "COSRX"
-  },
-  {
-    "sku": "LN.SC-RCC1",
-    "barcode": "8809803588515",
-    "brand": "Laneige"
-  },
-  {
-    "sku": "YDH.SC-YDGMNCG251",
-    "barcode": "8809340384595",
-    "brand": "Yadah"
-  },
-  {
     "sku": "ALN.SC-MSBBG251",
     "barcode": "8809295015599",
     "brand": "All Natural"
-  },
-  {
-    "sku": "ESR.MU-BGVCG28ALL1",
-    "barcode": "8809563948796",
-    "brand": "Espoir"
-  },
-  {
-    "sku": "IMF.SC-RWFCM150ALL1",
-    "barcode": "8809525932870",
-    "brand": "I'm From"
-  },
-  {
-    "sku": "MST.SC-SMPCM1501",
-    "barcode": "3504105033835",
-    "brand": "Mustela"
-  },
-  {
-    "sku": "MST.SC-HPSLM401",
-    "barcode": "3504105036768",
-    "brand": "Mustela"
-  },
-  {
-    "sku": "PW.SC-PPPMDOS1",
-    "barcode": "3332000066",
-    "brand": "Pure Paw Paw"
-  },
-  {
-    "sku": "PW.SC-PPPODMFS1",
-    "barcode": "3332000064",
-    "brand": "Pure Paw Paw"
-  },
-  {
-    "sku": "PW.SC-PPPHT1",
-    "barcode": "3332000065",
-    "brand": "Pure Paw Paw"
-  },
-  {
-    "sku": "ESR.MU-ECPVM3ALL1",
-    "barcode": "8809563949816",
-    "brand": "Espoir"
-  },
-  {
-    "sku": "ESR.MU-ECPSP5ALL1",
-    "barcode": "8809563940837",
-    "brand": "Espoir"
-  },
-  {
-    "sku": "NV.BB-HSSDROM501",
-    "barcode": "8999777017620",
-    "brand": "Nivea"
-  },
-  {
-    "sku": "NV.SC-SFSCESPM50301",
-    "barcode": "8999777000837",
-    "brand": "Nivea"
-  },
-  {
-    "sku": "NV.SC-MOACM4001",
-    "barcode": "8999777017941",
-    "brand": "Nivea"
-  },
-  {
-    "sku": "IMF.SC-HMG1201",
-    "barcode": "8809187042108",
-    "brand": "I'm From"
-  },
-  {
-    "sku": "YDH.SC-YCLTBSSG3431",
-    "barcode": "8809340385790",
-    "brand": "Yadah"
-  },
-  {
-    "sku": "EGB.BT-ODAIOMBCPG1",
-    "barcode": "191653010529",
-    "brand": "Ergobaby"
-  },
-  {
-    "sku": "EGB.BT-ODAIOMBCGG1",
-    "barcode": "191653010536",
-    "brand": "Ergobaby"
-  },
-  {
-    "sku": "EGB.BT-ODAIOMBCNB1",
-    "barcode": "191653010567",
-    "brand": "Ergobaby"
-  },
-  {
-    "sku": "EGB.BT-ODAIOMBCMB1",
-    "barcode": "191653010550",
-    "brand": "Ergobaby"
-  },
-  {
-    "sku": "CX.SC-HAHPE1001",
-    "barcode": "8809416470184",
-    "brand": "COSRX"
-  },
-  {
-    "sku": "CX.SC-RAVDT1501",
-    "barcode": "8809598451902",
-    "brand": "COSRX"
-  },
-  {
-    "sku": "CX.SC-ASMGCM150ALL1",
-    "barcode": "8809598452350",
-    "brand": "COSRX"
-  },
-  {
-    "sku": "CX.SC-ASMGGHMALL1",
-    "barcode": "8809598457058",
-    "brand": "COSRX"
-  },
-  {
-    "sku": "DE.SC-APD12ALL1",
-    "barcode": "4719745505119",
-    "brand": "Derma Angel"
-  },
-  {
-    "sku": "IMF.SC-RS1",
-    "barcode": "8809525931590",
-    "brand": "I'm From"
-  },
-  {
-    "sku": "KAN.SC-TMGSSS",
-    "barcode": "2259212826",
-    "brand": "KEANA NADESHIKO"
-  },
-  {
-    "sku": "SKC.SC-RSRMG301",
-    "barcode": "810114871409",
-    "brand": "Skintific"
-  },
-  {
-    "sku": "GGW.SC-JTVCPBGSM171",
-    "barcode": "8809618369576",
-    "brand": "Glad2Glow"
-  },
-  {
-    "sku": "CX.SC-LPNMCWM400ALL1",
-    "barcode": "8809598455627",
-    "brand": "COSRX"
-  },
-  {
-    "sku": "SKC.SC-DHABETM41001",
-    "barcode": "7554411565946",
-    "brand": "Skintific"
-  },
-  {
-    "sku": "SKC.SC-WTCE1",
-    "barcode": "7554411572876",
-    "brand": "Skintific"
-  },
-  {
-    "sku": "SKC.SC-PACWGG5801",
-    "barcode": "810114870327",
-    "brand": "Skintific"
-  },
-  {
-    "sku": "SKC.SC-PGGCM1201",
-    "barcode": "810114870723",
-    "brand": "Skintific"
-  },
-  {
-    "sku": "JML.BB-NCHNJIF15001",
-    "barcode": "8809711716833",
-    "brand": "Jmella"
-  },
-  {
-    "sku": "ILY.BB-CASGALL1",
-    "barcode": "8809643086981",
-    "brand": "ILLIYOON"
-  },
-  {
-    "sku": "LN.SC-CSCRM170ALL1",
-    "barcode": "8809925130333",
-    "brand": "Laneige"
-  },
-  {
-    "sku": "LN.SC-NCMNNS231",
-    "barcode": "8809803579568",
-    "brand": "Laneige"
-  },
-  {
-    "sku": "LN.SC-NCMNNB211",
-    "barcode": "8809803579544",
-    "brand": "Laneige"
-  },
-  {
-    "sku": "SCO.HC-VRPALL1",
-    "barcode": "8994456052107",
-    "brand": "Sociolla Collection"
-  },
-  {
-    "sku": "MI.BT-GMXPSBALLS",
-    "barcode": "2226418424",
-    "brand": "Mediheal"
-  },
-  {
-    "sku": "DE.SC-GAPRFALLS",
-    "barcode": "2210318066",
-    "brand": "Derma Angel"
   },
   {
     "sku": "ESR.MU-BGFN24ALL1",
@@ -1726,19 +1336,9 @@
     "brand": "Dr.G"
   },
   {
-    "sku": "NV.BB-NBSEBSVSFYPCM103201",
-    "barcode": "8850029040639",
-    "brand": "Nivea"
-  },
-  {
     "sku": "KAN.SC-BTRAM01100ALL1",
     "barcode": "4992440014753",
     "brand": "KEANA NADESHIKO"
-  },
-  {
-    "sku": "LN.SC-RCAE1",
-    "barcode": "8809803507967",
-    "brand": "Laneige"
   },
   {
     "sku": "LN.SC-NCMNNI131",
@@ -1746,24 +1346,9 @@
     "brand": "Laneige"
   },
   {
-    "sku": "RO.SC-PCCCM150ALL1",
-    "barcode": "8809864754126",
-    "brand": "Round Lab"
-  },
-  {
     "sku": "ESR.MU-BGVCT25ALL1",
     "barcode": "8809563948772",
     "brand": "Espoir"
-  },
-  {
-    "sku": "CX.SC-LPNMCWM100ALL1",
-    "barcode": "8809598455856",
-    "brand": "COSRX"
-  },
-  {
-    "sku": "CX.SC-TRC11",
-    "barcode": "8809598454781",
-    "brand": "COSRX"
   },
   {
     "sku": "VA.SC-HWBLPM102001",
@@ -1771,14 +1356,8 @@
     "brand": "Vaseline"
   },
   {
-    "sku": "DRG.SC-DGREDBSESG1101",
-    "barcode": "8809838656388",
-    "brand": "Dr.G"
-  },
-  {
-    "sku": "SPT.BT-SDS1",
-    "barcode": "9991504107",
-    "brand": "Spectra"
-  },
-  {
-    "sku": "RO.SC-LBJMC
+    "sku": "RO.SC-LBJMC",
+    "barcode": "8809738600221",
+    "brand": "Round Lab"
+  }
+]
