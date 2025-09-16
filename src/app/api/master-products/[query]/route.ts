@@ -11,6 +11,7 @@ export async function GET(request: Request, { params }: { params: { query: strin
   }
 
   try {
+    // Using supabaseService to bypass RLS policies for this internal lookup
     const { data, error } = await supabaseService
       .from('master_products')
       .select('sku, barcode, brand')

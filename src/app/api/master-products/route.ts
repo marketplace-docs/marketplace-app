@@ -8,6 +8,7 @@ const ALLOWED_ROLES = ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin
 const BATCH_SIZE = 1000; // Process 1000 rows at a time
 
 export async function GET() {
+    // Using supabaseService to bypass RLS policies
     const { data, error } = await supabaseService
         .from('master_products')
         .select('*')
@@ -78,6 +79,7 @@ export async function POST(request: Request) {
         const batch = allProducts.slice(i, i + BATCH_SIZE);
         
         if (batch.length > 0) {
+            // Using supabaseService to bypass RLS policies
             const { error: insertError } = await supabaseService
                 .from('master_products')
                 .upsert(batch, { onConflict: 'sku', ignoreDuplicates: false });
