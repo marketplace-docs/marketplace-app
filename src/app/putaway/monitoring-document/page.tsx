@@ -19,7 +19,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { MainLayout } from '@/components/layout/main-layout';
-import { format } from 'date-fns';
+import { format, parse } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Pencil, Trash2, Loader2, AlertCircle, Upload, Download } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -256,13 +256,15 @@ export default function MonitoringPutawayPage() {
             header.forEach((col, index) => {
               docData[col] = values[index]?.trim().replace(/"/g, '') || '';
             });
+            
+            const parsedDate = parse(docData.exp_date, 'dd/MM/yyyy', new Date());
 
             return {
               no_document: docData.no_document || '',
               sku: docData.sku || '',
               barcode: docData.barcode || '',
               brand: docData.brand || '',
-              exp_date: docData.exp_date || '',
+              exp_date: format(parsedDate, 'yyyy-MM-dd'),
               location: docData.location || '',
               check_by: docData.check_by || '',
               qty: parseInt(docData.qty || '0', 10),
@@ -405,7 +407,7 @@ export default function MonitoringPutawayPage() {
                             <DialogHeader>
                                 <DialogTitle>Upload CSV</DialogTitle>
                                 <DialogDescription>
-                                    Select a CSV file to bulk upload putaway documents. The data will be stored in the database.
+                                    Select a CSV file to bulk upload putaway documents. The data will be stored in the database. Date format: dd/MM/yyyy.
                                 </DialogDescription>
                             </DialogHeader>
                             <div className="py-4">

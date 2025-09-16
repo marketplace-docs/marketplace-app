@@ -22,7 +22,7 @@ import { useToast } from '@/hooks/use-toast';
 import { MainLayout } from '@/components/layout/main-layout';
 import { useRouter } from 'next/navigation';
 import { Loader2, Plus, Trash2, Upload } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, parse } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -191,12 +191,14 @@ export default function CreatePutawayPage() {
           header.forEach((col, index) => itemData[col] = values[index]?.trim().replace(/"/g, ''));
 
           const qty = parseInt(itemData.qty || '0', 10);
+           const parsedDate = parse(itemData.exp_date, 'dd/MM/yyyy', new Date());
+
           if (itemData.sku && itemData.barcode && itemData.location && itemData.exp_date && !isNaN(qty)) {
             const parsedItem = {
               sku: itemData.sku,
               barcode: itemData.barcode,
               brand: itemData.brand,
-              exp_date: itemData.exp_date,
+              exp_date: format(parsedDate, 'yyyy-MM-dd'),
               location: itemData.location,
               qty: qty,
             };
@@ -298,7 +300,7 @@ export default function CreatePutawayPage() {
                           <DialogHeader>
                               <DialogTitle>Upload Items CSV</DialogTitle>
                               <DialogDescription>
-                                  Select a CSV file to add multiple items to this document. Required headers: sku, barcode, brand, exp_date, location, qty.
+                                  Select a CSV file to add multiple items to this document. Required headers: sku, barcode, brand, exp_date(dd/MM/yyyy), location, qty.
                               </DialogDescription>
                           </DialogHeader>
                            <div className="py-4">
