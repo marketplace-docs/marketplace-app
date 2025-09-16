@@ -196,9 +196,30 @@ export default function MonitoringCycleCountPage() {
     };
 
     const handleDeleteDoc = async () => {
-         // Implement delete logic here, similar to other monitoring pages
-        toast({ title: "Note", description: "Delete functionality is not yet implemented." });
-        setDeleteDialogOpen(false);
+        if (!selectedDoc || !user) return;
+        setIsSubmitting(true);
+        try {
+            const response = await fetch(`/api/cycle-count-docs/${selectedDoc.id}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-User-Name': user.name,
+                    'X-User-Email': user.email,
+                    'X-User-Role': user.role,
+                }
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to delete document.');
+            }
+            toast({ title: 'Success', description: 'Cycle count document has been deleted.', variant: 'destructive'});
+            fetchDocs();
+            setDeleteDialogOpen(false);
+
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Error', description: error.message });
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
 
@@ -413,3 +434,4 @@ export default function MonitoringCycleCountPage() {
     );
 }
 
+    
