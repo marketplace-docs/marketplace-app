@@ -199,11 +199,6 @@ export const NAV_LINKS: NavLink[] = [
         label: 'Database',
         icon: Database,
         children: [
-             {
-                href: '/database/setup-db',
-                label: 'Setup DB',
-                icon: Database,
-            },
             {
                 href: '/database/master-product',
                 label: 'Master Product',
