@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -19,6 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import type { BatchProduct } from '@/types/batch-product';
+import Link from 'next/link';
 
 const statusVariantMap: { [key in CycleCountDoc['status']]: "default" | "secondary" | "destructive" | "outline" } = {
     'Pending': 'secondary',
@@ -190,7 +190,6 @@ export default function MonitoringCycleCountPage() {
     };
 
     const handleSaveChanges = async () => {
-        // Implement save logic here, similar to other monitoring pages
         toast({ title: "Note", description: "Save functionality is not yet implemented." });
         setEditDialogOpen(false);
     };
@@ -260,7 +259,7 @@ export default function MonitoringCycleCountPage() {
                                         <TableHead>Count Type</TableHead>
                                         <TableHead>Items to Count</TableHead>
                                         <TableHead>Status</TableHead>
-                                        {(canUpdate || canDelete) && <TableHead className="text-right">Actions</TableHead>}
+                                        <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -283,24 +282,28 @@ export default function MonitoringCycleCountPage() {
                                                 <TableCell>
                                                     <Badge variant={statusVariantMap[doc.status] || 'default'}>{doc.status}</Badge>
                                                 </TableCell>
-                                                {(canUpdate || canDelete) && (
-                                                    <TableCell className="text-right">
-                                                        <div className="flex items-center justify-end gap-2">
-                                                            {canUpdate && (
-                                                                <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(doc)}>
-                                                                    <Pencil className="h-4 w-4" />
-                                                                    <span className="sr-only">Edit</span>
-                                                                </Button>
-                                                            )}
-                                                            {canDelete && (
-                                                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" onClick={() => handleOpenDeleteDialog(doc)}>
-                                                                    <Trash2 className="h-4 w-4" />
-                                                                    <span className="sr-only">Delete</span>
-                                                                </Button>
-                                                            )}
-                                                        </div>
-                                                    </TableCell>
-                                                )}
+                                                <TableCell className="text-right">
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        <Button asChild variant="ghost" size="icon">
+                                                            <Link href={`/cycle-count/monitoring/${doc.id}`}>
+                                                                <Eye className="h-4 w-4" />
+                                                                <span className="sr-only">View</span>
+                                                            </Link>
+                                                        </Button>
+                                                        {canUpdate && (
+                                                            <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(doc)}>
+                                                                <Pencil className="h-4 w-4" />
+                                                                <span className="sr-only">Edit</span>
+                                                            </Button>
+                                                        )}
+                                                        {canDelete && (
+                                                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" onClick={() => handleOpenDeleteDialog(doc)}>
+                                                                <Trash2 className="h-4 w-4" />
+                                                                <span className="sr-only">Delete</span>
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                </TableCell>
                                             </TableRow>
                                         ))
                                     ) : (
@@ -358,7 +361,6 @@ export default function MonitoringCycleCountPage() {
                 </Card>
             </div>
 
-            {/* Edit Dialog */}
             <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
@@ -412,7 +414,6 @@ export default function MonitoringCycleCountPage() {
                 </DialogContent>
             </Dialog>
 
-            {/* Delete Confirmation Dialog */}
             <Dialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
@@ -433,5 +434,3 @@ export default function MonitoringCycleCountPage() {
         </MainLayout>
     );
 }
-
-    

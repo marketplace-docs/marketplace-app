@@ -1,4 +1,3 @@
-
 'use client';
 
 import { MainLayout } from "@/components/layout/main-layout";
@@ -87,6 +86,8 @@ const apiRoutes = [
         category: "Master Product & Stok",
         endpoints: [
             { method: "GET", path: "/api/master-product/batch-products", description: "Mengambil data stok agregat dari semua pergerakan barang." },
+            { method: "GET", path: "/api/master-product/batch-products/[barcode]", description: "Mengambil data stok untuk barcode tertentu." },
+            { method: "POST", path: "/api/master-product/batch-products/delete-anomaly", description: "Menghapus transaksi anomali yang menyebabkan stok negatif." },
         ]
     },
     {
@@ -95,6 +96,16 @@ const apiRoutes = [
             { method: "GET", path: "/api/menu-permissions/[userId]", description: "Mengambil hak akses menu untuk pengguna tertentu." },
             { method: "POST", path: "/api/menu-permissions", description: "Menyimpan atau memperbarui hak akses menu pengguna." },
             { method: "GET", path: "/api/log-activity", description: "Mengambil semua catatan aktivitas sistem." },
+        ]
+    },
+    {
+        category: "Cycle Count (Stock Opname)",
+        endpoints: [
+            { method: "GET", path: "/api/cycle-count-docs", description: "Mengambil semua dokumen cycle count." },
+            { method: "POST", path: "/api/cycle-count-docs", description: "Membuat dokumen cycle count baru." },
+            { method: "DELETE", path: "/api/cycle-count-docs/[id]", description: "Menghapus dokumen cycle count." },
+            { method: "GET", path: "/api/cycle-count-docs/generate-number", description: "Membuat nomor dokumen baru untuk cycle count." },
+            { method: "POST", path: "/api/cycle-count/submit-count", description: "Menyimpan hasil perhitungan stok dan membuat penyesuaian (adjustment)." },
         ]
     },
 ];

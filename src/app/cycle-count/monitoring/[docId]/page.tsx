@@ -1,0 +1,250 @@
+'use client';
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { MainLayout } from "@/components/layout/main-layout";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2, AlertCircle, X, Printer, FileText } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { format } from 'date-fns';
+import { useAuth } from '@/hooks/use-auth';
+import type { CycleCountDoc } from '@/types/cycle-count-doc';
+import type { BatchProduct } from '@/types/batch-product';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import Link from 'next/link';
+
+type CountedItem = BatchProduct & {
+    counted_stock: number | null;
+    discrepancy: number | null;
+    notes?: string;
+    reason?: string;
+    qty_adjust?: number | null;
+};
+
+export default function CycleCountDetailPage({ params }: { params: { docId: string } }) {
+    const { docId } = params;
+    const [doc, setDoc] = useState<CycleCountDoc | null>(null);
+    const [items, setItems] = useState<CountedItem[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const { user } = useAuth();
+    const { toast } = useToast();
+
+    const fetchDocDetails = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            // First, get the main document details
+            const docRes = await fetch('/api/cycle-count-docs');
+            if (!docRes.ok) throw new Error('Failed to fetch cycle count documents.');
+            const allDocs: CycleCountDoc[] = await docRes.json();
+            const currentDoc = allDocs.find(d => d.id.toString() === docId);
+
+            if (!currentDoc) {
+                throw new Error('Document not found.');
+            }
+            setDoc(currentDoc);
+
+            // Then, fetch the products to be counted based on the doc type
+            const itemsToCount = currentDoc.items_to_count.split(',').map(item => item.trim().toLowerCase());
+            
+            const productsRes = await fetch('/api/master-product/batch-products');
+            if (!productsRes.ok) throw new Error('Failed to fetch products.');
+            const allProducts: BatchProduct[] = await productsRes.json();
+
+            let productsInScope: BatchProduct[] = [];
+            if (currentDoc.count_type === 'By Location') {
+                productsInScope = allProducts.filter(p => itemsToCount.includes(p.location.toLowerCase()));
+            } else { // By SKU
+                productsInScope = allProducts.filter(p => itemsToCount.includes(p.sku.toLowerCase()));
+            }
+
+            const initialItems = productsInScope.map(p => ({
+                ...p,
+                counted_stock: null,
+                discrepancy: null,
+                notes: '',
+                reason: '',
+                qty_adjust: null
+            }));
+
+            setItems(initialItems);
+
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    }, [docId]);
+
+    useEffect(() => {
+        fetchDocDetails();
+    }, [fetchDocDetails]);
+
+    const handleCountChange = (productId: string, value: string) => {
+        const newCount = value === '' ? null : parseInt(value, 10);
+        
+        setItems(prev => prev.map(p => {
+            if (p.id === productId) {
+                const discrepancy = newCount !== null && !isNaN(newCount) ? newCount - p.stock : null;
+                return { ...p, counted_stock: newCount, discrepancy };
+            }
+            return p;
+        }));
+    };
+    
+    const handleFieldChange = (productId: string, field: keyof CountedItem, value: string | number) => {
+        setItems(prev => prev.map(p => {
+            if (p.id === productId) {
+                return { ...p, [field]: value };
+            }
+            return p;
+        }));
+    };
+
+    const handleRemoveItem = (productId: string) => {
+        setItems(prev => prev.filter(p => p.id !== productId));
+    };
+
+    const handleConfirmValid = async () => {
+        if (!user) return;
+        
+        const adjustments = items.filter(item => item.discrepancy !== 0 && item.discrepancy !== null);
+        if (adjustments.length === 0) {
+            toast({ title: 'No Adjustments Needed', description: 'All counts match system stock.' });
+            // Here you would typically update the doc status to 'Completed'
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const response = await fetch('/api/cycle-count/submit-count', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ adjustments: adjustments.map(a => ({...a, variance: a.discrepancy})), user }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to submit count adjustments.');
+            }
+
+            toast({ title: "Submission Success", description: "Stock adjustments have been successfully recorded." });
+            fetchDocDetails(); // Refetch to show updated state
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Submission Failed', description: error.message });
+        } finally {
+            setIsSubmitting(false);
+        }
+    }
+
+
+    if (loading) {
+        return <MainLayout><div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div></MainLayout>;
+    }
+    if (error) {
+        return <MainLayout><Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert></MainLayout>;
+    }
+    if (!doc) {
+        return <MainLayout><Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertTitle>Not Found</AlertTitle><AlertDescription>Document could not be found.</AlertDescription></Alert></MainLayout>;
+    }
+
+
+    return (
+        <MainLayout>
+             <Card>
+                <CardHeader className="flex flex-row items-start justify-between">
+                    <div>
+                        <CardTitle className="text-2xl">Doc No. {doc.no_doc}</CardTitle>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground mt-2">
+                             <span>Due date: {format(new Date(doc.date), 'yyyy-MM-dd - HH:mm')}</span>
+                             <Badge variant={doc.status === 'Completed' ? 'default' : 'secondary'}>{doc.status}</Badge>
+                        </div>
+                    </div>
+                    <Button asChild variant="ghost" size="icon">
+                        <Link href="/cycle-count/monitoring">
+                            <X className="h-5 w-5" />
+                        </Link>
+                    </Button>
+                </CardHeader>
+                <CardContent>
+                    <div className="border rounded-lg">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Assign To</TableHead>
+                                    <TableHead>Item</TableHead>
+                                    <TableHead>Expired</TableHead>
+                                    <TableHead>Qty</TableHead>
+                                    <TableHead>Real Qty</TableHead>
+                                    <TableHead>Discrepancy</TableHead>
+                                    <TableHead>Notes</TableHead>
+                                    <TableHead>Reason</TableHead>
+                                    <TableHead>Qty Adjust</TableHead>
+                                    <TableHead></TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {items.length > 0 ? items.map(item => (
+                                    <TableRow key={item.id}>
+                                        <TableCell>{doc.counter_name}</TableCell>
+                                        <TableCell>
+                                            <div className="font-medium">{item.sku}</div>
+                                            <div className="text-muted-foreground text-xs flex gap-2">
+                                                <Badge variant="outline">{item.barcode}</Badge>
+                                                <span>{item.location}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>{format(new Date(item.exp_date), 'yyyy-MM-dd')}</TableCell>
+                                        <TableCell>{item.stock}</TableCell>
+                                        <TableCell>
+                                            <Input type="number" value={item.counted_stock ?? ''} onChange={e => handleCountChange(item.id, e.target.value)} className="w-20" />
+                                        </TableCell>
+                                        <TableCell className={`font-bold ${item.discrepancy === null ? '' : (item.discrepancy === 0 ? 'text-green-600' : 'text-red-600')}`}>
+                                            {item.discrepancy}
+                                        </TableCell>
+                                         <TableCell><Input value={item.notes} onChange={e => handleFieldChange(item.id, 'notes', e.target.value)} className="w-24" /></TableCell>
+                                        <TableCell><Input value={item.reason} onChange={e => handleFieldChange(item.id, 'reason', e.target.value)} className="w-24" /></TableCell>
+                                        <TableCell><Input type="number" value={item.qty_adjust ?? ''} onChange={e => handleFieldChange(item.id, 'qty_adjust', e.target.value)} className="w-20" /></TableCell>
+                                        <TableCell>
+                                            <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)}>
+                                                <X className="h-4 w-4 text-red-500" />
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                )) : (
+                                    <TableRow>
+                                        <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
+                                            No items to count for this document.
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+                <CardFooter className="flex justify-between items-center border-t pt-6">
+                    <Button variant="destructive" outline>
+                        <X className="mr-2 h-4 w-4" /> INVALID
+                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" disabled={isSubmitting}>SAVE DRAFT</Button>
+                        <Button onClick={handleConfirmValid} disabled={isSubmitting}>
+                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                            CONFIRM VALID
+                        </Button>
+                        <Button variant="outline" size="icon"><Printer className="h-4 w-4" /></Button>
+                        <Button variant="outline" size="icon"><FileText className="h-4 w-4" /></Button>
+                        <Button variant="outline">ACC</Button>
+                        <Button variant="outline">RAW DATA</Button>
+                    </div>
+                </CardFooter>
+            </Card>
+        </MainLayout>
+    );
+}
