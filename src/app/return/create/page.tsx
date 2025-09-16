@@ -54,9 +54,10 @@ export default function CreateReturnPage() {
             const response = await fetch('/api/return-documents/generate-number');
             if (!response.ok) throw new Error('Failed to generate document number.');
             const data = await response.json();
+            if (data.error) throw new Error(data.error);
             setNewDocument(prev => ({ ...prev, no_document: data.newDocNumber }));
-        } catch (error) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Could not generate document number.' });
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Error', description: error.message || 'Could not generate document number.' });
         }
     };
     if (canCreate) {
@@ -107,7 +108,8 @@ export default function CreateReturnPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create return document');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create return document');
       }
       
       toast({
@@ -117,11 +119,11 @@ export default function CreateReturnPage() {
       setNewDocument({ no_document: '', qty: '', status: 'Pending', sku: '', barcode: '', brand: '', reason: '', received_by: '' });
       router.push('/return/monitoring-document');
 
-    } catch (error) {
+    } catch (error: any) {
        toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Something went wrong while creating the document.',
+        description: error.message || 'Something went wrong while creating the document.',
       });
     } finally {
       setIsSubmitting(false);
