@@ -1,4 +1,3 @@
-
 'use client';
 
 import { MainLayout } from "@/components/layout/main-layout";
@@ -6,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { NAV_LINKS } from "@/lib/constants";
 import Link from "next/link";
-import { Route, type LucideIcon, Warehouse } from "lucide-react";
+import { Route, type LucideIcon, Warehouse, Database } from "lucide-react";
 
 const techStack = ["Next.js", "React", "TypeScript", "Tailwind CSS", "ShadCN UI", "Genkit", "Firebase", "Supabase"];
 
@@ -190,6 +189,19 @@ export default function AppDocumentationPage() {
                                     <li>
                                         <Link href="/app-documentation/api-routes" className="hover:text-primary hover:underline">
                                             API Documentation
+                                        </Link>
+                                    </li>
+                                </ul>
+                            </div>
+                             <div>
+                                <h3 className="font-semibold text-md mb-2 flex items-center gap-2">
+                                    <Database className="h-5 w-5 text-primary" />
+                                    Database Setup
+                                </h3>
+                                <ul className="space-y-1 list-disc list-inside text-sm text-muted-foreground pl-2">
+                                    <li>
+                                        <Link href="/app-documentation/database-setup" className="hover:text-primary hover:underline">
+                                            Table Scripts
                                         </Link>
                                     </li>
                                 </ul>
