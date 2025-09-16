@@ -8,9 +8,9 @@ export async function GET() {
 
     const { data, error } = await supabaseService
       .from('cycle_count_docs')
-      .select('no_document')
-      .like('no_document', `${prefix}-%`)
-      .order('no_document', { ascending: false })
+      .select('no_doc')
+      .like('no_doc', `${prefix}-%`)
+      .order('no_doc', { ascending: false })
       .limit(1)
       .single();
 
@@ -20,8 +20,8 @@ export async function GET() {
     }
 
     let newSeq = 1;
-    if (data && data.no_document) {
-      const lastSeqStr = data.no_document.split('-').pop();
+    if (data && data.no_doc) {
+      const lastSeqStr = data.no_doc.split('-').pop();
       if (lastSeqStr) {
         const lastSeq = parseInt(lastSeqStr, 10);
         if (!isNaN(lastSeq)) {

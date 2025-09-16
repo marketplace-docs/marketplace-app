@@ -13,7 +13,12 @@ export async function POST(request: Request) {
     }
 
     const docToInsert = {
-      ...document,
+      no_doc: document.no_doc,
+      counter_name: document.counter_name,
+      count_type: document.count_type,
+      items_to_count: document.items_to_count,
+      status: document.status,
+      notes: document.notes,
       date: new Date().toISOString(),
     };
 
@@ -33,7 +38,7 @@ export async function POST(request: Request) {
           userName: user.name,
           userEmail: user.email,
           action: 'CREATE',
-          details: `Cycle Count Document: ${data.no_document}`,
+          details: `Cycle Count Document: ${data.no_doc}`,
       });
     }
 

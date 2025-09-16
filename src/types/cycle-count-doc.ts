@@ -1,7 +1,7 @@
 export type CycleCountDoc = {
     id: number;
     created_at: string;
-    no_document: string;
+    no_doc: string;
     date: string;
     counter_name: string;
     count_type: 'By Location' | 'By SKU';

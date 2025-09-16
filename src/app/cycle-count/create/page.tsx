@@ -23,7 +23,7 @@ export default function CreateCycleCountPage() {
     const { toast } = useToast();
     
     const [newDoc, setNewDoc] = useState<NewCycleCountDoc>({
-        no_document: '',
+        no_doc: '',
         counter_name: '',
         count_type: 'By Location',
         items_to_count: '',
@@ -39,7 +39,7 @@ export default function CreateCycleCountPage() {
             const response = await fetch('/api/cycle-count-docs/generate-number');
             if (!response.ok) throw new Error('Failed to generate document number');
             const data = await response.json();
-            setNewDoc(prev => ({ ...prev, no_document: data.newDocNumber }));
+            setNewDoc(prev => ({ ...prev, no_doc: data.newDocNumber }));
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Error', description: error.message });
         }
@@ -108,8 +108,8 @@ export default function CreateCycleCountPage() {
                        <form onSubmit={handleSubmit} className="space-y-6">
                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                <div className="space-y-2">
-                                   <Label htmlFor="no_document">No. Document</Label>
-                                   <Input id="no_document" value={newDoc.no_document} readOnly className="bg-muted"/>
+                                   <Label htmlFor="no_doc">No. Document</Label>
+                                   <Input id="no_doc" value={newDoc.no_doc} readOnly className="bg-muted"/>
                                </div>
                                <div className="space-y-2">
                                    <Label htmlFor="date">Date</Label>
@@ -156,7 +156,7 @@ export default function CreateCycleCountPage() {
                            </div>
                            <div className="flex justify-end">
                                 {canCreate ? (
-                                    <Button type="submit" disabled={isSubmitting || !newDoc.no_document}>
+                                    <Button type="submit" disabled={isSubmitting || !newDoc.no_doc}>
                                         {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                                         Submit Document
                                     </Button>
