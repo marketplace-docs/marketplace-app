@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Card,
   CardContent,
@@ -29,6 +29,12 @@ import type { ReturnDocument } from '@/types/return-document';
 import { useAuth } from '@/hooks/use-auth';
 
 type NewReturnDocument = Omit<ReturnDocument, 'id' | 'date'>;
+type ProductMaster = {
+    sku: string;
+    barcode: string;
+    brand: string;
+};
+
 
 export default function CreateReturnPage() {
   const [newDocument, setNewDocument] = React.useState<Omit<NewReturnDocument, 'qty'> & { qty: string }>({
@@ -42,6 +48,7 @@ export default function CreateReturnPage() {
     received_by: '',
   });
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isProductLoading, setIsProductLoading] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
   const { user } = useAuth();
@@ -66,12 +73,33 @@ export default function CreateReturnPage() {
   }, [canCreate, toast]);
 
 
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
+ const handleInputChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setNewDocument((prev) => ({ ...prev, [name]: value }));
-  };
+
+    if ((name === 'barcode' || name === 'sku') && value) {
+        setIsProductLoading(true);
+        try {
+            const response = await fetch(`/api/master-products/${value}`);
+            if (response.ok) {
+                const product: ProductMaster = await response.json();
+                setNewDocument(prev => ({
+                    ...prev,
+                    sku: product.sku,
+                    barcode: product.barcode,
+                    brand: product.brand,
+                }));
+            } else {
+                 setNewDocument(prev => ({ ...prev, brand: '' }));
+            }
+        } catch (error) {
+            console.error("Failed to fetch product data", error);
+            setNewDocument(prev => ({ ...prev, brand: '' }));
+        } finally {
+            setIsProductLoading(false);
+        }
+    }
+  }, []);
   
   const handleSelectChange = (name: string, value: string) => {
     setNewDocument(prev => ({ ...prev, [name]: value as 'Done' | 'Pending' | 'Cancelled' }));
@@ -164,16 +192,6 @@ export default function CreateReturnPage() {
                   />
                 </div>
                  <div className="space-y-2">
-                  <Label htmlFor="sku">SKU</Label>
-                  <Input
-                    id="sku"
-                    name="sku"
-                    placeholder="Enter SKU"
-                    value={newDocument.sku}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                 <div className="space-y-2">
                   <Label htmlFor="barcode">Barcode</Label>
                   <Input
                     id="barcode"
@@ -183,15 +201,27 @@ export default function CreateReturnPage() {
                     onChange={handleInputChange}
                   />
                 </div>
-                 <div className="space-y-2">
+                <div className="space-y-2">
+                  <Label htmlFor="sku">SKU</Label>
+                  <Input
+                    id="sku"
+                    name="sku"
+                    placeholder="Enter SKU"
+                    value={newDocument.sku}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                 <div className="space-y-2 relative">
                   <Label htmlFor="brand">Brand</Label>
                   <Input
                     id="brand"
                     name="brand"
-                    placeholder="Enter brand"
+                    placeholder="Product brand"
                     value={newDocument.brand}
-                    onChange={handleInputChange}
+                    className="bg-muted"
+                    readOnly
                   />
+                  {isProductLoading && <Loader2 className="absolute right-2 top-8 h-4 w-4 animate-spin" />}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="received_by">Received By</Label>
