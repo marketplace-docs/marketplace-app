@@ -1,6 +1,6 @@
 
 
-import { LayoutDashboard, ListTodo, Store, FileText, Settings, type LucideIcon, Briefcase, Users, Archive, BarChart3, AppWindow, BookText, Database, History, FilePlus, Eye, File, PieChart, Users2, Shield, Menu, Monitor, Undo2, Route, Package, PackagePlus, PackageMinus, Boxes, CalendarClock, Warehouse } from 'lucide-react';
+import { LayoutDashboard, ListTodo, Store, FileText, Settings, type LucideIcon, Briefcase, Users, Archive, BarChart3, AppWindow, BookText, Database, History, FilePlus, Eye, File, PieChart, Users2, Shield, Menu, Monitor, Undo2, Route, Package, PackagePlus, PackageMinus, Boxes, CalendarClock, Warehouse, Calculator } from 'lucide-react';
 
 export type NavLink = {
     href: string;
@@ -86,6 +86,33 @@ export const NAV_LINKS: NavLink[] = [
             },
              {
                 href: '/return/task',
+                label: 'Task',
+                icon: ListTodo,
+            },
+        ]
+    },
+    {
+        href: '#',
+        label: 'Cycle Count',
+        icon: Calculator,
+         children: [
+            {
+                href: '/cycle-count/create',
+                label: 'Create',
+                icon: FilePlus,
+            },
+            {
+                href: '/cycle-count/cc-location',
+                label: 'CC Location',
+                icon: Warehouse,
+            },
+            {
+                href: '/cycle-count/monitoring',
+                label: 'Monitoring Cycle Count',
+                icon: Eye,
+            },
+             {
+                href: '/cycle-count/task',
                 label: 'Task',
                 icon: ListTodo,
             },
