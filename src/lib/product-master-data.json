@@ -1,0 +1,588 @@
+
+[
+  {
+    "sku": "SCL.BT-LWSOGM1",
+    "barcode": "8994456050189",
+    "brand": "LILLA"
+  },
+  {
+    "sku": "SCL.BT-MPHDML1",
+    "barcode": "8994456050318",
+    "brand": "LILLA"
+  },
+  {
+    "sku": "SCL.BT-LWSML1",
+    "barcode": "8994456050226",
+    "brand": "LILLA"
+  },
+  {
+    "sku": "SCL.BT-MPHDNS1",
+    "barcode": "8994456050264",
+    "brand": "LILLA"
+  },
+  {
+    "sku": "SCL.BT-LWSMM1",
+    "barcode": "8994456050219",
+    "brand": "LILLA"
+  },
+  {
+    "sku": "SCL.BT-LWSGL1",
+    "barcode": "8994456050134",
+    "brand": "LILLA"
+  },
+  {
+    "sku": "SCL.BT-LWSLL1",
+    "barcode": "8994456050165",
+    "brand": "LILLA"
+  },
+  {
+    "sku": "SCL.BT-LWSOGL1",
+    "barcode": "8994456050196",
+    "brand": "LILLA"
+  },
+  {
+    "sku": "SCL.BT-LRMNDTS1",
+    "barcode": "8994456050486",
+    "brand": "LILLA"
+  },
+  {
+    "sku": "SCL.BT-LRMNDGM1",
+    "barcode": "8994456050615",
+    "brand": "LILLA"
+  },
+  {
+    "sku": "SCL.BT-LRMNDPM1",
+    "barcode": "8994456050578",
+    "brand": "LILLA"
+  },
+  {
+    "sku": "SCL.BT-LRMNDGAM1",
+    "barcode": "8994456050530",
+    "brand": "LILLA"
+  },
+  {
+    "sku": "SCL.BT-LRMNDBM1",
+    "barcode": "8994456050653",
+    "brand": "LILLA"
+  },
+  {
+    "sku": "SPT.BT-SDS1",
+    "barcode": "9991504107",
+    "brand": "Spectra"
+  },
+  {
+    "sku": "SCL.BT-LWSGS1",
+    "barcode": "8994456050097",
+    "brand": "LILLA"
+  },
+  {
+    "sku": "SCL.BT-LWSOGS1",
+    "barcode": "8994456050172",
+    "brand": "LILLA"
+  },
+  {
+    "sku": "SCL.BT-LRMNDTM1",
+    "barcode": "8994456050493",
+    "brand": "LILLA"
+  },
+  {
+    "sku": "SCL.BT-LWSDPM1",
+    "barcode": "8994456050066",
+    "brand": "LILLA"
+  },
+  {
+    "sku": "ISO.SC-IADSSGCNM150ALL1",
+    "barcode": "8809264722701",
+    "brand": "ISOI"
+  },
+  {
+    "sku": "ISO.SC-IBCSM251",
+    "barcode": "8809264736999",
+    "brand": "ISOI"
+  },
+  {
+    "sku": "ISO.SC-IBCTEM1301",
+    "barcode": "8809264736951",
+    "brand": "ISOI"
+  },
+  {
+    "sku": "SCL.BT-MPHDLS1",
+    "barcode": "8994456050356",
+    "brand": "LILLA"
+  },
+  {
+    "sku": "SCL.BT-MPHDDPL1",
+    "barcode": "8994456050349",
+    "brand": "LILLA"
+  },
+  {
+    "sku": "SCL.BT-MSJBDBS1",
+    "barcode": "8994456050455",
+    "brand": "LILLA"
+  },
+  {
+    "sku": "SCL.BT-MPHDDPS1",
+    "barcode": "8994456050325",
+    "brand": "LILLA"
+  },
+  {
+    "sku": "SCL.BT-LRMNDTL1",
+    "barcode": "8994456050509",
+    "brand": "LILLA"
+  },
+  {
+    "sku": "MST.BB-HPSSM200ALL1",
+    "barcode": "3504105036751",
+    "brand": "Mustela"
+  },
+  {
+    "sku": "MST.BB-HPSSG9ALL1",
+    "barcode": "3504105037772",
+    "brand": "Mustela"
+  },
+  {
+    "sku": "SCL.BT-LRMNDGX1",
+    "barcode": "8994456050639",
+    "brand": "LILLA"
+  },
+  {
+    "sku": "SCL.BT-LRMNDTX1",
+    "barcode": "8994456050516",
+    "brand": "LILLA"
+  },
+  {
+    "sku": "SCL.BT-LWSLS1",
+    "barcode": "8994456050141",
+    "brand": "LILLA"
+  },
+  {
+    "sku": "SCL.BT-MPHDNL1",
+    "barcode": "8994456050288",
+    "brand": "LILLA"
+  },
+  {
+    "sku": "SCL.BT-LWSGM1",
+    "barcode": "8994456050127",
+    "brand": "LILLA"
+  },
+  {
+    "sku": "SCL.BT-LBMSBM1801",
+    "barcode": "8994456051285",
+    "brand": "LILLA"
+  },
+  {
+    "sku": "HGN.BT-PMOBMSPP60261",
+    "barcode": "8886476120341",
+    "brand": "Hegen"
+  },
+  {
+    "sku": "MST.BB-SMS1",
+    "barcode": "3504105033880",
+    "brand": "Mustela"
+  },
+  {
+    "sku": "HGN.BT-PMOFBP15051",
+    "barcode": "8886476110205",
+    "brand": "Hegen"
+  },
+  {
+    "sku": "RG.HC-ANSP50ALL1",
+    "barcode": "8809514550184",
+    "brand": "Rated Green"
+  },
+  {
+    "sku": "PW.SC-OMG251",
+    "barcode": "9329401000350",
+    "brand": "Pure Paw Paw"
+  },
+  {
+    "sku": "PW.SC-OMW251",
+    "barcode": "9329401000343",
+    "brand": "Pure Paw Paw"
+  },
+  {
+    "sku": "SCL.BT-MPHDMS1",
+    "barcode": "8994456050295",
+    "brand": "LILLA"
+  },
+  {
+    "sku": "SCL.BT-MPHDDPM1",
+    "barcode": "8994456050332",
+    "brand": "LILLA"
+  },
+  {
+    "sku": "SCL.BT-LWSDPL1",
+    "barcode": "8994456050080",
+    "brand": "LILLA"
+  },
+  {
+    "sku": "SCL.BT-MSJMDBL1",
+    "barcode": "8994456050448",
+    "brand": "LILLA"
+  },
+  {
+    "sku": "SCL.BT-LWSMS1",
+    "barcode": "8994456050202",
+    "brand": "LILLA"
+  },
+  {
+    "sku": "IMF.SC-MSMM231",
+    "barcode": "8809595052010",
+    "brand": "I'm From"
+  },
+  {
+    "sku": "IMF.SC-FBEM301",
+    "barcode": "8809525930500",
+    "brand": "I'm From"
+  },
+  {
+    "sku": "IMF.SC-FCBM100ALL1",
+    "barcode": "8809525930135",
+    "brand": "I'm From"
+  },
+  {
+    "sku": "IMF.SC-HSALL1",
+    "barcode": "8809595052898",
+    "brand": "I'm From"
+  },
+  {
+    "sku": "IMF.SC-GSM301",
+    "barcode": "8809187048544",
+    "brand": "I'm From"
+  },
+  {
+    "sku": "IMF.SC-RCM50S",
+    "barcode": "2251102563",
+    "brand": "I'm From"
+  },
+  {
+    "sku": "RG.HC-TOSSPM2001",
+    "barcode": "8809514550320",
+    "brand": "Rated Green"
+  },
+  {
+    "sku": "CX.SC-ULISSP50ALL1",
+    "barcode": "8809598456242",
+    "brand": "COSRX"
+  },
+  {
+    "sku": "CX.SC-HAHPE1001",
+    "barcode": "8809416470184",
+    "brand": "COSRX"
+  },
+  {
+    "sku": "CX.SC-ACCLMM125ALL1",
+    "barcode": "8809598450141",
+    "brand": "COSRX"
+  },
+  {
+    "sku": "DE.SC-APD6ALL1",
+    "barcode": "4719745505454",
+    "brand": "Derma Angel"
+  },
+  {
+    "sku": "DE.SC-APN6ALL1",
+    "barcode": "4719745505461",
+    "brand": "Derma Angel"
+  },
+  {
+    "sku": "CLX.SC-DNRMPBFCM150ALL1",
+    "barcode": "8809591350332",
+    "brand": "Celimax"
+  },
+  {
+    "sku": "DRG.SC-REDBFMGCFM1501",
+    "barcode": "8809695369766",
+    "brand": "Dr.G"
+  },
+  {
+    "sku": "DRG.SC-DGPCREDBCSFM301",
+    "barcode": "8809695363931",
+    "brand": "Dr.G"
+  },
+  {
+    "sku": "DRG.SC-DGREDBCSTM2001",
+    "barcode": "8809695363474",
+    "brand": "Dr.G"
+  },
+  {
+    "sku": "DRG.SC-PCGFM2001",
+    "barcode": "8809695365898",
+    "brand": "Dr.G"
+  },
+  {
+    "sku": "DRG.SC-DGACBTM2001",
+    "barcode": "8809838650119",
+    "brand": "Dr.G"
+  },
+  {
+    "sku": "DRG.SC-DGACBBFM1501",
+    "barcode": "8809838650102",
+    "brand": "Dr.G"
+  },
+  {
+    "sku": "DRG.BB-REDBCSBMM1551",
+    "barcode": "8809695362484",
+    "brand": "Dr.G"
+  },
+  {
+    "sku": "PW.SC-OMO251",
+    "barcode": "9329401000305",
+    "brand": "Pure Paw Paw"
+  },
+  {
+    "sku": "DRG.SC-REDBFMAIOFM1501",
+    "barcode": "8809695360077",
+    "brand": "Dr.G"
+  },
+  {
+    "sku": "DE.BT-DACSALLS",
+    "barcode": "2210314177",
+    "brand": "Derma Angel"
+  },
+  {
+    "sku": "DE.SC-APRNF3ALLS",
+    "barcode": "2210313344",
+    "brand": "Derma Angel"
+  },
+  {
+    "sku": "JML.HC-JIFBPNHSM110001",
+    "barcode": "8809711716475",
+    "brand": "Jmella"
+  },
+  {
+    "sku": "PRE.SC-BWHMG251",
+    "barcode": "8809378321135",
+    "brand": "Papa Recipe"
+  },
+  {
+    "sku": "PRE.SC-BBPEAHMPG251",
+    "barcode": "8809378326703",
+    "brand": "Papa Recipe"
+  },
+  {
+    "sku": "PRE.SC-BGRHOMG251",
+    "barcode": "8809378322323",
+    "brand": "Papa Recipe"
+  },
+  {
+    "sku": "KAN.BB-HNBSGTG1401",
+    "barcode": "4992440034539",
+    "brand": "KEANA NADESHIKO"
+  },
+  {
+    "sku": "KAN.BB-HNBSFMM2001",
+    "barcode": "4992440036182",
+    "brand": "KEANA NADESHIKO"
+  },
+  {
+    "sku": "SCL.BT-MPHDLM1",
+    "barcode": "8994456050363",
+    "brand": "LILLA"
+  },
+  {
+    "sku": "SCL.BT-LRMNDGS1",
+    "barcode": "8994456050608",
+    "brand": "LILLA"
+  },
+  {
+    "sku": "SCL.BT-LRMNDPS1",
+    "barcode": "8994456050561",
+    "brand": "LILLA"
+  },
+  {
+    "sku": "SCL.BT-LMCPB1",
+    "barcode": "8994456050714",
+    "brand": "LILLA"
+  },
+  {
+    "sku": "SCL.BT-LRMNDBL1",
+    "barcode": "8994456050660",
+    "brand": "LILLA"
+  },
+  {
+    "sku": "JML.HC-KEHNNJI15001",
+    "barcode": "8809711716482",
+    "brand": "Jmella"
+  },
+  {
+    "sku": "JML.BB-MNDHNNC15001",
+    "barcode": "8809711716840",
+    "brand": "Jmella"
+  },
+  {
+    "sku": "YDH.SC-YMMPG251",
+    "barcode": "8809340382393",
+    "brand": "Yadah"
+  },
+  {
+    "sku": "YDH.SC-YPCMPG251",
+    "barcode": "8809340384236",
+    "brand": "Yadah"
+  },
+  {
+    "sku": "YDH.SC-YCTPM1501",
+    "barcode": "8809340385769",
+    "brand": "Yadah"
+  },
+  {
+    "sku": "SCL.BT-DTP1",
+    "barcode": "6000980911046",
+    "brand": "Sociolla Collection"
+  },
+  {
+    "sku": "CX.SC-GULISSP50ALLS",
+    "barcode": "2209113835",
+    "brand": "COSRX"
+  },
+  {
+    "sku": "CX.SC-HCA40ALL1",
+    "barcode": "8809598450660",
+    "brand": "COSRX"
+  },
+  {
+    "sku": "ISO.SC-IADSCM11301",
+    "barcode": "8809264721162",
+    "brand": "ISOI"
+  },
+  {
+    "sku": "CX.SC-PFCP1",
+    "barcode": "8809598452435",
+    "brand": "COSRX"
+  },
+  {
+    "sku": "YDH.SC-YCTM2101",
+    "barcode": "8809340385684",
+    "brand": "Yadah"
+  },
+  {
+    "sku": "DHC.SC-DCO701",
+    "barcode": "4511413305478",
+    "brand": "DHC"
+  },
+  {
+    "sku": "SCL.BT-DBALL1",
+    "barcode": "8994456050042",
+    "brand": "Sociolla Collection"
+  },
+  {
+    "sku": "ISO.SC-IBCUSM351",
+    "barcode": "8809264736555",
+    "brand": "ISOI"
+  },
+  {
+    "sku": "SCL.BT-GLDALL1",
+    "barcode": "S10959",
+    "brand": "Sociolla"
+  },
+  {
+    "sku": "GGW.SC-CASGMG100ALL1",
+    "barcode": "8809639467817",
+    "brand": "Glad2Glow"
+  },
+  {
+    "sku": "SCL.BT-CTCALL1",
+    "barcode": "S10958",
+    "brand": "Sociolla"
+  },
+  {
+    "sku": "DE.BT-DGMSALLS",
+    "barcode": "2210317830",
+    "brand": "Derma Angel"
+  },
+  {
+    "sku": "YDH.SC-YATBCM1501",
+    "barcode": "8809340380023",
+    "brand": "Yadah"
+  },
+  {
+    "sku": "YDH.SC-YCCM501",
+    "barcode": "8809340385080",
+    "brand": "Yadah"
+  },
+  {
+    "sku": "YDH.SC-YCSGM1051",
+    "barcode": "8809340384960",
+    "brand": "Yadah"
+  },
+  {
+    "sku": "YDH.SC-YATBCSCM151",
+    "barcode": "8809340382843",
+    "brand": "Yadah"
+  },
+  {
+    "sku": "YDH.SC-YATTM1001",
+    "barcode": "8809340380306",
+    "brand": "Yadah"
+  },
+  {
+    "sku": "YDH.SC-YOMSSM201",
+    "barcode": "8809340383383",
+    "brand": "Yadah"
+  },
+  {
+    "sku": "IMF.SC-MSM301",
+    "barcode": "8809525932719",
+    "brand": "I'm From"
+  },
+  {
+    "sku": "IMF.SC-GECG301",
+    "barcode": "8809595052836",
+    "brand": "I'm From"
+  },
+  {
+    "sku": "IMF.SC-RWFCM30ALL1",
+    "barcode": "8809525933013",
+    "brand": "I'm From"
+  },
+  {
+    "sku": "MST.BB-SMOALL1",
+    "barcode": "3504105034535",
+    "brand": "Mustela"
+  },
+  {
+    "sku": "RO.SC-GDTM1025100S",
+    "barcode": "2234615068",
+    "brand": "Round Lab"
+  },
+  {
+    "sku": "DRG.SC-GREDBCSCM10S",
+    "barcode": "22102813539",
+    "brand": "Dr.G"
+  },
+  {
+    "sku": "RJK.SC-RTTBPASALL1",
+    "barcode": "8858851436873",
+    "brand": "Rojukiss"
+  },
+  {
+    "sku": "RJK.SC-RJLPBSALL1",
+    "barcode": "8858851436880",
+    "brand": "Rojukiss"
+  },
+  {
+    "sku": "CX.SC-ASSC501",
+    "barcode": "8809416470191",
+    "brand": "COSRX"
+  },
+  {
+    "sku": "IMF.SC-MGCALLS",
+    "barcode": "2251110714",
+    "brand": "I'm From"
+  },
+  {
+    "sku": "IMF.BB-YHCM50S",
+    "barcode": "2251111290",
+    "brand": "I'm From"
+  },
+  {
+    "sku": "IMF.SC-BRP1",
+    "barcode": "8809525931378",
+    "brand": "I'm From"
+  },
+  {
+    "sku": "PW.SC-OMPF251",
+    "barcode": "9329401000336",
+    "brand": "Pure Paw Paw"
+  },
+_TRUNCATED_
