@@ -83,22 +83,22 @@ export default function CreatePutawayPage() {
   }, [canCreate, generateDocNumber]);
   
   useEffect(() => {
-    if (newItem.sku) {
-        const product = (masterData as ProductMaster[]).find(p => p.sku.toLowerCase() === newItem.sku.toLowerCase());
-        if (product && (product.barcode !== newItem.barcode || product.brand !== newItem.brand)) {
-            setNewItem(prev => ({ ...prev, barcode: product.barcode, brand: product.brand }));
-        }
+    if (newItem.barcode) {
+      const product = (masterData as ProductMaster[]).find(p => p.barcode === newItem.barcode);
+      if (product) {
+        setNewItem(prev => ({ ...prev, sku: product.sku, brand: product.brand }));
+      }
     }
-  }, [newItem.sku, newItem.barcode, newItem.brand]);
+  }, [newItem.barcode]);
 
   useEffect(() => {
-    if (newItem.barcode) {
-        const product = (masterData as ProductMaster[]).find(p => p.barcode === newItem.barcode);
-        if (product && (product.sku !== newItem.sku || product.brand !== newItem.brand)) {
-            setNewItem(prev => ({ ...prev, sku: product.sku, brand: product.brand }));
-        }
+    if (newItem.sku) {
+      const product = (masterData as ProductMaster[]).find(p => p.sku.toLowerCase() === newItem.sku.toLowerCase());
+      if (product) {
+        setNewItem(prev => ({ ...prev, barcode: product.barcode, brand: product.brand }));
+      }
     }
-  }, [newItem.barcode, newItem.sku, newItem.brand]);
+  }, [newItem.sku]);
 
   const handleItemInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -201,7 +201,7 @@ export default function CreatePutawayPage() {
           header.forEach((col, index) => itemData[col] = values[index]?.trim().replace(/"/g, ''));
 
           const qty = parseInt(itemData.qty || '0', 10);
-           const parsedDate = parse(itemData.exp_date, 'dd/MM/yyyy', new Date());
+          const parsedDate = parse(itemData.exp_date, 'dd/MM/yyyy', new Date());
 
           if (itemData.sku && itemData.barcode && itemData.location && isValid(parsedDate) && !isNaN(qty)) {
             const parsedItem = {
@@ -289,7 +289,7 @@ export default function CreatePutawayPage() {
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="brand">Brand</Label>
-                        <Input id="brand" name="brand" placeholder="Product brand" value={newItem.brand} onChange={handleItemInputChange} className="bg-muted" readOnly />
+                        <Input id="brand" name="brand" placeholder="Product brand" value={newItem.brand} className="bg-muted" readOnly />
                     </div>
                     <div className="space-y-2"><Label htmlFor="exp_date">EXP Date</Label><Input id="exp_date" name="exp_date" type="date" value={newItem.exp_date} onChange={handleItemInputChange}/></div>
                     <div className="space-y-2"><Label htmlFor="location">Location</Label><Input id="location" name="location" placeholder="Enter location" value={newItem.location} onChange={handleItemInputChange}/></div>
@@ -378,5 +378,3 @@ export default function CreatePutawayPage() {
     </MainLayout>
   );
 }
-
-    
