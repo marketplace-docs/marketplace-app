@@ -102,6 +102,11 @@ export const NAV_LINKS: NavLink[] = [
                 icon: Boxes,
             },
             {
+                href: '/master-product/marketplace-product',
+                label: 'Marketplace Product',
+                icon: Store,
+            },
+            {
                 href: '/master-product/product-in',
                 label: 'Stock In',
                 icon: PackagePlus,
