@@ -7,5 +7,5 @@ export type BatchProduct = {
     exp_date: string;
     location: string;
     stock: number;
-    status: 'Sellable' | 'Expiring' | 'Expired' | 'Out of Stock';
+    status?: 'Sellable' | 'Expiring' | 'Expired' | 'Out of Stock';
 };

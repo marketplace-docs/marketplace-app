@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
@@ -10,22 +10,21 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Search } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
+import type { BatchProduct } from '@/types/batch-product';
+import { useAuth } from '@/hooks/use-auth';
 
-// Mock data structure - this will be replaced by API data
-type ProductInLocation = {
-    sku: string;
-    barcode: string;
-    exp_date: string;
-    system_stock: number;
+type CountedProduct = BatchProduct & {
+    counted_stock: number | null;
+    variance: number | null;
 };
 
 export default function CCLocationPage() {
     const [location, setLocation] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [products, setProducts] = useState<ProductInLocation[]>([]);
-    const [countedStock, setCountedStock] = useState<Record<string, number | null>>({});
+    const [products, setProducts] = useState<CountedProduct[]>([]);
     const { toast } = useToast();
+    const { user } = useAuth();
 
     const handleSearchLocation = async () => {
         if (!location) {
@@ -33,54 +32,88 @@ export default function CCLocationPage() {
             return;
         }
         setIsLoading(true);
-        // Mock API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        setProducts([]);
         
-        // In a real scenario, you would fetch this from an API like `/api/stock/by-location/${location}`
-        const mockData: ProductInLocation[] = [
-            { sku: 'SKU001', barcode: '899000000001', exp_date: '2025-12-31', system_stock: 120 },
-            { sku: 'SKU002', barcode: '899000000002', exp_date: '2024-10-31', system_stock: 75 },
-        ];
-        
-        setProducts(mockData);
-        // Initialize counted stock state
-        const initialCounts: Record<string, number | null> = {};
-        mockData.forEach(p => {
-             initialCounts[`${p.barcode}-${p.exp_date}`] = null;
-        });
-        setCountedStock(initialCounts);
-        
-        setIsLoading(false);
-        toast({ title: 'Success', description: `Found ${mockData.length} items at location ${location}.` });
+        try {
+            const response = await fetch('/api/master-product/batch-products');
+            if (!response.ok) {
+                throw new Error('Failed to fetch batch products.');
+            }
+            const allProducts: BatchProduct[] = await response.json();
+            
+            const productsInLocation = allProducts
+                .filter(p => p.location.toLowerCase() === location.toLowerCase() && p.stock > 0)
+                .map(p => ({
+                    ...p,
+                    counted_stock: null,
+                    variance: null,
+                }));
+            
+            if (productsInLocation.length === 0) {
+                 toast({ variant: 'destructive', title: 'Not Found', description: `No products with stock found at location ${location}.` });
+            } else {
+                 toast({ title: 'Success', description: `Found ${productsInLocation.length} items at location ${location}.` });
+            }
+
+            setProducts(productsInLocation);
+
+        } catch (error: any) {
+             toast({ variant: 'destructive', title: 'Error', description: error.message });
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    const handleCountChange = (key: string, value: string) => {
-        const newCount = parseInt(value, 10);
-        setCountedStock(prev => ({
-            ...prev,
-            [key]: isNaN(newCount) ? null : newCount
+    const handleCountChange = (productId: string, value: string) => {
+        const newCount = value === '' ? null : parseInt(value, 10);
+        
+        setProducts(prev => prev.map(p => {
+            if (p.id === productId) {
+                const variance = newCount !== null && !isNaN(newCount) ? newCount - p.stock : null;
+                return { ...p, counted_stock: newCount, variance };
+            }
+            return p;
         }));
     };
     
     const handleSubmitCount = async () => {
-        setIsSubmitting(true);
-        console.log("Submitting data:", { location, counts: countedStock });
-        // Mock API call
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        toast({ title: "Submission Received", description: "Cycle count data has been submitted for review." });
+        if (!user) {
+            toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
+            return;
+        }
 
-        // Reset state
-        setLocation('');
-        setProducts([]);
-        setCountedStock({});
-        setIsSubmitting(false);
+        const adjustments = products.filter(p => p.variance !== 0 && p.variance !== null);
+        if (adjustments.length === 0) {
+            toast({ title: "No Changes", description: "No stock adjustments are needed for this location." });
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const response = await fetch('/api/cycle-count/submit-count', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ adjustments, user }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to submit count adjustments.');
+            }
+
+            toast({ title: "Submission Success", description: "Stock adjustments have been successfully recorded." });
+            
+            setLocation('');
+            setProducts([]);
+
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Submission Failed', description: error.message });
+        } finally {
+            setIsSubmitting(false);
+        }
     }
 
-    const allCountsEntered = products.length > 0 && products.every(p => {
-        const key = `${p.barcode}-${p.exp_date}`;
-        return countedStock[key] !== null && countedStock[key] !== undefined;
-    });
+    const allCountsEntered = products.length > 0 && products.every(p => p.counted_stock !== null);
 
     return (
         <MainLayout>
@@ -100,6 +133,7 @@ export default function CCLocationPage() {
                                 placeholder="Scan or enter location name" 
                                 value={location}
                                 onChange={(e) => setLocation(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleSearchLocation()}
                                 disabled={isLoading || isSubmitting}
                              />
                            </div>
@@ -111,7 +145,7 @@ export default function CCLocationPage() {
                         
                         {products.length > 0 && (
                             <div className="space-y-4 pt-4 border-t">
-                                <h3 className="font-medium text-lg">Products at Location: <span className="text-primary font-bold">{location}</span></h3>
+                                <h3 className="font-medium text-lg">Products at Location: <span className="text-primary font-bold">{products[0]?.location}</span></h3>
                                 <div className="border rounded-lg">
                                     <Table>
                                         <TableHeader>
@@ -126,27 +160,24 @@ export default function CCLocationPage() {
                                         </TableHeader>
                                         <TableBody>
                                             {products.map(product => {
-                                                const key = `${product.barcode}-${product.exp_date}`;
-                                                const actual = countedStock[key];
-                                                const variance = actual === null || actual === undefined ? null : actual - product.system_stock;
-                                                
                                                 return (
-                                                <TableRow key={key}>
+                                                <TableRow key={product.id}>
                                                     <TableCell>{product.sku}</TableCell>
                                                     <TableCell>{product.barcode}</TableCell>
                                                     <TableCell>{format(new Date(product.exp_date), 'dd/MM/yyyy')}</TableCell>
-                                                    <TableCell className="text-center">{product.system_stock.toLocaleString()}</TableCell>
+                                                    <TableCell className="text-center">{product.stock.toLocaleString()}</TableCell>
                                                     <TableCell>
                                                         <Input 
                                                             type="number"
                                                             placeholder="Count..."
-                                                            value={actual ?? ''}
-                                                            onChange={(e) => handleCountChange(key, e.target.value)}
+                                                            value={product.counted_stock ?? ''}
+                                                            onChange={(e) => handleCountChange(product.id, e.target.value)}
                                                             className="text-center"
+                                                            disabled={isSubmitting}
                                                         />
                                                     </TableCell>
-                                                     <TableCell className={`text-center font-bold ${variance === null ? '' : (variance === 0 ? 'text-green-600' : 'text-red-600')}`}>
-                                                        {variance === null ? '-' : variance.toLocaleString()}
+                                                     <TableCell className={`text-center font-bold ${product.variance === null ? '' : (product.variance === 0 ? 'text-green-600' : 'text-red-600')}`}>
+                                                        {product.variance === null ? '-' : product.variance.toLocaleString()}
                                                     </TableCell>
                                                 </TableRow>
                                             )})}
