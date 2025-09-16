@@ -37,7 +37,10 @@ export default function CreateCycleCountPage() {
     const generateDocNumber = useCallback(async () => {
         try {
             const response = await fetch('/api/cycle-count-docs/generate-number');
-            if (!response.ok) throw new Error('Failed to generate document number');
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to generate document number');
+            }
             const data = await response.json();
             setNewDoc(prev => ({ ...prev, no_doc: data.newDocNumber }));
         } catch (error: any) {
