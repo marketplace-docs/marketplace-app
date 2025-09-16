@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
@@ -27,7 +26,6 @@ import { format, parse, isValid } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import masterData from '@/lib/marketplace-product-data.json';
 
 type PutawayItem = {
     sku: string;
@@ -56,7 +54,8 @@ export default function CreatePutawayPage() {
     check_by: '',
     status: 'Pending' as 'Done' | 'Pending',
   });
-
+  
+  const [isProductLoading, setIsProductLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadDialogOpen, setUploadDialogOpen] = useState(false);
   const { toast } = useToast();
@@ -64,6 +63,34 @@ export default function CreatePutawayPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const canCreate = user?.role === 'Super Admin';
+  
+  const handleItemInputChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setNewItem(prev => ({ ...prev, [name]: value }));
+
+    if ((name === 'barcode' || name === 'sku') && value) {
+        setIsProductLoading(true);
+        try {
+            const response = await fetch(`/api/master-products/${value}`);
+            if (response.ok) {
+                const product: ProductMaster = await response.json();
+                setNewItem(prev => ({
+                    ...prev,
+                    sku: product.sku,
+                    barcode: product.barcode,
+                    brand: product.brand,
+                }));
+            } else {
+                 setNewItem(prev => ({ ...prev, brand: '' }));
+            }
+        } catch (error) {
+            console.error("Failed to fetch product data", error);
+            setNewItem(prev => ({ ...prev, brand: '' }));
+        } finally {
+            setIsProductLoading(false);
+        }
+    }
+  }, []);
 
   const generateDocNumber = useCallback(async () => {
     try {
@@ -82,29 +109,6 @@ export default function CreatePutawayPage() {
     }
   }, [canCreate, generateDocNumber]);
   
-  const handleItemInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    let updatedItem = { ...newItem, [name]: value };
-
-    if (name === 'barcode' && value) {
-        const product = (masterData as ProductMaster[]).find(p => p.barcode === value);
-        if (product) {
-            updatedItem = { ...updatedItem, sku: product.sku, brand: product.brand };
-        } else {
-            updatedItem = { ...updatedItem, sku: '', brand: '' };
-        }
-    } else if (name === 'sku' && value) {
-        const product = (masterData as ProductMaster[]).find(p => p.sku.toLowerCase() === value.toLowerCase());
-        if (product) {
-            updatedItem = { ...updatedItem, barcode: product.barcode, brand: product.brand };
-        } else {
-             updatedItem = { ...updatedItem, barcode: '', brand: '' };
-        }
-    }
-    
-    setNewItem(updatedItem);
-  };
-
   const handleAddItem = () => {
     const qty = parseInt(newItem.qty, 10);
     if (!newItem.sku || !newItem.barcode || !newItem.location || !newItem.exp_date || isNaN(qty) || qty <= 0) {
@@ -287,9 +291,10 @@ export default function CreatePutawayPage() {
                         <Label htmlFor="sku">SKU</Label>
                         <Input id="sku" name="sku" placeholder="Enter SKU" value={newItem.sku} onChange={handleItemInputChange} />
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-2 relative">
                         <Label htmlFor="brand">Brand</Label>
                         <Input id="brand" name="brand" placeholder="Product brand" value={newItem.brand} className="bg-muted" readOnly />
+                        {isProductLoading && <Loader2 className="absolute right-2 top-8 h-4 w-4 animate-spin" />}
                     </div>
                     <div className="space-y-2"><Label htmlFor="exp_date">EXP Date</Label><Input id="exp_date" name="exp_date" type="date" value={newItem.exp_date} onChange={handleItemInputChange}/></div>
                     <div className="space-y-2"><Label htmlFor="location">Location</Label><Input id="location" name="location" placeholder="Enter location" value={newItem.location} onChange={handleItemInputChange}/></div>

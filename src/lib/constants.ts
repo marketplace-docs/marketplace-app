@@ -102,11 +102,6 @@ export const NAV_LINKS: NavLink[] = [
                 icon: Boxes,
             },
             {
-                href: '/master-product/marketplace-product',
-                label: 'Marketplace Product',
-                icon: Store,
-            },
-            {
                 href: '/master-product/product-in',
                 label: 'Stock In',
                 icon: PackagePlus,
@@ -178,6 +173,11 @@ export const NAV_LINKS: NavLink[] = [
         icon: Database,
         children: [
             {
+                href: '/database/master-product',
+                label: 'Master Product',
+                icon: Package,
+            },
+            {
                 href: '/database/user-management',
                 label: 'User Management',
                 icon: Users2,
@@ -201,7 +201,7 @@ export const NAV_LINKS: NavLink[] = [
     },
     {
         href: '/app-documentation',
-        label: 'Documentation',
+        label: 'Dokumentasi Aplikasi',
         icon: BookText,
     },
     {
