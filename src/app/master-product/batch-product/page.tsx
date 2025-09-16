@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -243,11 +242,6 @@ export default function BatchProductPage() {
                         <AlertDescription>{error}</AlertDescription>
                     </Alert>
                 )}
-                 <div className="grid gap-4 md:grid-cols-3">
-                    <KpiCard title="Sellable Items" value={kpiData.sellable} icon={ShoppingCart} className="border-green-500" isLoading={loading} />
-                    <KpiCard title="Expiring Soon" value={kpiData.expiring} icon={Clock} className="border-yellow-500" isLoading={loading} />
-                    <KpiCard title="Out of Stock" value={kpiData.outOfStock} icon={Ban} className="border-red-500" isLoading={loading} />
-                </div>
                 <Card>
                     <CardHeader>
                         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
