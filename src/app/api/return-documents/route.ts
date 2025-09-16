@@ -29,7 +29,7 @@ export async function POST(request: Request) {
   // Handle bulk upload from CSV
   if (Array.isArray(documents)) {
     const docsToInsert = documents.map(doc => ({
-      no_document: doc.no_document,
+      nodocument: doc.nodocument,
       qty: doc.qty,
       status: doc.status,
       sku: doc.sku,
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
 
   const { data, error } = await supabaseService
     .from('return_documents')
-    .insert([{ no_document, qty, status, sku, barcode, brand, reason, received_by }])
+    .insert([{ nodocument: no_document, qty, status, sku, barcode, brand, reason, received_by }])
     .select()
     .single();
 
