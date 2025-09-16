@@ -84,25 +84,21 @@ export default function CreatePutawayPage() {
   
   const handleItemInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    let updatedItem = { ...newItem, [name]: value };
 
-    setNewItem(prev => {
-        const updatedItem = { ...prev, [name]: value };
-
-        if (name === 'barcode' && value) {
-            const product = (masterData as ProductMaster[]).find(p => p.barcode === value);
-            if (product) {
-                updatedItem.sku = product.sku;
-                updatedItem.brand = product.brand;
-            }
-        } else if (name === 'sku' && value) {
-            const product = (masterData as ProductMaster[]).find(p => p.sku.toLowerCase() === value.toLowerCase());
-            if (product) {
-                updatedItem.barcode = product.barcode;
-                updatedItem.brand = product.brand;
-            }
+    if (name === 'barcode') {
+        const product = (masterData as ProductMaster[]).find(p => p.barcode === value);
+        if (product) {
+            updatedItem = { ...updatedItem, sku: product.sku, brand: product.brand };
         }
-        return updatedItem;
-    });
+    } else if (name === 'sku') {
+        const product = (masterData as ProductMaster[]).find(p => p.sku.toLowerCase() === value.toLowerCase());
+        if (product) {
+            updatedItem = { ...updatedItem, barcode: product.barcode, brand: product.brand };
+        }
+    }
+    
+    setNewItem(updatedItem);
   };
 
   const handleAddItem = () => {
@@ -378,5 +374,3 @@ export default function CreatePutawayPage() {
     </MainLayout>
   );
 }
-
-    
