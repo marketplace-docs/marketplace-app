@@ -88,19 +88,6 @@ export default function CreatePutawayPage() {
         return;
     }
 
-    const isDuplicate = stagedItems.some(
-      item => item.barcode === newItem.barcode && item.location === newItem.location
-    );
-
-    if (isDuplicate) {
-        toast({
-            variant: 'destructive',
-            title: 'Duplicate Item',
-            description: 'This item with the same barcode and location already exists in the document.',
-        });
-        return;
-    }
-
     setStagedItems(prev => [...prev, { ...newItem, qty }]);
     setNewItem({ sku: '', barcode: '', brand: '', exp_date: '', location: '', qty: '' }); // Reset form
   };
@@ -183,7 +170,6 @@ export default function CreatePutawayPage() {
         }
 
         const newItems: PutawayItem[] = [];
-        const duplicates: string[] = [];
 
         lines.slice(1).forEach(line => {
           const values = line.split(',');
@@ -202,25 +188,10 @@ export default function CreatePutawayPage() {
               location: itemData.location,
               qty: qty,
             };
-
-            const isDuplicate = stagedItems.some(i => i.barcode === parsedItem.barcode && i.location === parsedItem.location) ||
-                                newItems.some(i => i.barcode === parsedItem.barcode && i.location === parsedItem.location);
-            
-            if (isDuplicate) {
-              duplicates.push(`${parsedItem.barcode} at ${parsedItem.location}`);
-            } else {
-              newItems.push(parsedItem);
-            }
+            newItems.push(parsedItem);
           }
         });
 
-        if (duplicates.length > 0) {
-          toast({
-            variant: "destructive",
-            title: "Skipped Duplicates",
-            description: `Skipped ${duplicates.length} duplicate items from CSV.`,
-          });
-        }
         
         setStagedItems(prev => [...prev, ...newItems]);
         setUploadDialogOpen(false);
