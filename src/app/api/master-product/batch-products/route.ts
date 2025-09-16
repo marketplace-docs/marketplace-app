@@ -72,8 +72,8 @@ export async function GET() {
             // Fetch status as well to filter internal movements
             { data: productOutData, error: productOutError }
         ] = await Promise.all([
-            supabaseService.from('putaway_documents').select('id, sku, barcode, brand, exp_date, location, qty, date'),
-            supabaseService.from('product_out_documents').select('id, sku, barcode, location, qty, expdate, date, status')
+            supabaseService.from('putaway_documents').select('id, sku, barcode, brand, exp_date, location, qty, date').limit(20000),
+            supabaseService.from('product_out_documents').select('id, sku, barcode, location, qty, expdate, date, status').limit(20000)
         ]);
 
         if (putawayError) throw putawayError;

@@ -13,7 +13,8 @@ export async function GET() {
   const { data, error } = await supabaseService
     .from('putaway_documents')
     .select('id, no_document, date, qty, status, sku, barcode, brand, exp_date, location, check_by')
-    .order('date', { ascending: false });
+    .order('date', { ascending: false })
+    .limit(20000);
 
   if (error) {
     console.error("Supabase GET error:", error);

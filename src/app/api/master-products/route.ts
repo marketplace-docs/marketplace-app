@@ -11,7 +11,8 @@ export async function GET() {
     const { data, error } = await supabaseService
         .from('master_products')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(20000);
 
     if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 });

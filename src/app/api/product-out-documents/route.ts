@@ -59,7 +59,8 @@ export async function GET() {
   const { data, error } = await supabaseService
     .from('product_out_documents')
     .select('*')
-    .order('date', { ascending: false });
+    .order('date', { ascending: false })
+    .limit(20000);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
