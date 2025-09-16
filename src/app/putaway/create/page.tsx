@@ -23,7 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 import { MainLayout } from '@/components/layout/main-layout';
 import { useRouter } from 'next/navigation';
 import { Loader2, Plus, Trash2, Upload } from 'lucide-react';
-import { format, parse } from 'date-fns';
+import { format, parse, isValid } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -203,7 +203,7 @@ export default function CreatePutawayPage() {
           const qty = parseInt(itemData.qty || '0', 10);
            const parsedDate = parse(itemData.exp_date, 'dd/MM/yyyy', new Date());
 
-          if (itemData.sku && itemData.barcode && itemData.location && itemData.exp_date && !isNaN(qty)) {
+          if (itemData.sku && itemData.barcode && itemData.location && isValid(parsedDate) && !isNaN(qty)) {
             const parsedItem = {
               sku: itemData.sku,
               barcode: itemData.barcode,
@@ -281,21 +281,15 @@ export default function CreatePutawayPage() {
                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                     <div className="space-y-2">
                         <Label htmlFor="sku">SKU</Label>
-                        <Input id="sku" name="sku" placeholder="Enter SKU" value={newItem.sku} onChange={handleItemInputChange} list="sku-list" />
-                        <datalist id="sku-list">
-                            {(masterData as ProductMaster[]).map(p => <option key={p.sku} value={p.sku} />)}
-                        </datalist>
+                        <Input id="sku" name="sku" placeholder="Enter SKU" value={newItem.sku} onChange={handleItemInputChange} />
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="barcode">Barcode</Label>
-                        <Input id="barcode" name="barcode" placeholder="Enter barcode" value={newItem.barcode} onChange={handleItemInputChange} list="barcode-list"/>
-                         <datalist id="barcode-list">
-                            {(masterData as ProductMaster[]).map(p => <option key={p.barcode} value={p.barcode} />)}
-                        </datalist>
+                        <Input id="barcode" name="barcode" placeholder="Enter barcode" value={newItem.barcode} onChange={handleItemInputChange} />
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="brand">Brand</Label>
-                        <Input id="brand" name="brand" placeholder="Enter brand" value={newItem.brand} onChange={handleItemInputChange}/>
+                        <Input id="brand" name="brand" placeholder="Product brand" value={newItem.brand} onChange={handleItemInputChange}/>
                     </div>
                     <div className="space-y-2"><Label htmlFor="exp_date">EXP Date</Label><Input id="exp_date" name="exp_date" type="date" value={newItem.exp_date} onChange={handleItemInputChange}/></div>
                     <div className="space-y-2"><Label htmlFor="location">Location</Label><Input id="location" name="location" placeholder="Enter location" value={newItem.location} onChange={handleItemInputChange}/></div>
