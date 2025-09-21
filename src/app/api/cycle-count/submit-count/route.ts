@@ -47,11 +47,11 @@ export async function POST(request: Request) {
     const docsToInsert = await Promise.all(adjustments.map(async (adj: any) => {
         const qtyChange = adj.variance;
         
-        let status: 'Issue - Adjustment Manual' | 'Receipt';
+        let status: 'Adjustment - Loc' | 'Receipt';
         let prefix: string;
 
         if (qtyChange < 0) {
-            status = 'Issue - Adjustment Manual';
+            status = 'Adjustment - Loc';
             prefix = 'MP-ADJ';
         } else {
             status = 'Receipt'; // Assuming positive variance is a stock 'receipt'
