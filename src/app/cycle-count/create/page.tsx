@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -67,6 +68,12 @@ export default function CreateCycleCountPage() {
                 setAllProducts(productsData);
                 setFilteredProducts(productsData); // Initially show all
                 setAllUsers(usersData);
+                
+                // Set default due time to current time on client side
+                const now = new Date();
+                const hours = now.getHours().toString().padStart(2, '0');
+                const minutes = now.getMinutes().toString().padStart(2, '0');
+                setDueTime(`${hours}:${minutes}`);
 
             } catch (error: any) {
                 toast({ variant: 'destructive', title: 'Error', description: error.message });
