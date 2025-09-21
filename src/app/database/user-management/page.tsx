@@ -78,8 +78,8 @@ export default function DatabaseUserPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10); 
 
-    const canAddUser = currentUser?.role && ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin', 'Staff'].includes(currentUser.role);
-    const canEditUser = currentUser?.role && ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin', 'Staff'].includes(currentUser.role);
+    const canAddUser = currentUser?.role && ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin'].includes(currentUser.role);
+    const canEditUser = currentUser?.role && ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin'].includes(currentUser.role);
     const canDeleteUser = currentUser?.role === 'Super Admin';
     const isSuperAdminForRoleChange = currentUser?.role === 'Super Admin';
 

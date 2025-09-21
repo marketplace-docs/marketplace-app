@@ -339,7 +339,7 @@ export default function MonitoringManpowerPage() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="Staff">Staff</SelectItem>
-                                    <SelectItem value="Regular">Regular</SelectItem>
+                                    <SelectItem value="Reguler">Reguler</SelectItem>
                                     <SelectItem value="Event">Event</SelectItem>
                                 </SelectContent>
                             </Select>
