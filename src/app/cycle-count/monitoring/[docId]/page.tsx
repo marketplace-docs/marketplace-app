@@ -99,7 +99,7 @@ export default function CycleCountDetailPage({ params }: { params: { docId: stri
         setItems(prev => prev.map(p => {
             if (p.id === productId) {
                 const discrepancy = newCount !== null && !isNaN(newCount) ? newCount - p.stock : null;
-                return { ...p, counted_stock: newCount, discrepancy };
+                return { ...p, counted_stock: newCount, discrepancy, qty_adjust: discrepancy };
             }
             return p;
         }));
