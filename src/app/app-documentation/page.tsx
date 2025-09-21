@@ -27,19 +27,20 @@ const featureDescriptions: FeatureDescription[] = [
         description: "Modul untuk mengelola tugas-tugas administratif dan sumber daya manusia harian di gudang.",
         children: [
             { label: "Create", description: "Membuat data manpower baru untuk pekerjaan spesifik." },
-            { label: "Monitoring Manpower", description: "Melihat, mengedit, dan menghapus data manpower yang telah dibuat. Hanya Super Admin yang dapat melakukan modifikasi." },
-            { label: "Task", description: "Menampilkan daftar tanggung jawab umum untuk peran Admin." },
+            { label: "Monitoring Manpower", description: "Melihat, mengedit, dan menghapus data manpower yang telah dibuat. Hak akses disesuaikan per peran." },
+            { label: "Task", description: "Dasbor operasional yang menampilkan ringkasan semua tugas gudang yang tertunda (pending), seperti Putaway dan Cycle Count." },
         ]
     },
     {
         label: "Putaway",
         icon: NAV_LINKS.find(l => l.label === "Putaway")!.icon,
-        description: "Manajemen proses penerimaan dan penempatan barang ke lokasi penyimpanan di gudang. Input lokasi menggunakan dropdown untuk mencegah kesalahan ketik.",
+        description: "Manajemen proses penerimaan dan penempatan barang ke lokasi penyimpanan di gudang.",
         children: [
-            { label: "Create", description: "Mencatat dokumen penerimaan barang baru secara manual (hanya Super Admin)." },
-            { label: "Monitoring Document", description: "Melihat, mengedit, mengelola, dan mengunggah massal semua dokumen penerimaan barang (hanya Super Admin)." },
-            { label: "Update Expired", description: "Memperbarui lokasi, tanggal kedaluwarsa, atau memecah stok (split batch) untuk produk yang sudah ada (hanya Super Admin)." },
-            { label: "Task", description: "Menampilkan daftar tanggung jawab umum untuk proses Putaway." },
+            { label: "Create", description: "Mencatat dokumen penerimaan barang baru, mendukung input massal via CSV." },
+            { label: "Monitoring Document", description: "Melihat, mengedit, dan mengelola semua dokumen penerimaan barang." },
+            { label: "Go-Putaway", description: "Fitur untuk memindahkan stok antar lokasi gudang dengan cepat dan akurat." },
+            { label: "Update Expired", description: "Memperbarui lokasi, tanggal kedaluwarsa, atau memecah stok (split batch) untuk produk yang sudah ada." },
+            { label: "Task", description: "Menampilkan daftar dokumen putaway yang statusnya masih 'Pending' dan memerlukan tindakan segera." },
         ]
     },
     {
@@ -47,9 +48,20 @@ const featureDescriptions: FeatureDescription[] = [
         icon: NAV_LINKS.find(l => l.label === "Return")!.icon,
         description: "Mengelola proses pengembalian barang dari pelanggan atau ekspedisi.",
         children: [
-            { label: "Create", description: "Mencatat dokumen retur baru (hanya Super Admin)." },
-            { label: "Monitoring Document", description: "Melihat dan mengelola semua dokumen retur yang tercatat (hanya Super Admin)." },
+            { label: "Create", description: "Mencatat dokumen retur baru." },
+            { label: "Monitoring Document", description: "Melihat dan mengelola semua dokumen retur yang tercatat." },
             { label: "Task", description: "Menampilkan daftar tanggung jawab umum untuk proses penanganan retur." },
+        ]
+    },
+    {
+        label: "Cycle Count",
+        icon: NAV_LINKS.find(l => l.label === "Cycle Count")!.icon,
+        description: "Modul lengkap untuk manajemen stok opname (Cycle Count) dengan alur kerja terstruktur.",
+        children: [
+            { label: "Create", description: "Membuat tugas cycle count baru berdasarkan filter SKU, brand, lokasi, dll., lalu menugaskannya ke 'Person In Charge'." },
+            { label: "CC Location", description: "Fitur cepat untuk melakukan hitungan fisik langsung di sebuah lokasi. Hasilnya akan menjadi dokumen baru yang perlu divalidasi." },
+            { label: "Monitoring Cycle Count", description: "Memantau semua dokumen cycle count (Pending, In Progress, Completed). Dari sini, atasan dapat melakukan validasi hasil hitungan." },
+            { label: "Task", description: "Halaman khusus untuk 'penghitung' (counter) untuk melihat semua tugas cycle count yang ditugaskan kepada mereka." },
         ]
     },
     {
@@ -58,10 +70,10 @@ const featureDescriptions: FeatureDescription[] = [
         description: "Pusat data untuk semua informasi terkait produk, stok, dan lokasi gudang.",
         children: [
             { label: "Batch Product", description: "Menampilkan data stok terkini yang diagregasi per batch (berdasarkan lokasi & tanggal kedaluwarsa)." },
-            { label: "Product In", description: "Menampilkan total stok masuk (goods receipt) yang diagregasi per SKU." },
-            { label: "Product Out", description: "Mencatat dan menampilkan semua data barang keluar (goods issue). Pencatatan hanya bisa oleh Super Admin." },
+            { label: "Stock In", description: "Menampilkan total stok masuk (goods receipt) yang diagregasi per SKU." },
+            { label: "Stock Out", description: "Mencatat dan menampilkan semua data barang keluar (goods issue)." },
             { label: "Stock Log", description: "Menampilkan riwayat lengkap semua pergerakan stok (masuk, keluar, dan pembaruan internal)." },
-            { label: "Location", description: "Mengelola data master semua lokasi gudang. Mendukung penambahan massal via upload CSV dengan format 'name,type'." },
+            { label: "Location", description: "Mengelola data master semua lokasi gudang. Mendukung penambahan massal via upload CSV." },
         ]
     },
     {
@@ -69,8 +81,8 @@ const featureDescriptions: FeatureDescription[] = [
         icon: NAV_LINKS.find(l => l.label === "Marketplace")!.icon,
         description: "Mengelola toko dan operasional yang terkait dengan platform marketplace.",
         children: [
-            { label: "Create", description: "Mendaftarkan toko marketplace baru (hanya Super Admin)." },
-            { label: "Monitoring Store", description: "Melihat dan mengelola daftar toko yang sudah ada. Modifikasi hanya bisa oleh Super Admin." },
+            { label: "Create", description: "Mendaftarkan toko marketplace baru." },
+            { label: "Monitoring Store", description: "Melihat dan mengelola daftar toko yang sudah ada." },
             { label: "Task", description: "Menampilkan daftar tanggung jawab umum untuk operasional Marketplace." },
         ]
     },
@@ -79,17 +91,18 @@ const featureDescriptions: FeatureDescription[] = [
         icon: NAV_LINKS.find(l => l.label === "Reports")!.icon,
         description: "Menyajikan laporan dan analisis data operasional untuk pengambilan keputusan.",
         children: [
-            { label: "Backlog", description: "Menampilkan data backlog pesanan dari berbagai marketplace, lengkap dengan visualisasi grafik. Modifikasi hanya bisa oleh Super Admin." },
-            { label: "Daily Performance", description: "Melihat, menambah, dan mengelola laporan kinerja harian per individu. Modifikasi hanya bisa oleh Super Admin." },
+            { label: "Backlog", description: "Menampilkan data backlog pesanan dari berbagai marketplace, lengkap dengan visualisasi grafik." },
+            { label: "Daily Performance", description: "Melihat, menambah, dan mengelola laporan kinerja harian per individu." },
             { label: "KPI Performance", description: "Menganalisis Key Performance Indicator (KPI) tim berdasarkan data kinerja harian." },
         ]
     },
     {
         label: "Database",
         icon: NAV_LINKS.find(l => l.label === "Database")!.icon,
-        description: "Modul untuk manajemen data master, pengguna, dan hak akses sistem (khusus Super Admin).",
+        description: "Modul untuk manajemen data master, pengguna, dan hak akses sistem.",
         children: [
-            { label: "User Management", description: "Mengelola data pengguna, termasuk menambah, mengedit, dan menghapus (hanya Super Admin)." },
+             { label: "Master Product", description: "Mengelola data master produk, mendukung upload massal via CSV." },
+            { label: "User Management", description: "Mengelola data pengguna, termasuk menambah, mengedit (Super Admin bisa mengubah Role), dan menghapus (hanya Super Admin)." },
             { label: "Role", description: "Menampilkan daftar peran (role) yang ada di dalam sistem." },
             { label: "Menu Permission", description: "Mengatur hak akses setiap pengguna terhadap menu-menu di aplikasi (hanya Super Admin)." },
             { label: "Log Activity", description: "Melihat jejak audit dari semua aktivitas penting yang terjadi di sistem." },
@@ -201,3 +214,5 @@ export default function AppDocumentationPage() {
         </MainLayout>
     );
 }
+
+    
