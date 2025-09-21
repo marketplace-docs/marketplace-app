@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useCallback } from 'react';
@@ -13,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { format } from 'date-fns';
 import type { BatchProduct } from '@/types/batch-product';
 import { useAuth } from '@/hooks/use-auth';
+import { useRouter } from 'next/navigation';
 
 type CountedProduct = BatchProduct & {
     counted_stock: number | null;
@@ -26,6 +26,7 @@ export default function CCLocationPage() {
     const [products, setProducts] = useState<CountedProduct[]>([]);
     const { toast } = useToast();
     const { user } = useAuth();
+    const router = useRouter();
 
     const handleSearchLocation = async () => {
         if (!location) {
@@ -82,33 +83,49 @@ export default function CCLocationPage() {
             toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
             return;
         }
-        
-        const adjustments = products.filter(p => p.variance !== 0 && p.variance !== null);
+
+        if (products.some(p => p.counted_stock === null)) {
+            toast({ variant: 'destructive', title: 'Incomplete Count', description: 'Please enter a count for all items before submitting.' });
+            return;
+        }
 
         setIsSubmitting(true);
         
         try {
-            if (adjustments.length > 0) {
-                const response = await fetch('/api/cycle-count/submit-count', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ adjustments, user }),
-                });
+            // 1. Generate a new document number
+            const docNumResponse = await fetch('/api/cycle-count-docs/generate-number');
+            if (!docNumResponse.ok) throw new Error('Could not generate document number.');
+            const { newDocNumber } = await docNumResponse.json();
 
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Failed to submit count adjustments.');
-                }
-                
-                toast({ title: "Submission Success", description: "Stock adjustments have been successfully recorded." });
-            } else {
-                // If there are no adjustments, it means the count is correct. Still a success.
-                toast({ title: "Validation Success", description: "Stock at this location has been validated successfully. No adjustments needed." });
+            // 2. Prepare the cycle count document payload
+            const newDocPayload = {
+                no_doc: newDocNumber,
+                counter_name: user.name,
+                count_type: 'By Location',
+                items_to_count: location, // The location that was counted
+                status: 'In Progress', // Set initial status
+                notes: `Manual count from CC Location page. Counted items: ${products.map(p => `${p.sku} (Qty: ${p.counted_stock})`).join(', ')}`,
+                date: new Date().toISOString(),
+            };
+
+            // 3. Create the new cycle count document
+            const createDocResponse = await fetch('/api/cycle-count-docs', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ document: newDocPayload, user }),
+            });
+
+            if (!createDocResponse.ok) {
+                const errorData = await createDocResponse.json();
+                throw new Error(errorData.error || 'Failed to create cycle count document.');
             }
+            
+            toast({ 
+                title: "Submission Success", 
+                description: `Count for location ${location} has been submitted for validation.` 
+            });
 
-            // Reset the form regardless of adjustments
-            setLocation('');
-            setProducts([]);
+            router.push('/cycle-count/monitoring');
 
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Submission Failed', description: error.message });
@@ -191,7 +208,7 @@ export default function CCLocationPage() {
                                 <div className="flex justify-end">
                                     <Button onClick={handleSubmitCount} disabled={!allCountsEntered || isSubmitting}>
                                         {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                                        Submit Count
+                                        Submit Count for Validation
                                     </Button>
                                 </div>
                             </div>
