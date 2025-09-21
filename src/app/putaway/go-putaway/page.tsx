@@ -13,6 +13,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Combobox } from "@/components/ui/combobox";
 
 type BatchProduct = {
     id: string;
@@ -29,6 +30,12 @@ type MoveFields = {
     quantity: string;
 };
 
+type Location = {
+  id: number;
+  name: string;
+  type: string;
+};
+
 export default function GoPutawayPage() {
     const [barcode, setBarcode] = useState('');
     const [availableBatches, setAvailableBatches] = useState<BatchProduct[]>([]);
@@ -37,11 +44,33 @@ export default function GoPutawayPage() {
         destinationLocation: '',
         quantity: '',
     });
+    const [locations, setLocations] = useState<Location[]>([]);
 
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { toast } = useToast();
     const { user } = useAuth();
+    
+    useEffect(() => {
+        const fetchLocations = async () => {
+            try {
+                const response = await fetch('/api/locations');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch locations');
+                }
+                const data = await response.json();
+                setLocations(data);
+            } catch (error) {
+                console.error(error);
+                toast({
+                    variant: 'destructive',
+                    title: 'Error',
+                    description: 'Could not load location data.',
+                });
+            }
+        };
+        fetchLocations();
+    }, [toast]);
     
     const fetchProductData = useCallback(async (searchBarcode: string) => {
         if (!searchBarcode) {
@@ -245,7 +274,15 @@ export default function GoPutawayPage() {
                                          <ArrowRight className="h-6 w-6 text-muted-foreground hidden md:block" />
                                          <div className="flex-1">
                                             <Label htmlFor="destinationLocation">To Location</Label>
-                                            <Input id="destinationLocation" name="destinationLocation" placeholder="Enter new location" value={moveFields.destinationLocation} onChange={handleFieldChange} disabled={isSubmitting} />
+                                             <Combobox
+                                                items={locations.map(loc => ({ label: loc.name, value: loc.name }))}
+                                                value={moveFields.destinationLocation}
+                                                onChange={(value) => setMoveFields(prev => ({...prev, destinationLocation: value}))}
+                                                placeholder="Select location..."
+                                                searchPlaceholder="Search location..."
+                                                notFoundMessage="No location found."
+                                                disabled={isSubmitting}
+                                            />
                                         </div>
                                          <div className="flex-1">
                                             <Label htmlFor="quantity">Quantity to Move</Label>
