@@ -3,7 +3,8 @@ import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 import { logActivity } from '@/lib/logger';
 
-const UPDATE_ROLES = ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin'];
+const UPDATE_ROLES = ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin', 'Staff'];
+const DELETE_ROLES = ['Super Admin'];
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const { id } = params;
@@ -46,7 +47,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
       role: request.headers.get('X-User-Role')
   };
 
-  if (user.role !== 'Super Admin') {
+  if (!user.role || !DELETE_ROLES.includes(user.role)) {
     return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
   }
 

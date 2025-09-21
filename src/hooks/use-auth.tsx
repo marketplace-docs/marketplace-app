@@ -3,6 +3,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { logActivity } from '@/lib/logger';
+import { supabase } from '@/lib/supabase-client';
 
 type User = {
   email: string;
@@ -18,15 +19,6 @@ type AuthContextType = {
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-const allowedUsers: User[] = [
-    { email: 'arlan.saputra@marketplace.com', name: 'Arlan Saputra', role: 'Super Admin' },
-    { email: 'rudi.setiawan@marketplace.com', name: 'Rudi Setiawan', role: 'Manager' },
-    { email: 'nova.aurelia@marketplace.com', name: 'Nova Aurelia', role: 'Supervisor' },
-    { email: 'nurul.tanzilla@marketplace.com', name: 'Nurul Tanzilla', role: 'Admin' },
-    { email: 'regina.rifana@marketplace.com', name: 'Regina Rifana', role: 'Captain' },
-    { email: 'staff@marketplace.com', name: 'Staff Gudang', role: 'Staff' }
-];
 
 const validPassword = 'Marketplace@soco123!!!';
 
@@ -50,27 +42,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (credentials: { email: string; password?: string }): Promise<boolean> => {
     const lowercasedEmail = credentials.email.toLowerCase();
-    const foundUser = allowedUsers.find(u => u.email === lowercasedEmail);
-
-    if (foundUser && credentials.password === validPassword) {
-        const loggedInUser: User = { 
-            email: foundUser.email,
-            name: foundUser.name,
-            role: foundUser.role
-        };
-        setUser(loggedInUser);
-        localStorage.setItem('user', JSON.stringify(loggedInUser));
-
-        await logActivity({
-            userName: loggedInUser.name,
-            userEmail: loggedInUser.email,
-            action: 'LOGIN',
-            details: 'User logged in successfully.',
-        });
-
-        return true;
+    
+    // Check password first
+    if (credentials.password !== validPassword) {
+      return false;
     }
-    return false;
+
+    // Fetch user data from the database
+    const { data: dbUser, error } = await supabase
+      .from('users')
+      .select('name, email, role')
+      .eq('email', lowercasedEmail)
+      .single();
+
+    if (error || !dbUser) {
+      console.error("Login error or user not found in DB:", error?.message);
+      return false;
+    }
+
+    const loggedInUser: User = { 
+        email: dbUser.email,
+        name: dbUser.name,
+        role: dbUser.role
+    };
+
+    setUser(loggedInUser);
+    localStorage.setItem('user', JSON.stringify(loggedInUser));
+
+    await logActivity({
+        userName: loggedInUser.name,
+        userEmail: loggedInUser.email,
+        action: 'LOGIN',
+        details: 'User logged in successfully.',
+    });
+
+    return true;
   };
 
   const logout = async () => {
@@ -102,5 +108,3 @@ export function useAuth() {
   }
   return context;
 }
-
-    
