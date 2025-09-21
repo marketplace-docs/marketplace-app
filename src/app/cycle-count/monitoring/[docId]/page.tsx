@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -16,6 +17,7 @@ import type { BatchProduct } from '@/types/batch-product';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 type CountedItem = BatchProduct & {
     counted_stock: number | null;
@@ -27,6 +29,7 @@ type CountedItem = BatchProduct & {
 
 export default function CycleCountDetailPage({ params }: { params: { docId: string } }) {
     const { docId } = params;
+    const router = useRouter();
     const [doc, setDoc] = useState<CycleCountDoc | null>(null);
     const [items, setItems] = useState<CountedItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -39,7 +42,6 @@ export default function CycleCountDetailPage({ params }: { params: { docId: stri
         setLoading(true);
         setError(null);
         try {
-            // First, get the main document details
             const docRes = await fetch('/api/cycle-count-docs');
             if (!docRes.ok) throw new Error('Failed to fetch cycle count documents.');
             const allDocs: CycleCountDoc[] = await docRes.json();
@@ -50,7 +52,12 @@ export default function CycleCountDetailPage({ params }: { params: { docId: stri
             }
             setDoc(currentDoc);
 
-            // Then, fetch the products to be counted based on the doc type
+            if (currentDoc.status === 'Completed' || currentDoc.status === 'Cancelled') {
+                 setItems([]);
+                 setLoading(false);
+                 return;
+            }
+
             const itemsToCount = currentDoc.items_to_count.split(',').map(item => item.trim().toLowerCase());
             
             const productsRes = await fetch('/api/master-product/batch-products');
@@ -60,7 +67,7 @@ export default function CycleCountDetailPage({ params }: { params: { docId: stri
             let productsInScope: BatchProduct[] = [];
             if (currentDoc.count_type === 'By Location') {
                 productsInScope = allProducts.filter(p => itemsToCount.includes(p.location.toLowerCase()));
-            } else { // By SKU
+            } else { 
                 productsInScope = allProducts.filter(p => itemsToCount.includes(p.sku.toLowerCase()));
             }
 
@@ -111,37 +118,66 @@ export default function CycleCountDetailPage({ params }: { params: { docId: stri
         setItems(prev => prev.filter(p => p.id !== productId));
     };
 
-    const handleConfirmValid = async () => {
-        if (!user) return;
-        
-        const adjustments = items.filter(item => item.discrepancy !== 0 && item.discrepancy !== null);
-        if (adjustments.length === 0) {
-            toast({ title: 'No Adjustments Needed', description: 'All counts match system stock.' });
-            // Here you would typically update the doc status to 'Completed'
-            return;
-        }
-
+    const updateDocStatus = async (status: 'Completed' | 'Cancelled') => {
+        if (!user || !doc) return;
         setIsSubmitting(true);
         try {
-            const response = await fetch('/api/cycle-count/submit-count', {
-                method: 'POST',
+            const response = await fetch(`/api/cycle-count-docs/${doc.id}`, {
+                method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ adjustments: adjustments.map(a => ({...a, variance: a.discrepancy})), user }),
+                body: JSON.stringify({ status, user }),
             });
-
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to submit count adjustments.');
+                throw new Error(errorData.error || `Failed to update status to ${status}.`);
             }
+            toast({ title: "Status Updated", description: `Document status has been changed to ${status}.` });
+            router.push('/cycle-count/monitoring');
 
-            toast({ title: "Submission Success", description: "Stock adjustments have been successfully recorded." });
-            fetchDocDetails(); // Refetch to show updated state
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Status Update Failed', description: error.message });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+
+    const handleConfirmValid = async () => {
+        if (!user || !doc) return;
+        
+        const adjustments = items.filter(item => item.discrepancy !== 0 && item.discrepancy !== null);
+        
+        setIsSubmitting(true);
+        try {
+            if (adjustments.length > 0) {
+                 const response = await fetch('/api/cycle-count/submit-count', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ adjustments: adjustments.map(a => ({...a, variance: a.discrepancy})), user }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to submit count adjustments.');
+                }
+                toast({ title: "Adjustments Submitted", description: "Stock adjustments have been successfully recorded." });
+            } else {
+                 toast({ title: 'No Adjustments Needed', description: 'All counts match system stock.' });
+            }
+            
+            // After adjustments are (or are not) made, update status to Completed
+            await updateDocStatus('Completed');
+            
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Submission Failed', description: error.message });
         } finally {
             setIsSubmitting(false);
         }
-    }
+    };
+
+    const handleInvalidate = async () => {
+        await updateDocStatus('Cancelled');
+    };
 
 
     if (loading) {
@@ -154,6 +190,9 @@ export default function CycleCountDetailPage({ params }: { params: { docId: stri
         return <MainLayout><Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertTitle>Not Found</AlertTitle><AlertDescription>Document could not be found.</AlertDescription></Alert></MainLayout>;
     }
 
+
+    const isFinished = doc.status === 'Completed' || doc.status === 'Cancelled';
+    const allCountsEntered = items.length > 0 && items.every(p => p.counted_stock !== null);
 
     return (
         <MainLayout>
@@ -190,7 +229,13 @@ export default function CycleCountDetailPage({ params }: { params: { docId: stri
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {items.length > 0 ? items.map(item => (
+                                {isFinished ? (
+                                     <TableRow>
+                                        <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
+                                            This document is already {doc.status} and cannot be edited.
+                                        </TableCell>
+                                    </TableRow>
+                                ) : items.length > 0 ? items.map(item => (
                                     <TableRow key={item.id}>
                                         <TableCell>{doc.counter_name}</TableCell>
                                         <TableCell>
@@ -228,22 +273,25 @@ export default function CycleCountDetailPage({ params }: { params: { docId: stri
                         </Table>
                     </div>
                 </CardContent>
-                <CardFooter className="flex justify-between items-center border-t pt-6">
-                    <Button variant="destructive" outline>
-                        <X className="mr-2 h-4 w-4" /> INVALID
-                    </Button>
-                    <div className="flex items-center gap-2">
-                        <Button variant="outline" disabled={isSubmitting}>SAVE DRAFT</Button>
-                        <Button onClick={handleConfirmValid} disabled={isSubmitting}>
-                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                            CONFIRM VALID
+                {!isFinished && (
+                    <CardFooter className="flex justify-between items-center border-t pt-6">
+                        <Button variant="destructive" outline onClick={handleInvalidate} disabled={isSubmitting}>
+                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                            <X className="mr-2 h-4 w-4" /> INVALID
                         </Button>
-                        <Button variant="outline" size="icon"><Printer className="h-4 w-4" /></Button>
-                        <Button variant="outline" size="icon"><FileText className="h-4 w-4" /></Button>
-                        <Button variant="outline">ACC</Button>
-                        <Button variant="outline">RAW DATA</Button>
-                    </div>
-                </CardFooter>
+                        <div className="flex items-center gap-2">
+                            <Button variant="outline" disabled>SAVE DRAFT</Button>
+                            <Button onClick={handleConfirmValid} disabled={isSubmitting || !allCountsEntered}>
+                                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                                CONFIRM VALID
+                            </Button>
+                            <Button variant="outline" size="icon" disabled><Printer className="h-4 w-4" /></Button>
+                            <Button variant="outline" size="icon" disabled><FileText className="h-4 w-4" /></Button>
+                            <Button variant="outline" disabled>ACC</Button>
+                            <Button variant="outline" disabled>RAW DATA</Button>
+                        </div>
+                    </CardFooter>
+                )}
             </Card>
         </MainLayout>
     );
