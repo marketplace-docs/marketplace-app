@@ -52,12 +52,6 @@ export default function CycleCountDetailPage({ params }: { params: { docId: stri
             }
             setDoc(currentDoc);
 
-            if (currentDoc.status === 'Completed' || currentDoc.status === 'Cancelled') {
-                 setItems([]);
-                 setLoading(false);
-                 return;
-            }
-
             const itemsToCount = currentDoc.items_to_count.split(',').map(item => item.trim().toLowerCase());
             
             const productsRes = await fetch('/api/master-product/batch-products');
