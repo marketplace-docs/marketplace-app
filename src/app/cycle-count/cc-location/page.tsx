@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useCallback } from 'react';
@@ -81,28 +82,31 @@ export default function CCLocationPage() {
             toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
             return;
         }
-
+        
         const adjustments = products.filter(p => p.variance !== 0 && p.variance !== null);
-        if (adjustments.length === 0) {
-            toast({ title: "No Changes", description: "No stock adjustments are needed for this location." });
-            return;
-        }
 
         setIsSubmitting(true);
+        
         try {
-            const response = await fetch('/api/cycle-count/submit-count', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ adjustments, user }),
-            });
+            if (adjustments.length > 0) {
+                const response = await fetch('/api/cycle-count/submit-count', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ adjustments, user }),
+                });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to submit count adjustments.');
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to submit count adjustments.');
+                }
+                
+                toast({ title: "Submission Success", description: "Stock adjustments have been successfully recorded." });
+            } else {
+                // If there are no adjustments, it means the count is correct. Still a success.
+                toast({ title: "Validation Success", description: "Stock at this location has been validated successfully. No adjustments needed." });
             }
 
-            toast({ title: "Submission Success", description: "Stock adjustments have been successfully recorded." });
-            
+            // Reset the form regardless of adjustments
             setLocation('');
             setProducts([]);
 
