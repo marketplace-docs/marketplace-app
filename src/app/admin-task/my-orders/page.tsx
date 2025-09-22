@@ -31,13 +31,14 @@ import {
   DialogTrigger
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import type { BatchProduct } from '@/types/batch-product';
 
 
 type Order = {
   id: string;
   reference: string;
   sku: string;
-  status: 'Payment Accepted' | 'Ready To Be Shipped';
+  status: 'Payment Accepted' | 'Out of Stock';
   order_date: string;
   customer: string;
   city: string;
@@ -45,15 +46,10 @@ type Order = {
   from: string;
   delivery_type: string;
   qty: number;
+  total_stock_on_hand: number;
 };
 
-type NewOrder = Omit<Order, 'id' | 'status' | 'order_date'> & { order_date: Date };
-
-type BookedLocation = {
-  sku: string;
-  location: string;
-  qty: number;
-} | null;
+type NewOrder = Omit<Order, 'id' | 'status' | 'order_date' | 'total_stock_on_hand'> & { order_date: Date };
 
 type Filters = {
     reference: string;
@@ -80,9 +76,6 @@ export default function MyOrdersPage() {
     const [selection, setSelection] = useState<Record<string, boolean>>({});
     const fileInputRef = useRef<HTMLInputElement>(null);
     
-    const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-    const [bookedLocation, setBookedLocation] = useState<BookedLocation>(null);
-    const [isBookingLoading, setIsBookingLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isUploadDialogOpen, setUploadDialogOpen] = useState(false);
     const [isAddDialogOpen, setAddDialogOpen] = useState(false);
@@ -113,15 +106,35 @@ export default function MyOrdersPage() {
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch('/api/manual-orders');
-            if (!response.ok) throw new Error("Failed to fetch manual orders.");
-            const data = await response.json();
-             const ordersWithStatus = data.map((order: any) => ({
-                ...order,
-                status: 'Payment Accepted' as const
-            }));
+            const [ordersRes, stockRes] = await Promise.all([
+                fetch('/api/manual-orders'),
+                fetch('/api/master-product/batch-products')
+            ]);
+            
+            if (!ordersRes.ok) throw new Error("Failed to fetch manual orders.");
+            if (!stockRes.ok) throw new Error("Failed to fetch product stock.");
+
+            const ordersData = await ordersRes.json();
+            const stockData: BatchProduct[] = await stockRes.json();
+
+            // Aggregate stock by SKU
+            const stockBySku = stockData.reduce((acc, product) => {
+                acc.set(product.sku, (acc.get(product.sku) || 0) + product.stock);
+                return acc;
+            }, new Map<string, number>());
+
+            const ordersWithStatus: Order[] = ordersData.map((order: any) => {
+                const totalStock = stockBySku.get(order.sku) || 0;
+                return {
+                    ...order,
+                    status: order.qty > totalStock ? 'Out of Stock' : 'Payment Accepted',
+                    total_stock_on_hand: totalStock,
+                };
+            });
+
             setAllOrders(ordersWithStatus);
             setFilteredOrders(ordersWithStatus);
+
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -179,40 +192,6 @@ export default function MyOrdersPage() {
             deliveryType: '', dateRange: undefined, reserved: false, ecobox: false
         });
         setFilteredOrders(allOrders);
-    };
-
-
-    const handleViewBooking = async (order: Order) => {
-        setSelectedOrder(order);
-        setIsBookingLoading(true);
-        setBookedLocation(null);
-
-        try {
-            const response = await fetch('/api/master-product/batch-products');
-            if (!response.ok) throw new Error("Failed to fetch stock data.");
-            
-            const allProducts: any[] = await response.json();
-            const availableBatches = allProducts
-                .filter(p => p.stock > 0 && p.sku === order.sku)
-                .sort((a, b) => new Date(a.exp_date).getTime() - new Date(b.exp_date).getTime());
-            
-            if (availableBatches.length > 0) {
-                const bestBatch = availableBatches[0];
-                setBookedLocation({
-                    sku: bestBatch.sku,
-                    location: bestBatch.location,
-                    qty: order.qty
-                });
-            } else {
-                 setBookedLocation(null);
-            }
-
-        } catch (err: any) {
-            console.error(err);
-            setBookedLocation(null);
-        } finally {
-            setIsBookingLoading(false);
-        }
     };
     
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -528,11 +507,48 @@ export default function MyOrdersPage() {
                                         />
                                     </TableCell>
                                     <TableCell>
-                                        <Button variant="link" className="p-0 h-auto font-medium text-blue-600 hover:underline cursor-pointer" onClick={() => handleViewBooking(order)}>
-                                            {order.reference}
-                                        </Button>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                 <Button variant="link" className="p-0 h-auto font-medium text-blue-600 hover:underline cursor-pointer">
+                                                    {order.reference}
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-80">
+                                               {order.status === 'Payment Accepted' ? (
+                                                    <Table>
+                                                        <TableHeader>
+                                                            <TableRow>
+                                                                <TableHead>SKU</TableHead>
+                                                                <TableHead>QTY</TableHead>
+                                                                <TableHead>STOCK</TableHead>
+                                                                <TableHead>BY</TableHead>
+                                                            </TableRow>
+                                                        </TableHeader>
+                                                        <TableBody>
+                                                            <TableRow>
+                                                                <TableCell>{order.sku}</TableCell>
+                                                                <TableCell>{order.qty}</TableCell>
+                                                                <TableCell>{order.total_stock_on_hand}</TableCell>
+                                                                <TableCell>{user?.name}</TableCell>
+                                                            </TableRow>
+                                                        </TableBody>
+                                                    </Table>
+                                               ) : (
+                                                    <Badge variant="secondary" className="w-full justify-center text-base bg-gray-200 text-gray-800">
+                                                        Out of Stock
+                                                    </Badge>
+                                               )}
+                                            </PopoverContent>
+                                        </Popover>
                                     </TableCell>
-                                    <TableCell><Badge className={cn(order.status === 'Payment Accepted' ? 'bg-green-500 hover:bg-green-600' : 'bg-orange-500 hover:bg-orange-600', "text-white")}>{order.status}</Badge></TableCell>
+                                    <TableCell>
+                                        <Badge className={cn(
+                                            order.status === 'Payment Accepted' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600',
+                                            "text-white"
+                                        )}>
+                                            {order.status}
+                                        </Badge>
+                                    </TableCell>
                                     <TableCell>{format(new Date(order.order_date), 'yyyy-MM-dd HH:mm:ss')}</TableCell>
                                     <TableCell>{order.customer}</TableCell>
                                     <TableCell>{order.city}</TableCell>
@@ -554,48 +570,6 @@ export default function MyOrdersPage() {
                     </Table>
                 </div>
             </div>
-
-            <Dialog open={!!selectedOrder} onOpenChange={(isOpen) => !isOpen && setSelectedOrder(null)}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Booking Location for Order: {selectedOrder?.reference}</DialogTitle>
-                        <DialogDescription>
-                            The system has automatically selected the best location based on FEFO (First-Expired, First-Out).
-                        </DialogDescription>
-                    </DialogHeader>
-                    {isBookingLoading ? (
-                        <div className="h-24 flex items-center justify-center">
-                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                        </div>
-                    ) : bookedLocation ? (
-                        <div className="space-y-4 py-4">
-                            <div className="p-4 bg-muted rounded-lg">
-                                <h3 className="font-semibold text-lg text-primary">{bookedLocation.location}</h3>
-                                <p className="text-sm text-muted-foreground">Please pick from this location.</p>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p className="text-sm font-medium text-muted-foreground">SKU</p>
-                                    <p className="font-semibold">{bookedLocation.sku}</p>
-                                </div>
-                                 <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Quantity</p>
-                                    <p className="font-semibold">{bookedLocation.qty}</p>
-                                </div>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="py-4 text-center text-destructive">
-                           <p>No available stock found for this SKU.</p>
-                        </div>
-                    )}
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setSelectedOrder(null)}>Close</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
         </MainLayout>
     );
 }
-
