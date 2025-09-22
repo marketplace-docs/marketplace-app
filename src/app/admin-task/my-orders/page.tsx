@@ -6,8 +6,8 @@ import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
-import { format } from 'date-fns';
-import { Loader2, AlertCircle, PackageMinus, Search, SlidersHorizontal, Calendar as CalendarIcon, Upload, Play, Plus, HeartPulse } from 'lucide-react';
+import { format, isWithinInterval } from 'date-fns';
+import { Loader2, AlertCircle, PackageMinus, Search, SlidersHorizontal, Calendar as CalendarIcon, Upload, Play, Plus } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
@@ -55,13 +55,28 @@ type BookedLocation = {
   qty: number;
 } | null;
 
+type Filters = {
+    reference: string;
+    city: string;
+    customer: string;
+    orderType: string;
+    from: string;
+    sku: string;
+    qty: string;
+    deliveryType: string;
+    dateRange: DateRange | undefined;
+    reserved: boolean;
+    ecobox: boolean;
+};
+
+
 export default function MyOrdersPage() {
     const { user } = useAuth();
     const { toast } = useToast();
-    const [orders, setOrders] = useState<Order[]>([]);
+    const [allOrders, setAllOrders] = useState<Order[]>([]);
+    const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [dateRange, setDateRange] = useState<DateRange | undefined>();
     const [selection, setSelection] = useState<Record<string, boolean>>({});
     const fileInputRef = useRef<HTMLInputElement>(null);
     
@@ -77,6 +92,21 @@ export default function MyOrdersPage() {
       sku: '',
     });
 
+    const [filters, setFilters] = useState<Filters>({
+        reference: '',
+        city: '',
+        customer: '',
+        orderType: '',
+        from: '',
+        sku: '',
+        qty: '',
+        deliveryType: '',
+        dateRange: undefined,
+        reserved: false,
+        ecobox: false,
+    });
+
+
     const selectedCount = Object.values(selection).filter(Boolean).length;
     
     const fetchOrders = useCallback(async () => {
@@ -90,7 +120,8 @@ export default function MyOrdersPage() {
                 ...order,
                 status: 'Payment Accepted' as const
             }));
-            setOrders(ordersWithStatus);
+            setAllOrders(ordersWithStatus);
+            setFilteredOrders(ordersWithStatus);
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -101,6 +132,54 @@ export default function MyOrdersPage() {
     useEffect(() => {
         fetchOrders();
     }, [fetchOrders]);
+    
+    const handleFilterChange = (name: keyof Filters, value: any) => {
+        setFilters(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleSearch = () => {
+        let tempOrders = [...allOrders];
+
+        if (filters.reference) {
+            tempOrders = tempOrders.filter(o => o.reference.toLowerCase().includes(filters.reference.toLowerCase()));
+        }
+        if (filters.city) {
+            tempOrders = tempOrders.filter(o => o.city.toLowerCase().includes(filters.city.toLowerCase()));
+        }
+        if (filters.customer) {
+            tempOrders = tempOrders.filter(o => o.customer.toLowerCase().includes(filters.customer.toLowerCase()));
+        }
+        if (filters.sku) {
+            tempOrders = tempOrders.filter(o => o.sku.toLowerCase().includes(filters.sku.toLowerCase()));
+        }
+        if (filters.orderType) {
+            tempOrders = tempOrders.filter(o => o.type === filters.orderType);
+        }
+        if (filters.from) {
+            tempOrders = tempOrders.filter(o => o.from === filters.from);
+        }
+         if (filters.qty) {
+            tempOrders = tempOrders.filter(o => o.qty === parseInt(filters.qty, 10));
+        }
+        if (filters.deliveryType) {
+            tempOrders = tempOrders.filter(o => o.delivery_type === filters.deliveryType);
+        }
+        if (filters.dateRange?.from && filters.dateRange?.to) {
+            tempOrders = tempOrders.filter(o => {
+                const orderDate = new Date(o.order_date);
+                return isWithinInterval(orderDate, { start: filters.dateRange!.from!, end: filters.dateRange!.to! });
+            });
+        }
+        setFilteredOrders(tempOrders);
+    };
+
+    const handleReset = () => {
+        setFilters({
+            reference: '', city: '', customer: '', orderType: '', from: '', sku: '', qty: '',
+            deliveryType: '', dateRange: undefined, reserved: false, ecobox: false
+        });
+        setFilteredOrders(allOrders);
+    };
 
 
     const handleViewBooking = async (order: Order) => {
@@ -238,40 +317,64 @@ export default function MyOrdersPage() {
                         </AccordionTrigger>
                         <AccordionContent className="p-4">
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                                <Input placeholder="Reference" />
-                                <Input placeholder="City" />
-                                <Input placeholder="Customer" />
-                                <Select><SelectTrigger><SelectValue placeholder="Order Type" /></SelectTrigger><SelectContent><SelectItem value="on-sale">On Sale</SelectItem><SelectItem value="normal">Normal</SelectItem></SelectContent></Select>
-                                <Select><SelectTrigger><SelectValue placeholder="From" /></SelectTrigger><SelectContent><SelectItem value="ios">iOS</SelectItem><SelectItem value="android">Android</SelectItem></SelectContent></Select>
-                                <Input placeholder="SKU" />
-                                <Select><SelectTrigger><SelectValue placeholder="Qty" /></SelectTrigger><SelectContent><SelectItem value="1">1</SelectItem><SelectItem value="2">2</SelectItem></SelectContent></Select>
-                                <Select><SelectTrigger><SelectValue placeholder="Delivery ype" /></SelectTrigger><SelectContent><SelectItem value="regular">Regular</SelectItem><SelectItem value="express">Express</SelectItem></SelectContent></Select>
+                                <Input placeholder="Reference" value={filters.reference} onChange={(e) => handleFilterChange('reference', e.target.value)} />
+                                <Input placeholder="City" value={filters.city} onChange={(e) => handleFilterChange('city', e.target.value)} />
+                                <Input placeholder="Customer" value={filters.customer} onChange={(e) => handleFilterChange('customer', e.target.value)} />
+                                <Select value={filters.orderType} onValueChange={(value) => handleFilterChange('orderType', value)}>
+                                    <SelectTrigger><SelectValue placeholder="Order Type" /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="on-sale">On Sale</SelectItem>
+                                        <SelectItem value="normal">Normal</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Select value={filters.from} onValueChange={(value) => handleFilterChange('from', value)}>
+                                    <SelectTrigger><SelectValue placeholder="From" /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="ios">iOS</SelectItem>
+                                        <SelectItem value="android">Android</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Input placeholder="SKU" value={filters.sku} onChange={(e) => handleFilterChange('sku', e.target.value)} />
+                                <Select value={filters.qty} onValueChange={(value) => handleFilterChange('qty', value)}>
+                                    <SelectTrigger><SelectValue placeholder="Qty" /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="1">1</SelectItem>
+                                        <SelectItem value="2">2</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Select value={filters.deliveryType} onValueChange={(value) => handleFilterChange('deliveryType', value)}>
+                                    <SelectTrigger><SelectValue placeholder="Delivery Type" /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="regular">Regular</SelectItem>
+                                        <SelectItem value="express">Express</SelectItem>
+                                    </SelectContent>
+                                </Select>
                                  <Popover>
                                     <PopoverTrigger asChild>
-                                        <Button id="date" variant={"outline"} className={cn("w-full justify-start text-left font-normal", !dateRange && "text-muted-foreground")}>
+                                        <Button id="date" variant={"outline"} className={cn("w-full justify-start text-left font-normal", !filters.dateRange && "text-muted-foreground")}>
                                             <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {dateRange?.from ? (dateRange.to ? (<>{format(dateRange.from, "LLL dd, y")} - {format(dateRange.to, "LLL dd, y")}</>) : format(dateRange.from, "LLL dd, y")) : (<span>Order Date From Date</span>)}
+                                            {filters.dateRange?.from ? (filters.dateRange.to ? (<>{format(filters.dateRange.from, "LLL dd, y")} - {format(filters.dateRange.to, "LLL dd, y")}</>) : format(filters.dateRange.from, "LLL dd, y")) : (<span>Order Date From Date</span>)}
                                         </Button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start"><Calendar initialFocus mode="range" defaultMonth={dateRange?.from} selected={dateRange} onSelect={setDateRange} numberOfMonths={2}/></PopoverContent>
+                                    <PopoverContent className="w-auto p-0" align="start"><Calendar initialFocus mode="range" defaultMonth={filters.dateRange?.from} selected={filters.dateRange} onSelect={(value) => handleFilterChange('dateRange', value)} numberOfMonths={2}/></PopoverContent>
                                 </Popover>
                                 <Popover>
                                     <PopoverTrigger asChild>
-                                        <Button id="date-to" variant={"outline"} className={cn("w-full justify-start text-left font-normal", !dateRange?.to && "text-muted-foreground")}>
+                                        <Button id="date-to" variant={"outline"} className={cn("w-full justify-start text-left font-normal", !filters.dateRange?.to && "text-muted-foreground")}>
                                             <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {dateRange?.to ? format(dateRange.to, "LLL dd, y") : <span>Order Date To Date</span>}
+                                            {filters.dateRange?.to ? format(filters.dateRange.to, "LLL dd, y") : <span>Order Date To Date</span>}
                                         </Button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="end"><Calendar initialFocus mode="single" selected={dateRange?.to} onSelect={(day) => setDateRange(prev => ({...prev, to: day}))} /></PopoverContent>
+                                    <PopoverContent className="w-auto p-0" align="end"><Calendar initialFocus mode="single" selected={filters.dateRange?.to} onSelect={(day) => handleFilterChange('dateRange', {...filters.dateRange, to: day})} /></PopoverContent>
                                 </Popover>
-                                <div className="flex items-center space-x-2"><Switch id="reserved" /><Label htmlFor="reserved">Reserved</Label></div>
-                                <div className="flex items-center space-x-2"><Switch id="ecobox" /><Label htmlFor="ecobox">Ecobox</Label></div>
+                                <div className="flex items-center space-x-2"><Switch id="reserved" checked={filters.reserved} onCheckedChange={(value) => handleFilterChange('reserved', value)} /><Label htmlFor="reserved">Reserved</Label></div>
+                                <div className="flex items-center space-x-2"><Switch id="ecobox" checked={filters.ecobox} onCheckedChange={(value) => handleFilterChange('ecobox', value)} /><Label htmlFor="ecobox">Ecobox</Label></div>
                             </div>
                             <div className="flex items-center justify-between mt-4">
                                 <div className="flex items-center space-x-2"><Switch id="always-open" defaultChecked /><Label htmlFor="always-open">Always open</Label></div>
                                 <div className="flex gap-2">
-                                    <Button variant="outline">RESET</Button>
-                                    <Button><Search className="mr-2 h-4 w-4" /> SEARCH</Button>
+                                    <Button variant="outline" onClick={handleReset}>RESET</Button>
+                                    <Button onClick={handleSearch}><Search className="mr-2 h-4 w-4" /> SEARCH</Button>
                                 </div>
                             </div>
                         </AccordionContent>
@@ -377,11 +480,11 @@ export default function MyOrdersPage() {
                             <TableRow>
                                 <TableHead className="w-12">
                                     <Checkbox
-                                        checked={selectedCount === orders.length && orders.length > 0}
+                                        checked={selectedCount === filteredOrders.length && filteredOrders.length > 0}
                                         onCheckedChange={(checked) => {
                                             const newSelection: Record<string, boolean> = {};
                                             if (checked) {
-                                                orders.forEach(o => newSelection[o.id] = true);
+                                                filteredOrders.forEach(o => newSelection[o.id] = true);
                                             }
                                             setSelection(newSelection);
                                         }}
@@ -415,8 +518,8 @@ export default function MyOrdersPage() {
                                         </Alert>
                                     </TableCell>
                                 </TableRow>
-                            ) : orders.length > 0 ? (
-                                orders.map(order => (
+                            ) : filteredOrders.length > 0 ? (
+                                filteredOrders.map(order => (
                                 <TableRow key={order.id} data-state={selection[order.id] && "selected"}>
                                     <TableCell>
                                         <Checkbox
