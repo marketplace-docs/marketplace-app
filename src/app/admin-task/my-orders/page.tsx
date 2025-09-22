@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import { Loader2, AlertCircle, PackageMinus, Search, SlidersHorizontal, Calendar as CalendarIcon, Upload, Play } from 'lucide-react';
+import { Loader2, AlertCircle, PackageMinus, Search, SlidersHorizontal, Calendar as CalendarIcon, Upload, Play, Plus } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
@@ -46,6 +46,8 @@ type Order = {
   qty: number;
 };
 
+type NewOrder = Omit<Order, 'id' | 'status' | 'order_date'> & { order_date: Date };
+
 type BookedLocation = {
   sku: string;
   location: string;
@@ -67,7 +69,12 @@ export default function MyOrdersPage() {
     const [isBookingLoading, setIsBookingLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isUploadDialogOpen, setUploadDialogOpen] = useState(false);
-    
+    const [isAddDialogOpen, setAddDialogOpen] = useState(false);
+
+    const [newOrder, setNewOrder] = useState<Partial<NewOrder>>({
+      qty: 1,
+    });
+
     const selectedCount = Object.values(selection).filter(Boolean).length;
     
     const fetchOrders = useCallback(async () => {
@@ -171,6 +178,48 @@ export default function MyOrdersPage() {
         }
     };
 
+    const handleAddManualOrder = async () => {
+      if (!user) return;
+      setIsSubmitting(true);
+      try {
+        const payload = [{
+          ...newOrder,
+          order_date: new Date().toISOString()
+        }]
+        const response = await fetch('/api/manual-orders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ordersToInsert: payload,
+                user,
+            }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to add manual order.');
+        }
+
+        await fetchOrders();
+        setAddDialogOpen(false);
+        setNewOrder({ qty: 1 });
+
+        toast({
+            title: 'Success',
+            description: 'Manual order has been added.',
+        });
+
+      } catch (error: any) {
+          toast({
+              variant: 'destructive',
+              title: 'Failed to Add',
+              description: error.message,
+          });
+      } finally {
+          setIsSubmitting(false);
+      }
+    };
+
 
     return (
         <MainLayout>
@@ -238,28 +287,77 @@ export default function MyOrdersPage() {
                                 <div className="flex items-center space-x-2"><Label htmlFor="bulk-mode">Bulk Mode</Label><Switch id="bulk-mode" /></div>
                            </div>
                             <div className="flex-1 w-full border-t sm:border-t-0 sm:border-l sm:pl-4 sm:ml-4 flex items-center justify-between">
-                                <Dialog open={isUploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-                                    <DialogTrigger asChild>
-                                        <Button variant="link" className="text-violet-600"><Upload className="mr-2 h-4 w-4"/>UPLOAD MANUAL ORDER</Button>
-                                    </DialogTrigger>
-                                    <DialogContent>
-                                        <DialogHeader>
-                                            <DialogTitle>Upload Manual Orders</DialogTitle>
-                                            <DialogDescription>
-                                                Select a CSV file to bulk upload manual orders. Ensure the file has the correct columns.
-                                            </DialogDescription>
-                                        </DialogHeader>
-                                        <div className="py-4">
-                                           <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
-                                           <Button onClick={() => fileInputRef.current?.click()} className="w-full" disabled={isSubmitting}>
-                                                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Choose File'}
-                                           </Button>
-                                            <p className="text-xs text-muted-foreground mt-2">
-                                                Don't have a template? <a href="/templates/manual_orders_template.csv" download className="underline text-primary">Download CSV template</a>
-                                            </p>
-                                        </div>
-                                    </DialogContent>
-                                </Dialog>
+                                <div className="flex items-center gap-2">
+                                    <Dialog open={isAddDialogOpen} onOpenChange={setAddDialogOpen}>
+                                        <DialogTrigger asChild>
+                                             <Button variant="link" className="text-violet-600"><Plus className="mr-2 h-4 w-4"/>ADD MANUAL ORDER</Button>
+                                        </DialogTrigger>
+                                        <DialogContent>
+                                            <DialogHeader>
+                                                <DialogTitle>Add Manual Order</DialogTitle>
+                                            </DialogHeader>
+                                            <div className="grid gap-4 py-4">
+                                                <div className="grid grid-cols-4 items-center gap-4">
+                                                    <Label htmlFor="reference" className="text-right">Reference</Label>
+                                                    <Input id="reference" value={newOrder.reference || ''} onChange={(e) => setNewOrder({...newOrder, reference: e.target.value})} className="col-span-3" />
+                                                </div>
+                                                <div className="grid grid-cols-4 items-center gap-4">
+                                                    <Label htmlFor="customer" className="text-right">Customer</Label>
+                                                    <Input id="customer" value={newOrder.customer || ''} onChange={(e) => setNewOrder({...newOrder, customer: e.target.value})} className="col-span-3" />
+                                                </div>
+                                                <div className="grid grid-cols-4 items-center gap-4">
+                                                    <Label htmlFor="city" className="text-right">City</Label>
+                                                    <Input id="city" value={newOrder.city || ''} onChange={(e) => setNewOrder({...newOrder, city: e.target.value})} className="col-span-3" />
+                                                </div>
+                                                <div className="grid grid-cols-4 items-center gap-4">
+                                                    <Label htmlFor="type" className="text-right">Type</Label>
+                                                    <Input id="type" value={newOrder.type || ''} onChange={(e) => setNewOrder({...newOrder, type: e.target.value})} className="col-span-3" />
+                                                </div>
+                                                <div className="grid grid-cols-4 items-center gap-4">
+                                                    <Label htmlFor="from" className="text-right">From</Label>
+                                                    <Input id="from" value={newOrder.from || ''} onChange={(e) => setNewOrder({...newOrder, from: e.target.value})} className="col-span-3" />
+                                                </div>
+                                                <div className="grid grid-cols-4 items-center gap-4">
+                                                    <Label htmlFor="delivery_type" className="text-right">Delivery Type</Label>
+                                                    <Input id="delivery_type" value={newOrder.delivery_type || ''} onChange={(e) => setNewOrder({...newOrder, delivery_type: e.target.value})} className="col-span-3" />
+                                                </div>
+                                                <div className="grid grid-cols-4 items-center gap-4">
+                                                    <Label htmlFor="qty" className="text-right">Qty</Label>
+                                                    <Input id="qty" type="number" value={newOrder.qty || 1} onChange={(e) => setNewOrder({...newOrder, qty: parseInt(e.target.value) || 1})} className="col-span-3" />
+                                                </div>
+                                            </div>
+                                            <DialogFooter>
+                                                <Button variant="outline" onClick={() => setAddDialogOpen(false)}>Cancel</Button>
+                                                <Button onClick={handleAddManualOrder} disabled={isSubmitting}>
+                                                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                  Submit
+                                                </Button>
+                                            </DialogFooter>
+                                        </DialogContent>
+                                    </Dialog>
+                                    <Dialog open={isUploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+                                        <DialogTrigger asChild>
+                                            <Button variant="link" className="text-violet-600"><Upload className="mr-2 h-4 w-4"/>UPLOAD MANUAL ORDER</Button>
+                                        </DialogTrigger>
+                                        <DialogContent>
+                                            <DialogHeader>
+                                                <DialogTitle>Upload Manual Orders</DialogTitle>
+                                                <DialogDescription>
+                                                    Select a CSV file to bulk upload manual orders. Ensure the file has the correct columns.
+                                                </DialogDescription>
+                                            </DialogHeader>
+                                            <div className="py-4">
+                                               <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
+                                               <Button onClick={() => fileInputRef.current?.click()} className="w-full" disabled={isSubmitting}>
+                                                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Choose File'}
+                                               </Button>
+                                                <p className="text-xs text-muted-foreground mt-2">
+                                                    Don't have a template? <a href="/templates/manual_orders_template.csv" download className="underline text-primary">Download CSV template</a>
+                                                </p>
+                                            </div>
+                                        </DialogContent>
+                                    </Dialog>
+                                </div>
 
                                 <div className="flex items-center gap-4">
                                     <p className="text-sm font-semibold">SELECTED: <span className="text-green-600">{selectedCount} ORDER</span></p>

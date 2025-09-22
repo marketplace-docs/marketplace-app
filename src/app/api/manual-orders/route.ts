@@ -19,6 +19,34 @@ export async function GET() {
 
 
 export async function POST(request: Request) {
+    const body = await request.json().catch(() => null);
+
+    // Handle single manual order from dialog
+    if (body && body.ordersToInsert) {
+      const { ordersToInsert, user } = body;
+        if (!user) {
+          return NextResponse.json({ error: 'User data is missing.' }, { status: 400 });
+        }
+        const { data, error } = await supabaseService
+            .from('manual_orders')
+            .insert(ordersToInsert)
+            .select();
+
+        if (error) {
+            return NextResponse.json({ error: error.message }, { status: 500 });
+        }
+        
+        await logActivity({
+            userName: user.name,
+            userEmail: user.email,
+            action: 'CREATE_MANUAL_ORDER',
+            details: `Created manual order: ${ordersToInsert[0].reference}`,
+        });
+
+        return NextResponse.json({ message: 'Order created', data }, { status: 201 });
+    }
+    
+    // Handle bulk upload from CSV
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
     const userJson = formData.get('user') as string | null;
