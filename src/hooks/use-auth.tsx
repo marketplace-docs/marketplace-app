@@ -41,12 +41,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (credentials: { email: string; password?: string }): Promise<boolean> => {
-    const lowercasedEmail = credentials.email.toLowerCase();
     
     // Check password first
     if (credentials.password !== validPassword) {
       return false;
     }
+    const lowercasedEmail = credentials.email.toLowerCase();
 
     // Fetch user data from the database
     const { data: dbUser, error } = await supabase
