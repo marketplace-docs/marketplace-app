@@ -4,6 +4,7 @@
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 import { logActivity } from '@/lib/logger';
+import { format } from 'date-fns';
 
 type ProductOutStatus =
     | 'Issue - Order'
@@ -21,7 +22,7 @@ type ProductOutStatus =
     | 'Receipt'
     | 'Adjusment - Loc';
 
-type AggregatedProduct = {
+type BatchProduct = {
     id: string;
     sku: string;
     barcode: string;
@@ -30,6 +31,32 @@ type AggregatedProduct = {
     location: string;
     stock: number;
 };
+
+// Helper function to create a unique key for each stock batch
+const createStockKey = (barcode: string, location: string, exp_date: string): string => {
+    const loc = location || 'no-location';
+    let exp = 'no-exp-date';
+    try {
+        if (exp_date) {
+            exp = format(new Date(exp_date), 'yyyy-MM-dd');
+        }
+    } catch (e) {
+        exp = 'invalid-date';
+    }
+    return `${barcode}|${loc}|${exp}`;
+};
+
+// Define statuses that represent a DECREASE in stock.
+const REAL_STOCK_OUT_STATUSES = [
+    'Issue - Order',
+    'Issue - Internal Transfer',
+    'Issue - Adjustment Manual',
+    'Issue - Putaway',
+    'Issue - Return',
+    'Issue - Return Putaway',
+    'Issue - Update Expired',
+];
+
 
 async function generateNewDocumentNumber(status: ProductOutStatus): Promise<string> {
     const year = new Date().getFullYear();
@@ -100,78 +127,99 @@ export async function POST(request: Request) {
             const entry: { [key: string]: string } = {};
             header.forEach((h, j) => entry[h] = values[j]?.trim().replace(/"/g, ''));
 
-            const qty = parseInt(entry.qty, 10);
+            let requestedQty = parseInt(entry.qty, 10);
 
-            if (!entry.barcode || isNaN(qty) || !entry.status) {
+            if (!entry.barcode || isNaN(requestedQty) || !entry.status) {
                 failedRows.push({ row: i + 2, reason: 'Missing required data (barcode, qty, or status).' });
                 continue;
             }
+             if (requestedQty <= 0) {
+                failedRows.push({ row: i + 2, reason: 'Quantity must be greater than 0.' });
+                continue;
+            }
+
 
             try {
-                // Fetch available batches for the barcode
-                const { data: batches, error: batchError } = await supabaseService
-                    .from('putaway_documents')
-                    .select('sku, exp_date, location, qty')
-                    .eq('barcode', entry.barcode);
+                // Fetch all stock movements for the given barcode
+                const [
+                    { data: putawayData, error: putawayError },
+                    { data: productOutData, error: productOutError }
+                ] = await Promise.all([
+                    supabaseService.from('putaway_documents').select('sku, brand, exp_date, location, qty, date').eq('barcode', entry.barcode),
+                    supabaseService.from('product_out_documents').select('location, qty, expdate, date, status').eq('barcode', entry.barcode)
+                ]);
 
-                if (batchError) throw batchError;
-
-                const { data: outBatches } = await supabaseService
-                    .from('product_out_documents')
-                    .select('location, expdate, qty')
-                    .eq('barcode', entry.barcode);
+                if (putawayError || productOutError) {
+                    throw new Error('Database error fetching stock data.');
+                }
                 
+                // Calculate current stock levels for each batch
                 const stockMap = new Map<string, number>();
-                batches.forEach(b => {
-                    const key = `${b.location}|${b.exp_date}`;
-                    stockMap.set(key, (stockMap.get(key) || 0) + b.qty);
+
+                putawayData.forEach(p => {
+                    const key = createStockKey(entry.barcode, p.location, p.exp_date);
+                    stockMap.set(key, (stockMap.get(key) || 0) + p.qty);
                 });
 
-                outBatches?.forEach(ob => {
-                    const key = `${ob.location}|${ob.expdate}`;
-                    stockMap.set(key, (stockMap.get(key) || 0) - ob.qty);
+                productOutData.forEach(p => {
+                    if (REAL_STOCK_OUT_STATUSES.includes(p.status)) {
+                        const key = createStockKey(entry.barcode, p.location, p.expdate);
+                        stockMap.set(key, (stockMap.get(key) || 0) - p.qty);
+                    }
                 });
 
-                const availableBatches: AggregatedProduct[] = Array.from(stockMap.entries())
-                    .map(([key, stock]) => {
-                        const [location, exp_date] = key.split('|');
-                        const batchInfo = batches.find(b => b.location === location && b.exp_date === exp_date);
-                        return {
-                            id: key,
-                            sku: batchInfo?.sku || '',
-                            barcode: entry.barcode,
-                            brand: '',
-                            exp_date,
-                            location,
-                            stock,
-                        };
-                    })
-                    .filter(b => b.stock > 0)
-                    .sort((a, b) => new Date(a.exp_date).getTime() - new Date(b.exp_date).getTime());
+                const allAvailableBatches: BatchProduct[] = [];
+                putawayData.forEach(p => {
+                     const key = createStockKey(entry.barcode, p.location, p.exp_date);
+                     const stock = stockMap.get(key) || 0;
+                     if (stock > 0) {
+                        // Check if this exact batch is already in the list to avoid duplicates
+                        if (!allAvailableBatches.some(b => b.id === key)) {
+                            allAvailableBatches.push({
+                                id: key,
+                                sku: p.sku,
+                                barcode: entry.barcode,
+                                brand: p.brand || '',
+                                exp_date: p.exp_date,
+                                location: p.location,
+                                stock: stock,
+                            });
+                        }
+                     }
+                });
                 
-                if (availableBatches.length === 0) {
-                    failedRows.push({ row: i + 2, reason: `No available stock for barcode ${entry.barcode}.` });
+                // --- Cascading FEFO Logic ---
+                const sortedBatches = allAvailableBatches.sort((a, b) => new Date(a.exp_date).getTime() - new Date(b.exp_date).getTime());
+                
+                const totalStockAvailable = sortedBatches.reduce((sum, batch) => sum + batch.stock, 0);
+
+                if (totalStockAvailable < requestedQty) {
+                    failedRows.push({ row: i + 2, reason: `Insufficient stock for barcode ${entry.barcode}. Required: ${requestedQty}, Available: ${totalStockAvailable}.` });
                     continue;
                 }
+                
+                let remainingQtyToTake = requestedQty;
+                
+                for (const batch of sortedBatches) {
+                    if (remainingQtyToTake <= 0) break;
 
-                const bestBatch = availableBatches[0];
-                if (qty > bestBatch.stock) {
-                    failedRows.push({ row: i + 2, reason: `Qty ${qty} exceeds stock ${bestBatch.stock} for barcode ${entry.barcode}.` });
-                    continue;
+                    const qtyFromThisBatch = Math.min(remainingQtyToTake, batch.stock);
+
+                    const docNumber = await generateNewDocumentNumber(entry.status as ProductOutStatus);
+                    validDocsToInsert.push({
+                        nodocument: docNumber,
+                        sku: batch.sku,
+                        barcode: entry.barcode,
+                        expdate: batch.exp_date,
+                        location: batch.location,
+                        qty: qtyFromThisBatch,
+                        status: entry.status as ProductOutStatus,
+                        date: new Date().toISOString(),
+                        validatedby: user.name,
+                    });
+                    
+                    remainingQtyToTake -= qtyFromThisBatch;
                 }
-
-                const docNumber = await generateNewDocumentNumber(entry.status as ProductOutStatus);
-                validDocsToInsert.push({
-                    nodocument: docNumber,
-                    sku: bestBatch.sku,
-                    barcode: entry.barcode,
-                    expdate: bestBatch.exp_date,
-                    location: bestBatch.location,
-                    qty,
-                    status: entry.status as ProductOutStatus,
-                    date: new Date().toISOString(),
-                    validatedby: user.name,
-                });
 
             } catch (processingError: any) {
                 failedRows.push({ row: i + 2, reason: `Error processing barcode ${entry.barcode}: ${processingError.message}` });
