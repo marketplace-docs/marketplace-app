@@ -1,215 +1,211 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import { Loader2, AlertCircle, ChevronLeft, ChevronRight, PackageMinus } from 'lucide-react';
+import { Loader2, AlertCircle, PackageMinus, Search, SlidersHorizontal, Calendar as CalendarIcon, HeartPulse, Play } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { DateRange } from 'react-day-picker';
+import { cn } from '@/lib/utils';
+import { Checkbox } from '@/components/ui/checkbox';
 
-type ProductOutDocument = {
-    id: string;
-    nodocument: string;
-    sku: string;
-    barcode: string;
-    expdate: string;
-    location: string;
-    qty: number;
-    status: string;
-    date: string; 
-    validatedby: string;
+
+type Order = {
+  id: string;
+  reference: string;
+  status: 'Payment Accepted' | 'Ready To Be Shipped';
+  orderDate: string;
+  customer: string;
+  city: string;
+  type: string;
+  from: string;
+  deliveryType: string;
+  qty: number;
 };
 
-const statusOptions = [
-    'All',
-    'Issue - Order', 
-    'Issue - Internal Transfer', 
-    'Issue - Adjustment Manual',
-    'Adjustment - Loc',
-    'Adjustment - SKU',
-    'Issue - Putaway',
-    'Receipt - Putaway',
-    'Issue - Return',
-    'Issue - Return Putaway',
-    'Issue - Update Expired',
-    'Receipt - Update Expired',
-    'Receipt - Outbound Return',
-    'Receipt',
-    'Adjusment - Loc'
+const mockOrders: Order[] = [
+    { id: '1', reference: 'IVMPTNEIQ', status: 'Payment Accepted', orderDate: '2025-09-22 11:08:01', customer: 'Aydelin Sgi', city: 'Brebes', type: 'On Sale', from: 'ios', deliveryType: 'regular', qty: 1 },
+    { id: '2', reference: 'IVMPTNEIR', status: 'Ready To Be Shipped', orderDate: '2025-09-22 10:30:00', customer: 'John Doe', city: 'Jakarta', type: 'Normal', from: 'android', deliveryType: 'express', qty: 2 },
 ];
 
 
 export default function MyOrdersPage() {
     const { user } = useAuth();
-    const [myOrders, setMyOrders] = useState<ProductOutDocument[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [orders, setOrders] = useState<Order[]>(mockOrders);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [dateRange, setDateRange] = useState<DateRange | undefined>();
+    const [selection, setSelection] = useState<Record<string, boolean>>({});
 
-    const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState('All');
-
-    const [currentPage, setCurrentPage] = useState(1);
-    const [rowsPerPage, setRowsPerPage] = useState(10);
-
-    const fetchMyOrders = useCallback(async () => {
-        if (!user) return;
-        setLoading(true);
-        setError(null);
-        try {
-            const response = await fetch('/api/product-out-documents');
-            if (!response.ok) {
-                throw new Error('Failed to fetch product out documents');
-            }
-            const allDocs: ProductOutDocument[] = await response.json();
-            const userOrders = allDocs.filter(doc => doc.validatedby === user.name);
-            setMyOrders(userOrders);
-        } catch (err: any) {
-            setError(err.message);
-        } finally {
-            setLoading(false);
-        }
-    }, [user]);
-
-    useEffect(() => {
-        fetchMyOrders();
-    }, [fetchMyOrders]);
-    
-    const filteredOrders = useMemo(() => {
-        return myOrders.filter(order => {
-            const matchesSearch = order.nodocument.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                  order.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                  order.barcode.toLowerCase().includes(searchTerm.toLowerCase());
-            const matchesStatus = statusFilter === 'All' || order.status === statusFilter;
-            return matchesSearch && matchesStatus;
-        });
-    }, [myOrders, searchTerm, statusFilter]);
-
-    const totalPages = Math.ceil(filteredOrders.length / rowsPerPage);
-    const paginatedOrders = filteredOrders.slice(
-        (currentPage - 1) * rowsPerPage,
-        currentPage * rowsPerPage
-    );
-
-     const handleNextPage = () => {
-        setCurrentPage((prev) => (prev < totalPages ? prev + 1 : prev));
-    };
-
-    const handlePrevPage = () => {
-        setCurrentPage((prev) => (prev > 1 ? prev - 1 : prev));
-    };
-
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [rowsPerPage, searchTerm, statusFilter]);
-
+    const selectedCount = Object.values(selection).filter(Boolean).length;
 
     return (
         <MainLayout>
              <div className="w-full space-y-6">
-                <h1 className="text-2xl font-bold">My Orders</h1>
+                <div>
+                    <h1 className="text-2xl font-bold">Create Wave eCommerce</h1>
+                    <p className="text-sm text-muted-foreground">Only order with <span className="font-semibold text-primary">Payment accepted</span>, and <span className="font-semibold text-primary">Ready To Be Shipped</span> can be proceesed</p>
+                </div>
+                
+                <Accordion type="single" collapsible defaultValue='filter' className="w-full">
+                    <AccordionItem value="filter" className="border rounded-lg">
+                        <AccordionTrigger className="p-4 bg-muted/50 rounded-t-lg hover:no-underline">
+                            <div className='flex items-center gap-2'>
+                                <SlidersHorizontal className="h-5 w-5" />
+                                <span className="font-semibold">Filter</span>
+                            </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="p-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                                <Input placeholder="Reference" />
+                                <Input placeholder="City" />
+                                <Input placeholder="Customer" />
+                                <Select><SelectTrigger><SelectValue placeholder="Order Type" /></SelectTrigger><SelectContent><SelectItem value="on-sale">On Sale</SelectItem><SelectItem value="normal">Normal</SelectItem></SelectContent></Select>
+                                <Select><SelectTrigger><SelectValue placeholder="From" /></SelectTrigger><SelectContent><SelectItem value="ios">iOS</SelectItem><SelectItem value="android">Android</SelectItem></SelectContent></Select>
+                                <Input placeholder="SKU" />
+                                <Select><SelectTrigger><SelectValue placeholder="Qty" /></SelectTrigger><SelectContent><SelectItem value="1">1</SelectItem><SelectItem value="2">2</SelectItem></SelectContent></Select>
+                                <Select><SelectTrigger><SelectValue placeholder="Delivery ype" /></SelectTrigger><SelectContent><SelectItem value="regular">Regular</SelectItem><SelectItem value="express">Express</SelectItem></SelectContent></Select>
+                                 <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button id="date" variant={"outline"} className={cn("w-full justify-start text-left font-normal", !dateRange && "text-muted-foreground")}>
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            {dateRange?.from ? (dateRange.to ? (<>{format(dateRange.from, "LLL dd, y")} - {format(dateRange.to, "LLL dd, y")}</>) : format(dateRange.from, "LLL dd, y")) : (<span>Order Date From Date</span>)}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start"><Calendar initialFocus mode="range" defaultMonth={dateRange?.from} selected={dateRange} onSelect={setDateRange} numberOfMonths={2}/></PopoverContent>
+                                </Popover>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button id="date-to" variant={"outline"} className={cn("w-full justify-start text-left font-normal", !dateRange?.to && "text-muted-foreground")}>
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            {dateRange?.to ? format(dateRange.to, "LLL dd, y") : <span>Order Date To Date</span>}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="end"><Calendar initialFocus mode="single" selected={dateRange?.to} onSelect={(day) => setDateRange(prev => ({...prev, to: day}))} /></PopoverContent>
+                                </Popover>
+                                <div className="flex items-center space-x-2"><Switch id="reserved" /><Label htmlFor="reserved">Reserved</Label></div>
+                                <div className="flex items-center space-x-2"><Switch id="ecobox" /><Label htmlFor="ecobox">Ecobox</Label></div>
+                            </div>
+                            <div className="flex items-center justify-between mt-4">
+                                <div className="flex items-center space-x-2"><Switch id="always-open" defaultChecked /><Label htmlFor="always-open">Always open</Label></div>
+                                <div className="flex gap-2">
+                                    <Button variant="outline">RESET</Button>
+                                    <Button><Search className="mr-2 h-4 w-4" /> SEARCH</Button>
+                                </div>
+                            </div>
+                        </AccordionContent>
+                    </AccordionItem>
+                </Accordion>
+
                 <Card>
-                    <CardHeader>
-                        <CardTitle>My Validated Goods Issues</CardTitle>
-                        <CardDescription>A list of all "product out" documents that you have validated.</CardDescription>
-                         <div className="flex items-center gap-2 pt-4">
-                            <Input 
-                                placeholder="Search document, SKU, or barcode..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="max-w-sm"
-                            />
-                             <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                <SelectTrigger className="w-[220px]">
-                                    <SelectValue placeholder="Filter by status" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {statusOptions.map(option => (
-                                        <SelectItem key={option} value={option}>{option}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                    <CardContent className="p-4">
+                        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                           <div className="flex items-center gap-8">
+                                <div className="flex items-center space-x-2"><Label htmlFor="aisle-mode">Aisle Mode</Label><Switch id="aisle-mode" /></div>
+                                <div className="flex items-center space-x-2"><Label htmlFor="bulk-mode">Bulk Mode</Label><Switch id="bulk-mode" /></div>
+                           </div>
+                            <div className="flex-1 w-full border-t sm:border-t-0 sm:border-l sm:pl-4 sm:ml-4 flex items-center justify-between">
+                                <Button variant="link" className="text-violet-600"><HeartPulse className="mr-2"/>TRANSFER ORDER</Button>
+                                <div className="flex items-center gap-4">
+                                    <p className="text-sm font-semibold">SELECTED: <span className="text-green-600">{selectedCount} ORDER</span></p>
+                                    <Button variant="link" className="text-blue-600 font-bold"><Play className="mr-2"/>START WAVE</Button>
+                                </div>
+                            </div>
                         </div>
-                    </CardHeader>
-                    <CardContent>
-                         {loading ? (
-                            <div className="flex justify-center items-center h-64">
-                                <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                            </div>
-                        ) : error ? (
-                             <Alert variant="destructive">
-                                <AlertCircle className="h-4 w-4" />
-                                <AlertTitle>Error</AlertTitle>
-                                <AlertDescription>{error}</AlertDescription>
-                            </Alert>
-                        ) : paginatedOrders.length > 0 ? (
-                           <>
-                            <div className="border rounded-lg">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Document</TableHead>
-                                            <TableHead>Date</TableHead>
-                                            <TableHead>SKU</TableHead>
-                                            <TableHead>Location</TableHead>
-                                            <TableHead>QTY</TableHead>
-                                            <TableHead>Status</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {paginatedOrders.map(order => (
-                                            <TableRow key={order.id}>
-                                                <TableCell className="font-medium">{order.nodocument}</TableCell>
-                                                <TableCell>{format(new Date(order.date), 'dd/MM/yyyy HH:mm')}</TableCell>
-                                                <TableCell>{order.sku}</TableCell>
-                                                <TableCell>{order.location}</TableCell>
-                                                <TableCell><Badge>{order.qty}</Badge></TableCell>
-                                                <TableCell><Badge variant="secondary">{order.status}</Badge></TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </div>
-                             <div className="flex items-center justify-end space-x-2 py-4">
-                                <div className="flex-1 text-sm text-muted-foreground">
-                                    Page {filteredOrders.length > 0 ? currentPage : 0} of {totalPages}
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                    <span className="text-sm text-muted-foreground">Rows per page:</span>
-                                    <Select
-                                        value={`${rowsPerPage}`}
-                                        onValueChange={(value) => setRowsPerPage(Number(value))}
-                                    >
-                                        <SelectTrigger className="h-8 w-[70px]"><SelectValue placeholder={rowsPerPage} /></SelectTrigger>
-                                        <SelectContent side="top">
-                                            {[10, 25, 50].map((size) => <SelectItem key={size} value={`${size}`}>{size}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <Button variant="outline" size="sm" onClick={handlePrevPage} disabled={currentPage === 1}>
-                                    <ChevronLeft className="h-4 w-4" />
-                                </Button>
-                                <Button variant="outline" size="sm" onClick={handleNextPage} disabled={currentPage === totalPages || totalPages === 0}>
-                                    <ChevronRight className="h-4 w-4" />
-                                </Button>
-                            </div>
-                           </>
-                        ) : (
-                            <div className="flex flex-col items-center justify-center h-64 text-center text-muted-foreground">
-                                <PackageMinus className="h-16 w-16 mb-4" />
-                                <h3 className="text-xl font-semibold">No Documents Found</h3>
-                                <p>You have not validated any goods issue documents yet.</p>
-                            </div>
-                        )}
                     </CardContent>
                 </Card>
+
+                <div className="border rounded-lg">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-12">
+                                    <Checkbox
+                                        checked={selectedCount === orders.length && orders.length > 0}
+                                        onCheckedChange={(checked) => {
+                                            const newSelection: Record<string, boolean> = {};
+                                            if (checked) {
+                                                orders.forEach(o => newSelection[o.id] = true);
+                                            }
+                                            setSelection(newSelection);
+                                        }}
+                                    />
+                                </TableHead>
+                                <TableHead>Reference</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead>Order Date</TableHead>
+                                <TableHead>Customer</TableHead>
+                                <TableHead>City</TableHead>
+                                <TableHead>Type</TableHead>
+                                <TableHead>From</TableHead>
+                                <TableHead>Delivery Type</TableHead>
+                                <TableHead>Qty</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                             {loading ? (
+                                <TableRow>
+                                    <TableCell colSpan={10} className="h-24 text-center">
+                                        <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+                                    </TableCell>
+                                </TableRow>
+                            ) : error ? (
+                                <TableRow>
+                                    <TableCell colSpan={10} className="h-24 text-center">
+                                         <Alert variant="destructive">
+                                            <AlertCircle className="h-4 w-4" />
+                                            <AlertTitle>Error</AlertTitle>
+                                            <AlertDescription>{error}</AlertDescription>
+                                        </Alert>
+                                    </TableCell>
+                                </TableRow>
+                            ) : orders.length > 0 ? (
+                                orders.map(order => (
+                                <TableRow key={order.id} data-state={selection[order.id] && "selected"}>
+                                    <TableCell>
+                                        <Checkbox
+                                            checked={selection[order.id] || false}
+                                            onCheckedChange={(checked) => setSelection(prev => ({...prev, [order.id]: !!checked}))}
+                                        />
+                                    </TableCell>
+                                    <TableCell className="font-medium text-blue-600 hover:underline cursor-pointer">{order.reference}</TableCell>
+                                    <TableCell><Badge className={cn(order.status === 'Payment Accepted' ? 'bg-green-500 hover:bg-green-600' : 'bg-orange-500 hover:bg-orange-600', "text-white")}>{order.status}</Badge></TableCell>
+                                    <TableCell>{order.orderDate}</TableCell>
+                                    <TableCell>{order.customer}</TableCell>
+                                    <TableCell>{order.city}</TableCell>
+                                    <TableCell>{order.type}</TableCell>
+                                    <TableCell>{order.from}</TableCell>
+                                    <TableCell>{order.deliveryType}</TableCell>
+                                    <TableCell>{order.qty}</TableCell>
+                                </TableRow>
+                                ))
+                            ) : (
+                               <TableRow>
+                                    <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
+                                        <PackageMinus className="h-12 w-12 mx-auto mb-2" />
+                                        No orders found.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+
             </div>
         </MainLayout>
     );
 }
+
