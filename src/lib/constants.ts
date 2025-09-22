@@ -40,6 +40,11 @@ export const NAV_LINKS: NavLink[] = [
                 label: 'My Orders',
                 icon: ClipboardList,
             },
+            {
+                href: '/admin-task/monitoring-orders',
+                label: 'Monitoring Orders',
+                icon: Monitor,
+            },
         ]
     },
     {
