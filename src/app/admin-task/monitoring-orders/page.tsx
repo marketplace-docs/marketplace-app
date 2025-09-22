@@ -134,11 +134,23 @@ export default function MonitoringOrdersPage() {
                 )}
                 <Card>
                     <CardHeader>
-                        <CardTitle>Wave Monitoring</CardTitle>
-                        <CardDescription>A list of all order waves created.</CardDescription>
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <CardTitle>Wave Monitoring</CardTitle>
+                                <CardDescription>A list of all order waves created.</CardDescription>
+                            </div>
+                            <div className="flex items-center gap-2 no-print">
+                                <Button variant="outline" size="icon" onClick={fetchWaves}>
+                                    <RefreshCw className="h-4 w-4" />
+                                </Button>
+                                <Button variant="outline" size="icon" onClick={handlePrint}>
+                                    <Printer className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </div>
                     </CardHeader>
-                    <CardContent id="printable-content">
-                        <div className="border rounded-lg">
+                    <CardContent>
+                        <div className="border rounded-lg" id="printable-content">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -177,12 +189,6 @@ export default function MonitoringOrdersPage() {
                                                 <TableCell></TableCell>
                                                 <TableCell className="text-right no-print">
                                                     <div className="flex items-center justify-end gap-1">
-                                                        <Button variant="ghost" size="icon" className="text-green-500 hover:text-green-600 h-8 w-8" onClick={() => fetchWaves()}>
-                                                            <RefreshCw className="h-4 w-4" />
-                                                        </Button>
-                                                         <Button variant="ghost" size="icon" className="text-blue-500 hover:text-blue-600 h-8 w-8" onClick={handlePrint}>
-                                                            <Printer className="h-4 w-4" />
-                                                        </Button>
                                                          <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-600 h-8 w-8" onClick={() => handleViewDetails(wave)}>
                                                             <List className="h-4 w-4" />
                                                         </Button>
@@ -271,7 +277,7 @@ export default function MonitoringOrdersPage() {
 
             <style jsx global>{`
                 @media print {
-                  body * {
+                  body > * {
                     visibility: hidden;
                   }
                   #printable-content, #printable-content * {
@@ -282,9 +288,14 @@ export default function MonitoringOrdersPage() {
                     left: 0;
                     top: 0;
                     width: 100%;
+                    border: none;
                   }
                   .no-print {
-                    display: none;
+                    display: none !important;
+                  }
+                   @page {
+                    size: auto;
+                    margin: 0.5in;
                   }
                 }
             `}</style>
