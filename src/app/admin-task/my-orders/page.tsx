@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -28,19 +28,21 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogTrigger
 } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
 
 
 type Order = {
   id: string;
   reference: string;
   status: 'Payment Accepted' | 'Ready To Be Shipped';
-  orderDate: string;
+  order_date: string;
   customer: string;
   city: string;
   type: string;
   from: string;
-  deliveryType: string;
+  delivery_type: string;
   qty: number;
 };
 
@@ -50,26 +52,50 @@ type BookedLocation = {
   qty: number;
 } | null;
 
-const mockOrders: Order[] = [
-    { id: '1', reference: 'IVMPTNEIQ', status: 'Payment Accepted', orderDate: '2025-09-22 11:08:01', customer: 'Aydelin Sgi', city: 'Brebes', type: 'On Sale', from: 'ios', deliveryType: 'regular', qty: 1 },
-    { id: '2', reference: 'IVMPTNEIR', status: 'Ready To Be Shipped', orderDate: '2025-09-22 10:30:00', customer: 'John Doe', city: 'Jakarta', type: 'Normal', from: 'android', deliveryType: 'express', qty: 2 },
-];
-
-
 export default function MyOrdersPage() {
     const { user } = useAuth();
-    const [orders, setOrders] = useState<Order[]>(mockOrders);
-    const [loading, setLoading] = useState(false);
+    const { toast } = useToast();
+    const [orders, setOrders] = useState<Order[]>([]);
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [dateRange, setDateRange] = useState<DateRange | undefined>();
     const [selection, setSelection] = useState<Record<string, boolean>>({});
+    const fileInputRef = useRef<HTMLInputElement>(null);
     
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
     const [bookedLocation, setBookedLocation] = useState<BookedLocation>(null);
     const [isBookingLoading, setIsBookingLoading] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isUploadDialogOpen, setUploadDialogOpen] = useState(false);
     
     const selectedCount = Object.values(selection).filter(Boolean).length;
     
+    const fetchOrders = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const response = await fetch('/api/manual-orders');
+            if (!response.ok) throw new Error("Failed to fetch manual orders.");
+            const data = await response.json();
+            // Assuming the API returns the correct shape, but you might need to map it
+            // For now, let's add a mock status to them
+             const ordersWithStatus = data.map((order: any) => ({
+                ...order,
+                status: 'Payment Accepted' as const // Add default status
+            }));
+            setOrders(ordersWithStatus);
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchOrders();
+    }, [fetchOrders]);
+
+
     const handleViewBooking = async (order: Order) => {
         setSelectedOrder(order);
         setIsBookingLoading(true);
@@ -101,6 +127,47 @@ export default function MyOrdersPage() {
             setBookedLocation(null);
         } finally {
             setIsBookingLoading(false);
+        }
+    };
+    
+    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file || !user) return;
+        setIsSubmitting(true);
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('user', JSON.stringify(user));
+
+        try {
+            const response = await fetch('/api/manual-orders', {
+                method: 'POST',
+                body: formData,
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || 'An unknown error occurred during upload.');
+            }
+
+            await fetchOrders();
+            setUploadDialogOpen(false);
+
+            toast({
+                title: 'Upload Successful',
+                description: `${result.successCount} orders have been uploaded.`,
+            });
+            
+        } catch (error: any) {
+            toast({
+                variant: 'destructive',
+                title: 'Upload Failed',
+                description: error.message,
+            });
+        } finally {
+            setIsSubmitting(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
         }
     };
 
@@ -171,7 +238,29 @@ export default function MyOrdersPage() {
                                 <div className="flex items-center space-x-2"><Label htmlFor="bulk-mode">Bulk Mode</Label><Switch id="bulk-mode" /></div>
                            </div>
                             <div className="flex-1 w-full border-t sm:border-t-0 sm:border-l sm:pl-4 sm:ml-4 flex items-center justify-between">
-                                <Button variant="link" className="text-violet-600"><Upload className="mr-2 h-4 w-4"/>UPLOAD MANUAL ORDER</Button>
+                                <Dialog open={isUploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button variant="link" className="text-violet-600"><Upload className="mr-2 h-4 w-4"/>UPLOAD MANUAL ORDER</Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                        <DialogHeader>
+                                            <DialogTitle>Upload Manual Orders</DialogTitle>
+                                            <DialogDescription>
+                                                Select a CSV file to bulk upload manual orders. Ensure the file has the correct columns.
+                                            </DialogDescription>
+                                        </DialogHeader>
+                                        <div className="py-4">
+                                           <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
+                                           <Button onClick={() => fileInputRef.current?.click()} className="w-full" disabled={isSubmitting}>
+                                                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Choose File'}
+                                           </Button>
+                                            <p className="text-xs text-muted-foreground mt-2">
+                                                Don't have a template? <a href="/templates/manual_orders_template.csv" download className="underline text-primary">Download CSV template</a>
+                                            </p>
+                                        </div>
+                                    </DialogContent>
+                                </Dialog>
+
                                 <div className="flex items-center gap-4">
                                     <p className="text-sm font-semibold">SELECTED: <span className="text-green-600">{selectedCount} ORDER</span></p>
                                     <Button variant="link" className="text-blue-600 font-bold"><Play className="mr-2"/>START WAVE</Button>
@@ -240,12 +329,12 @@ export default function MyOrdersPage() {
                                         </Button>
                                     </TableCell>
                                     <TableCell><Badge className={cn(order.status === 'Payment Accepted' ? 'bg-green-500 hover:bg-green-600' : 'bg-orange-500 hover:bg-orange-600', "text-white")}>{order.status}</Badge></TableCell>
-                                    <TableCell>{order.orderDate}</TableCell>
+                                    <TableCell>{format(new Date(order.order_date), 'yyyy-MM-dd HH:mm:ss')}</TableCell>
                                     <TableCell>{order.customer}</TableCell>
                                     <TableCell>{order.city}</TableCell>
                                     <TableCell>{order.type}</TableCell>
                                     <TableCell>{order.from}</TableCell>
-                                    <TableCell>{order.deliveryType}</TableCell>
+                                    <TableCell>{order.delivery_type}</TableCell>
                                     <TableCell>{order.qty}</TableCell>
                                 </TableRow>
                                 ))
