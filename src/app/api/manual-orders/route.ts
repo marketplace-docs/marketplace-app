@@ -72,7 +72,7 @@ export async function POST(request: Request) {
         }
 
         const header = lines.shift()!.split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
-        const requiredHeaders = ['reference', 'order_date', 'customer', 'city', 'type', 'from', 'delivery_type', 'qty'];
+        const requiredHeaders = ['reference', 'sku', 'order_date', 'customer', 'city', 'type', 'from', 'delivery_type', 'qty'];
         if (!requiredHeaders.every(h => header.includes(h))) {
             return NextResponse.json({ error: `Invalid CSV headers. Required: ${requiredHeaders.join(', ')}` }, { status: 400 });
         }
@@ -84,13 +84,14 @@ export async function POST(request: Request) {
 
             const parsedDate = parse(orderData.order_date, 'yyyy-MM-dd HH:mm:ss', new Date());
 
-            if (!orderData.reference || !orderData.qty) {
-                 console.warn(`Skipping row ${index + 2}: Missing reference or qty.`);
+            if (!orderData.reference || !orderData.qty || !orderData.sku) {
+                 console.warn(`Skipping row ${index + 2}: Missing reference, sku, or qty.`);
                 return null;
             }
             
             return {
                 reference: orderData.reference,
+                sku: orderData.sku,
                 order_date: parsedDate.toISOString(),
                 customer: orderData.customer,
                 city: orderData.city,

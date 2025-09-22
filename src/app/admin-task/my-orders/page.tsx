@@ -36,6 +36,7 @@ import { useToast } from '@/hooks/use-toast';
 type Order = {
   id: string;
   reference: string;
+  sku: string;
   status: 'Payment Accepted' | 'Ready To Be Shipped';
   order_date: string;
   customer: string;
@@ -84,11 +85,9 @@ export default function MyOrdersPage() {
             const response = await fetch('/api/manual-orders');
             if (!response.ok) throw new Error("Failed to fetch manual orders.");
             const data = await response.json();
-            // Assuming the API returns the correct shape, but you might need to map it
-            // For now, let's add a mock status to them
              const ordersWithStatus = data.map((order: any) => ({
                 ...order,
-                status: 'Payment Accepted' as const // Add default status
+                status: 'Payment Accepted' as const
             }));
             setOrders(ordersWithStatus);
         } catch (err: any) {
@@ -109,13 +108,12 @@ export default function MyOrdersPage() {
         setBookedLocation(null);
 
         try {
-            // This logic is a placeholder. In a real scenario, you'd query based on the order's SKU.
             const response = await fetch('/api/master-product/batch-products');
             if (!response.ok) throw new Error("Failed to fetch stock data.");
             
             const allProducts: any[] = await response.json();
             const availableBatches = allProducts
-                .filter(p => p.stock > 0)
+                .filter(p => p.stock > 0 && p.sku === order.sku)
                 .sort((a, b) => new Date(a.exp_date).getTime() - new Date(b.exp_date).getTime());
             
             if (availableBatches.length > 0) {
@@ -126,7 +124,7 @@ export default function MyOrdersPage() {
                     qty: order.qty
                 });
             } else {
-                 setBookedLocation(null); // No stock found
+                 setBookedLocation(null);
             }
 
         } catch (err: any) {
@@ -301,6 +299,10 @@ export default function MyOrdersPage() {
                                                     <Label htmlFor="reference" className="text-right">Reference</Label>
                                                     <Input id="reference" value={newOrder.reference || ''} onChange={(e) => setNewOrder({...newOrder, reference: e.target.value})} className="col-span-3" />
                                                 </div>
+                                                 <div className="grid grid-cols-4 items-center gap-4">
+                                                    <Label htmlFor="sku" className="text-right">SKU</Label>
+                                                    <Input id="sku" value={newOrder.sku || ''} onChange={(e) => setNewOrder({...newOrder, sku: e.target.value})} className="col-span-3" />
+                                                </div>
                                                 <div className="grid grid-cols-4 items-center gap-4">
                                                     <Label htmlFor="customer" className="text-right">Customer</Label>
                                                     <Input id="customer" value={newOrder.customer || ''} onChange={(e) => setNewOrder({...newOrder, customer: e.target.value})} className="col-span-3" />
@@ -385,6 +387,7 @@ export default function MyOrdersPage() {
                                     />
                                 </TableHead>
                                 <TableHead>Reference</TableHead>
+                                <TableHead>SKU</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead>Order Date</TableHead>
                                 <TableHead>Customer</TableHead>
@@ -398,13 +401,13 @@ export default function MyOrdersPage() {
                         <TableBody>
                              {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={10} className="h-24 text-center">
+                                    <TableCell colSpan={11} className="h-24 text-center">
                                         <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                                     </TableCell>
                                 </TableRow>
                             ) : error ? (
                                 <TableRow>
-                                    <TableCell colSpan={10} className="h-24 text-center">
+                                    <TableCell colSpan={11} className="h-24 text-center">
                                          <Alert variant="destructive">
                                             <AlertCircle className="h-4 w-4" />
                                             <AlertTitle>Error</AlertTitle>
@@ -426,6 +429,7 @@ export default function MyOrdersPage() {
                                             {order.reference}
                                         </Button>
                                     </TableCell>
+                                    <TableCell>{order.sku}</TableCell>
                                     <TableCell><Badge className={cn(order.status === 'Payment Accepted' ? 'bg-green-500 hover:bg-green-600' : 'bg-orange-500 hover:bg-orange-600', "text-white")}>{order.status}</Badge></TableCell>
                                     <TableCell>{format(new Date(order.order_date), 'yyyy-MM-dd HH:mm:ss')}</TableCell>
                                     <TableCell>{order.customer}</TableCell>
@@ -438,7 +442,7 @@ export default function MyOrdersPage() {
                                 ))
                             ) : (
                                <TableRow>
-                                    <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
+                                    <TableCell colSpan={11} className="h-24 text-center text-muted-foreground">
                                         <PackageMinus className="h-12 w-12 mx-auto mb-2" />
                                         No orders found.
                                     </TableCell>
@@ -480,7 +484,7 @@ export default function MyOrdersPage() {
                         </div>
                     ) : (
                         <div className="py-4 text-center text-destructive">
-                           <p>No available stock found for this order.</p>
+                           <p>No available stock found for this SKU.</p>
                         </div>
                     )}
                     <DialogFooter>

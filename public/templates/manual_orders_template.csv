@@ -1,3 +1,2 @@
-reference,order_date,customer,city,type,from,delivery_type,qty
-IVMPTNEIQ,2024-07-29 10:30:00,John Doe,Jakarta,Normal,ios,regular,1
-IVMPABCDE,2024-07-29 11:00:00,Jane Smith,Bandung,On Sale,android,express,2
+reference,sku,order_date,customer,city,type,"from",delivery_type,qty
+IVMPTNEIQ,SKU001,2024-07-28 15:30:00,John Doe,Jakarta,Normal,ios,regular,1
