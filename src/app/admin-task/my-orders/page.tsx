@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import { Loader2, AlertCircle, PackageMinus, Search, SlidersHorizontal, Calendar as CalendarIcon, HeartPulse, Play } from 'lucide-react';
+import { Loader2, AlertCircle, PackageMinus, Search, SlidersHorizontal, Calendar as CalendarIcon, Upload, Play } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
@@ -21,6 +21,14 @@ import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 
 
 type Order = {
@@ -36,6 +44,12 @@ type Order = {
   qty: number;
 };
 
+type BookedLocation = {
+  sku: string;
+  location: string;
+  qty: number;
+} | null;
+
 const mockOrders: Order[] = [
     { id: '1', reference: 'IVMPTNEIQ', status: 'Payment Accepted', orderDate: '2025-09-22 11:08:01', customer: 'Aydelin Sgi', city: 'Brebes', type: 'On Sale', from: 'ios', deliveryType: 'regular', qty: 1 },
     { id: '2', reference: 'IVMPTNEIR', status: 'Ready To Be Shipped', orderDate: '2025-09-22 10:30:00', customer: 'John Doe', city: 'Jakarta', type: 'Normal', from: 'android', deliveryType: 'express', qty: 2 },
@@ -49,8 +63,47 @@ export default function MyOrdersPage() {
     const [error, setError] = useState<string | null>(null);
     const [dateRange, setDateRange] = useState<DateRange | undefined>();
     const [selection, setSelection] = useState<Record<string, boolean>>({});
-
+    
+    const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+    const [bookedLocation, setBookedLocation] = useState<BookedLocation>(null);
+    const [isBookingLoading, setIsBookingLoading] = useState(false);
+    
     const selectedCount = Object.values(selection).filter(Boolean).length;
+    
+    const handleViewBooking = async (order: Order) => {
+        setSelectedOrder(order);
+        setIsBookingLoading(true);
+        setBookedLocation(null);
+
+        try {
+            // This logic is a placeholder. In a real scenario, you'd query based on the order's SKU.
+            const response = await fetch('/api/master-product/batch-products');
+            if (!response.ok) throw new Error("Failed to fetch stock data.");
+            
+            const allProducts: any[] = await response.json();
+            const availableBatches = allProducts
+                .filter(p => p.stock > 0)
+                .sort((a, b) => new Date(a.exp_date).getTime() - new Date(b.exp_date).getTime());
+            
+            if (availableBatches.length > 0) {
+                const bestBatch = availableBatches[0];
+                setBookedLocation({
+                    sku: bestBatch.sku,
+                    location: bestBatch.location,
+                    qty: order.qty
+                });
+            } else {
+                 setBookedLocation(null); // No stock found
+            }
+
+        } catch (err: any) {
+            console.error(err);
+            setBookedLocation(null);
+        } finally {
+            setIsBookingLoading(false);
+        }
+    };
+
 
     return (
         <MainLayout>
@@ -118,7 +171,7 @@ export default function MyOrdersPage() {
                                 <div className="flex items-center space-x-2"><Label htmlFor="bulk-mode">Bulk Mode</Label><Switch id="bulk-mode" /></div>
                            </div>
                             <div className="flex-1 w-full border-t sm:border-t-0 sm:border-l sm:pl-4 sm:ml-4 flex items-center justify-between">
-                                <Button variant="link" className="text-violet-600"><HeartPulse className="mr-2"/>TRANSFER ORDER</Button>
+                                <Button variant="link" className="text-violet-600"><Upload className="mr-2 h-4 w-4"/>UPLOAD MANUAL ORDER</Button>
                                 <div className="flex items-center gap-4">
                                     <p className="text-sm font-semibold">SELECTED: <span className="text-green-600">{selectedCount} ORDER</span></p>
                                     <Button variant="link" className="text-blue-600 font-bold"><Play className="mr-2"/>START WAVE</Button>
@@ -181,7 +234,11 @@ export default function MyOrdersPage() {
                                             onCheckedChange={(checked) => setSelection(prev => ({...prev, [order.id]: !!checked}))}
                                         />
                                     </TableCell>
-                                    <TableCell className="font-medium text-blue-600 hover:underline cursor-pointer">{order.reference}</TableCell>
+                                    <TableCell>
+                                        <Button variant="link" className="p-0 h-auto font-medium text-blue-600 hover:underline cursor-pointer" onClick={() => handleViewBooking(order)}>
+                                            {order.reference}
+                                        </Button>
+                                    </TableCell>
                                     <TableCell><Badge className={cn(order.status === 'Payment Accepted' ? 'bg-green-500 hover:bg-green-600' : 'bg-orange-500 hover:bg-orange-600', "text-white")}>{order.status}</Badge></TableCell>
                                     <TableCell>{order.orderDate}</TableCell>
                                     <TableCell>{order.customer}</TableCell>
@@ -203,9 +260,48 @@ export default function MyOrdersPage() {
                         </TableBody>
                     </Table>
                 </div>
-
             </div>
+
+            <Dialog open={!!selectedOrder} onOpenChange={(isOpen) => !isOpen && setSelectedOrder(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Booking Location for Order: {selectedOrder?.reference}</DialogTitle>
+                        <DialogDescription>
+                            The system has automatically selected the best location based on FEFO (First-Expired, First-Out).
+                        </DialogDescription>
+                    </DialogHeader>
+                    {isBookingLoading ? (
+                        <div className="h-24 flex items-center justify-center">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        </div>
+                    ) : bookedLocation ? (
+                        <div className="space-y-4 py-4">
+                            <div className="p-4 bg-muted rounded-lg">
+                                <h3 className="font-semibold text-lg text-primary">{bookedLocation.location}</h3>
+                                <p className="text-sm text-muted-foreground">Please pick from this location.</p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-sm font-medium text-muted-foreground">SKU</p>
+                                    <p className="font-semibold">{bookedLocation.sku}</p>
+                                </div>
+                                 <div>
+                                    <p className="text-sm font-medium text-muted-foreground">Quantity</p>
+                                    <p className="font-semibold">{bookedLocation.qty}</p>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="py-4 text-center text-destructive">
+                           <p>No available stock found for this order.</p>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setSelectedOrder(null)}>Close</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
         </MainLayout>
     );
 }
-
