@@ -437,7 +437,7 @@ export default function BatchProductPage() {
             <Dialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Delete Stock Anomaly?</DialogTitle>
+                        <DialogTitle>Resolve Stock Anomaly?</DialogTitle>
                         <DialogDescription>
                             This will delete the outgoing transaction documents that caused the negative stock for barcode <span className="font-bold">{selectedBatchToDelete?.barcode}</span> at location <span className="font-bold">{selectedBatchToDelete?.location}</span>. This action cannot be undone.
                         </DialogDescription>
@@ -446,7 +446,7 @@ export default function BatchProductPage() {
                         <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
                         <Button variant="destructive" onClick={handleDeleteAnomaly} disabled={isSubmitting}>
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Delete Anomaly
+                            Resolve Anomaly
                         </Button>
                     </DialogFooter>
                 </DialogContent>
