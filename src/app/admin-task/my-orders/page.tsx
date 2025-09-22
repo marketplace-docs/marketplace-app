@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import type { BatchProduct } from '@/types/batch-product';
+import { useRouter } from 'next/navigation';
 
 
 type Order = {
@@ -68,6 +69,7 @@ type Filters = {
 
 export default function MyOrdersPage() {
     const { user } = useAuth();
+    const router = useRouter();
     const { toast } = useToast();
     const [allOrders, setAllOrders] = useState<Order[]>([]);
     const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
@@ -77,6 +79,7 @@ export default function MyOrdersPage() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isWaveDialogOpen, setWaveDialogOpen] = useState(false);
     const [isUploadDialogOpen, setUploadDialogOpen] = useState(false);
     const [isAddDialogOpen, setAddDialogOpen] = useState(false);
 
@@ -277,6 +280,54 @@ export default function MyOrdersPage() {
       }
     };
 
+    const handleStartWave = async () => {
+        if (!user || selectedCount === 0) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Please select at least one order to start a wave.' });
+            return;
+        }
+
+        const selectedOrders = allOrders.filter(order => selection[order.id]);
+
+        if (selectedOrders.some(order => order.status === 'Out of Stock')) {
+            toast({ variant: 'destructive', title: 'Invalid Orders', description: 'Cannot start a wave with "Out of Stock" orders.' });
+            return;
+        }
+
+        setIsSubmitting(true);
+
+        try {
+            const response = await fetch('/api/waves', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    orders: selectedOrders,
+                    user,
+                    waveType: "Manual"
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to create wave.');
+            }
+            
+            const { wave } = await response.json();
+
+            toast({ title: 'Wave Created', description: `Wave ${wave.wave_document_number} has been started with ${selectedCount} orders.` });
+            
+            setWaveDialogOpen(false);
+            setSelection({});
+            await fetchOrders(); // Refresh the list
+            router.push('/admin-task/monitoring-orders');
+
+
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Wave Creation Failed', description: error.message });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
 
     return (
         <MainLayout>
@@ -446,7 +497,28 @@ export default function MyOrdersPage() {
 
                                 <div className="flex items-center gap-4">
                                     <p className="text-sm font-semibold">SELECTED: <span className="text-green-600">{selectedCount} ORDER</span></p>
-                                    <Button variant="link" className="text-blue-600 font-bold"><Play className="mr-2"/>START WAVE</Button>
+                                     <Dialog open={isWaveDialogOpen} onOpenChange={setWaveDialogOpen}>
+                                        <DialogTrigger asChild>
+                                            <Button variant="link" className="text-blue-600 font-bold" disabled={selectedCount === 0}>
+                                                <Play className="mr-2"/>START WAVE
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent>
+                                            <DialogHeader>
+                                                <DialogTitle>Confirm Start Wave</DialogTitle>
+                                                <DialogDescription>
+                                                    You are about to start a new wave with <span className="font-bold text-foreground">{selectedCount}</span> selected orders. Are you sure you want to proceed?
+                                                </DialogDescription>
+                                            </DialogHeader>
+                                            <DialogFooter>
+                                                <Button variant="outline" onClick={() => setWaveDialogOpen(false)}>Cancel</Button>
+                                                <Button onClick={handleStartWave} disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700">
+                                                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Play className="mr-2 h-4 w-4"/>}
+                                                    Start
+                                                </Button>
+                                            </DialogFooter>
+                                        </DialogContent>
+                                    </Dialog>
                                 </div>
                             </div>
                         </div>
