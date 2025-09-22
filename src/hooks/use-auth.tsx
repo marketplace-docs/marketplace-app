@@ -3,7 +3,6 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { logActivity } from '@/lib/logger';
-import { supabaseService } from '@/lib/supabase-service';
 
 type User = {
   email: string;
@@ -19,9 +18,6 @@ type AuthContextType = {
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-const validPassword = 'Marketplace@soco123!!!';
-
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -41,42 +37,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (credentials: { email: string; password?: string }): Promise<boolean> => {
-    
-    // Check password first
-    if (credentials.password !== validPassword) {
-      return false;
-    }
-    const lowercasedEmail = credentials.email.toLowerCase();
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(credentials),
+      });
 
-    // Fetch user data from the database using the service client to bypass RLS
-    const { data: dbUser, error } = await supabaseService
-      .from('users')
-      .select('name, email, role')
-      .eq('email', lowercasedEmail)
-      .single();
+      const data = await response.json();
 
-    if (error || !dbUser) {
-      console.error("Login error or user not found in DB:", error?.message);
-      return false;
-    }
+      if (!response.ok) {
+        throw new Error(data.error || 'Login failed');
+      }
 
-    const loggedInUser: User = { 
-        email: dbUser.email,
-        name: dbUser.name,
-        role: dbUser.role
-    };
+      const loggedInUser: User = data.user;
+      setUser(loggedInUser);
+      localStorage.setItem('user', JSON.stringify(loggedInUser));
 
-    setUser(loggedInUser);
-    localStorage.setItem('user', JSON.stringify(loggedInUser));
-
-    await logActivity({
+      await logActivity({
         userName: loggedInUser.name,
         userEmail: loggedInUser.email,
         action: 'LOGIN',
         details: 'User logged in successfully.',
-    });
+      });
 
-    return true;
+      return true;
+    } catch (error) {
+      console.error('Login error:', error);
+      return false;
+    }
   };
 
   const logout = async () => {
