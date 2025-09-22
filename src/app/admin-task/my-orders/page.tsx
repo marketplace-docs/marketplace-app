@@ -388,7 +388,6 @@ export default function MyOrdersPage() {
                                     />
                                 </TableHead>
                                 <TableHead>Reference</TableHead>
-                                <TableHead>SKU</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead>Order Date</TableHead>
                                 <TableHead>Customer</TableHead>
@@ -402,13 +401,13 @@ export default function MyOrdersPage() {
                         <TableBody>
                              {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={11} className="h-24 text-center">
+                                    <TableCell colSpan={10} className="h-24 text-center">
                                         <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                                     </TableCell>
                                 </TableRow>
                             ) : error ? (
                                 <TableRow>
-                                    <TableCell colSpan={11} className="h-24 text-center">
+                                    <TableCell colSpan={10} className="h-24 text-center">
                                          <Alert variant="destructive">
                                             <AlertCircle className="h-4 w-4" />
                                             <AlertTitle>Error</AlertTitle>
@@ -430,7 +429,6 @@ export default function MyOrdersPage() {
                                             {order.reference}
                                         </Button>
                                     </TableCell>
-                                    <TableCell>{order.sku}</TableCell>
                                     <TableCell><Badge className={cn(order.status === 'Payment Accepted' ? 'bg-green-500 hover:bg-green-600' : 'bg-orange-500 hover:bg-orange-600', "text-white")}>{order.status}</Badge></TableCell>
                                     <TableCell>{format(new Date(order.order_date), 'yyyy-MM-dd HH:mm:ss')}</TableCell>
                                     <TableCell>{order.customer}</TableCell>
@@ -443,7 +441,7 @@ export default function MyOrdersPage() {
                                 ))
                             ) : (
                                <TableRow>
-                                    <TableCell colSpan={11} className="h-24 text-center text-muted-foreground">
+                                    <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
                                         <PackageMinus className="h-12 w-12 mx-auto mb-2" />
                                         No orders found.
                                     </TableCell>
@@ -497,3 +495,4 @@ export default function MyOrdersPage() {
         </MainLayout>
     );
 }
+
