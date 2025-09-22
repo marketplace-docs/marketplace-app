@@ -19,11 +19,11 @@ export async function GET() {
 
 
 export async function POST(request: Request) {
-    const body = await request.json().catch(() => null);
+    const contentType = request.headers.get('content-type');
 
-    // Handle single manual order from dialog
-    if (body && body.ordersToInsert) {
-      const { ordersToInsert, user } = body;
+    // Handle JSON body for single/manual add
+    if (contentType && contentType.includes('application/json')) {
+      const { ordersToInsert, user } = await request.json();
         if (!user) {
           return NextResponse.json({ error: 'User data is missing.' }, { status: 400 });
         }
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ message: 'Order created', data }, { status: 201 });
     }
     
-    // Handle bulk upload from CSV
+    // Handle FormData for bulk upload from CSV
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
     const userJson = formData.get('user') as string | null;

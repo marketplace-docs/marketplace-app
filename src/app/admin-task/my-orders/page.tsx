@@ -74,6 +74,7 @@ export default function MyOrdersPage() {
 
     const [newOrder, setNewOrder] = useState<Partial<NewOrder>>({
       qty: 1,
+      sku: '',
     });
 
     const selectedCount = Object.values(selection).filter(Boolean).length;
@@ -200,7 +201,7 @@ export default function MyOrdersPage() {
 
         await fetchOrders();
         setAddDialogOpen(false);
-        setNewOrder({ qty: 1 });
+        setNewOrder({ qty: 1, sku: '' });
 
         toast({
             title: 'Success',

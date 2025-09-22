@@ -1,2 +1,1 @@
-reference,sku,order_date,customer,city,type,"from",delivery_type,qty
-IVMPTNEIQ,SKU001,2024-07-28 15:30:00,John Doe,Jakarta,Normal,ios,regular,1
+reference,sku,order_date,customer,city,type,from,delivery_type,qty
