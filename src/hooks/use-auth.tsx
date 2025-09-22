@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { logActivity } from '@/lib/logger';
-import { supabase } from '@/lib/supabase-client';
+import { supabaseService } from '@/lib/supabase-service';
 
 type User = {
   email: string;
@@ -48,8 +48,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     const lowercasedEmail = credentials.email.toLowerCase();
 
-    // Fetch user data from the database
-    const { data: dbUser, error } = await supabase
+    // Fetch user data from the database using the service client to bypass RLS
+    const { data: dbUser, error } = await supabaseService
       .from('users')
       .select('name, email, role')
       .eq('email', lowercasedEmail)
