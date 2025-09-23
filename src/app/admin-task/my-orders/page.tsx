@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
 import { format, isWithinInterval } from 'date-fns';
-import { Loader2, AlertCircle, PackageMinus, Search, SlidersHorizontal, Calendar as CalendarIcon, Upload, Play, Plus } from 'lucide-react';
+import { Loader2, AlertCircle, PackageMinus, Search, SlidersHorizontal, Calendar as CalendarIcon, Upload, Play, Plus, MessageSquareText } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
@@ -33,6 +33,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import type { BatchProduct } from '@/types/batch-product';
 import { useRouter } from 'next/navigation';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 
 type Order = {
@@ -614,12 +615,30 @@ export default function MyOrdersPage() {
                                         </Popover>
                                     </TableCell>
                                     <TableCell>
+                                      <div className="flex items-center gap-2">
                                         <Badge className={cn(
                                             order.status === 'Payment Accepted' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600',
                                             "text-white"
                                         )}>
                                             {order.status}
                                         </Badge>
+                                        {order.status === 'Out of Stock' && (
+                                             <TooltipProvider>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <a href={`mailto:project.teamedit@gmail.com?subject=Out of Stock Report for Order: ${order.reference}&body=Hi CS Team,%0D%0A%0D%0APlease be advised that the following order is currently out of stock:%0D%0A%0D%0AOrder Reference: ${order.reference}%0D%0ASKU: ${order.sku}%0D%0AQuantity: ${order.qty}%0D%0ACustomer: ${order.customer}%0D%0A%0D%0APlease take the necessary action.%0D%0A%0D%0AThanks,%0D%0A${user?.name || 'Warehouse Team'}`}>
+                                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500 hover:text-red-600">
+                                                                <MessageSquareText className="h-4 w-4" />
+                                                            </Button>
+                                                        </a>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        <p>Report to CS</p>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
+                                        )}
+                                      </div>
                                     </TableCell>
                                     <TableCell>{format(new Date(order.order_date), 'yyyy-MM-dd HH:mm:ss')}</TableCell>
                                     <TableCell>{order.customer}</TableCell>
