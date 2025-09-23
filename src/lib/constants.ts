@@ -149,8 +149,8 @@ export const NAV_LINKS: NavLink[] = [
                 icon: PackagePlus,
             },
             {
-                href: '/master-product/product-out',
-                label: 'Stock Out',
+                href: '/master-product/outbound',
+                label: 'Outbound',
                 icon: PackageMinus,
             },
             {
