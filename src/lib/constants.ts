@@ -1,6 +1,6 @@
 
 
-import { LayoutDashboard, ListTodo, Store, FileText, Settings, type LucideIcon, Briefcase, Users, Archive, BarChart3, AppWindow, BookText, Database, History, FilePlus, Eye, File, PieChart, Users2, Shield, Menu, Monitor, Undo2, Route, Package, PackagePlus, PackageMinus, Boxes, CalendarClock, Warehouse, Calculator, PackageX, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, ListTodo, Store, FileText, Settings, type LucideIcon, Briefcase, Users, Archive, BarChart3, AppWindow, BookText, Database, History, FilePlus, Eye, File, PieChart, Users2, Shield, Menu, Monitor, Undo2, Route, Package, PackagePlus, PackageMinus, Boxes, CalendarClock, Warehouse, Calculator, PackageX, ClipboardList, ScanLine } from 'lucide-react';
 
 export type NavLink = {
     href: string;
@@ -44,6 +44,11 @@ export const NAV_LINKS: NavLink[] = [
                 href: '/admin-task/monitoring-orders',
                 label: 'Monitoring Orders',
                 icon: Monitor,
+            },
+            {
+                href: '/admin-task/go-picker',
+                label: 'Go-Picker',
+                icon: ScanLine,
             },
         ]
     },

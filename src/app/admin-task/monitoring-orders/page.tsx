@@ -177,7 +177,9 @@ export default function MonitoringOrdersPage() {
                                                 <TableCell>{wave.wave_type}</TableCell>
                                                 <TableCell>{format(new Date(wave.created_at), 'yyyy-MM-dd HH:mm')}</TableCell>
                                                 <TableCell>
-                                                    <Badge className={cn("text-white", wave.status === 'Wave Progress' ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-green-500 hover:bg-green-600')}>
+                                                    <Badge className={cn("text-white", 
+                                                        wave.status === 'Wave Progress' ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-green-500 hover:bg-green-600'
+                                                    )}>
                                                         {wave.status}
                                                     </Badge>
                                                 </TableCell>
@@ -215,6 +217,17 @@ export default function MonitoringOrdersPage() {
                         </div>
                     </CardContent>
                 </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Go-Picker</CardTitle>
+                        <CardDescription>Scan order, product, and quantity to fulfill waves.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-muted-foreground">Go-Picker feature coming soon...</p>
+                    </CardContent>
+                </Card>
+
             </div>
             
             <Dialog open={isCancelDialogOpen} onOpenChange={setCancelDialogOpen}>

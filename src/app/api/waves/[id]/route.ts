@@ -75,3 +75,36 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
+
+
+export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+  const { id } = params;
+  const body = await request.json();
+  const { status, user } = body;
+
+  if (!user?.role) {
+    return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
+  }
+
+  const { data, error } = await supabaseService
+    .from('waves')
+    .update({ status })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  if (user.name && user.email) {
+    await logActivity({
+        userName: user.name,
+        userEmail: user.email,
+        action: 'UPDATE_WAVE_STATUS',
+        details: `Wave ID: ${id} status changed to ${status}`,
+    });
+  }
+
+  return NextResponse.json(data);
+}
