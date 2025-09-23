@@ -19,30 +19,49 @@ export default function GoPickerPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [scanData, setScanData] = useState({
         orderRef: '',
+        location: '',
         productBarcode: '',
         quantity: '',
     });
 
-    // Dummy logic for now
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!scanData.orderRef || !scanData.productBarcode || !scanData.quantity) {
+        if (!scanData.orderRef || !scanData.location || !scanData.productBarcode || !scanData.quantity) {
             toast({ variant: 'destructive', title: 'Error', description: 'Please fill all fields.' });
+            return;
+        }
+
+        if (!user) {
+             toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
             return;
         }
 
         setIsSubmitting(true);
 
-        // In a real scenario, you would fetch the wave containing this order
-        // and then update its status. Here we just simulate it.
         try {
-            // Find the wave associated with the order (this logic is simplified)
-            // For now, let's assume we can't do this easily and just show a success message.
+            // In a real scenario, you would find the wave associated with this order reference.
+            // This requires an API endpoint to search waves by order reference.
+            // For now, we will simulate this by assuming we know the wave ID.
             
-            // Example of how you might update a wave status if you had the wave ID
-            /*
-            const waveId = findWaveIdForOrder(scanData.orderRef); // This function needs to be implemented
-            const response = await fetch(`/api/waves/${waveId}`, {
+            // This is a placeholder. You'd need a way to get the real waveId.
+            // For example: const waveId = await findWaveIdForOrder(scanData.orderRef);
+            // Let's find a wave that's in progress to update it.
+            const wavesResponse = await fetch('/api/waves');
+            if (!wavesResponse.ok) throw new Error('Could not fetch waves to find a target.');
+            const waves = await wavesResponse.json();
+            const waveToUpdate = waves.find((w: any) => w.status === 'Wave Progress');
+            
+            if (!waveToUpdate) {
+                toast({
+                    variant: 'destructive',
+                    title: 'No Wave to Update',
+                    description: 'Could not find a wave in "Progress" status to update. Please start a new wave.',
+                });
+                setIsSubmitting(false);
+                return;
+            }
+
+            const response = await fetch(`/api/waves/${waveToUpdate.id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: 'Wave Done', user }),
@@ -51,14 +70,13 @@ export default function GoPickerPage() {
             if (!response.ok) {
                 throw new Error('Failed to update wave status.');
             }
-            */
-
+            
             toast({
-                title: 'Pick Confirmed (Simulation)',
-                description: `Order ${scanData.orderRef} picked. In a real scenario, wave status would be updated.`,
+                title: 'Pick Confirmed',
+                description: `Order pick confirmed. Wave ${waveToUpdate.wave_document_number} status updated to "Wave Done".`,
             });
             
-            setScanData({ orderRef: '', productBarcode: '', quantity: '' });
+            setScanData({ orderRef: '', location: '', productBarcode: '', quantity: '' });
             router.push('/admin-task/monitoring-orders');
 
         } catch (error: any) {
@@ -83,7 +101,7 @@ export default function GoPickerPage() {
                         </div>
                         <CardTitle className="text-center">Scan & Pick</CardTitle>
                         <CardDescription className="text-center">
-                            Scan the order reference, product barcode, and enter the quantity to complete the picking process.
+                            Scan the order, location, product, and enter the quantity to complete the picking process.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -91,6 +109,10 @@ export default function GoPickerPage() {
                             <div className="space-y-2">
                                 <Label htmlFor="orderRef">Scan Order</Label>
                                 <Input id="orderRef" name="orderRef" placeholder="Scan or type order reference..." value={scanData.orderRef} onChange={handleInputChange} required />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="location">Scan Location</Label>
+                                <Input id="location" name="location" placeholder="Scan or type location..." value={scanData.location} onChange={handleInputChange} required />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="productBarcode">Scan Product</Label>

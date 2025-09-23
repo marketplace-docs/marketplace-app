@@ -20,7 +20,7 @@ type Wave = {
     created_at: string;
     wave_document_number: string;
     wave_type: string;
-    status: string;
+    status: 'Wave Progress' | 'Wave Done';
     total_orders: number;
     created_by: string;
 }
@@ -185,7 +185,7 @@ export default function MonitoringOrdersPage() {
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center justify-center h-8 w-8 rounded-full border-2 border-gray-300">
-                                                        <span className="text-xs font-semibold">0/{wave.total_orders}</span>
+                                                        <span className="text-xs font-semibold">{wave.status === 'Wave Done' ? `${wave.total_orders}/${wave.total_orders}` : `0/${wave.total_orders}`}</span>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell></TableCell>
@@ -215,16 +215,6 @@ export default function MonitoringOrdersPage() {
                                 </TableBody>
                             </Table>
                         </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Go-Picker</CardTitle>
-                        <CardDescription>Scan order, product, and quantity to fulfill waves.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-muted-foreground">Go-Picker feature coming soon...</p>
                     </CardContent>
                 </Card>
 
