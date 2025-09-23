@@ -7,7 +7,7 @@ import { parse } from 'date-fns';
 export async function GET() {
   const { data, error } = await supabaseService
     .from('manual_orders')
-    .select('*')
+    .select('id, reference, sku, order_date, customer, city, type, from, delivery_type, qty')
     .order('order_date', { ascending: false });
 
   if (error) {

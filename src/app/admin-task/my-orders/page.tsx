@@ -49,9 +49,10 @@ type Order = {
   delivery_type: string;
   qty: number;
   total_stock_on_hand: number;
+  location: string;
 };
 
-type NewOrder = Omit<Order, 'id' | 'status' | 'order_date' | 'total_stock_on_hand'> & { order_date: Date };
+type NewOrder = Omit<Order, 'id' | 'status' | 'order_date' | 'total_stock_on_hand' | 'location'> & { order_date: Date };
 
 type Filters = {
     reference: string;
@@ -123,16 +124,25 @@ export default function MyOrdersPage() {
 
             // Aggregate stock by SKU
             const stockBySku = stockData.reduce((acc, product) => {
-                acc.set(product.sku, (acc.get(product.sku) || 0) + product.stock);
+                if (!acc.has(product.sku)) {
+                    acc.set(product.sku, { total: 0, location: 'N/A' });
+                }
+                const current = acc.get(product.sku)!;
+                current.total += product.stock;
+                // Simple logic: get the first location. Could be improved if needed.
+                if (current.location === 'N/A' && product.stock > 0) {
+                  current.location = product.location;
+                }
                 return acc;
-            }, new Map<string, number>());
+            }, new Map<string, { total: number; location: string }>());
 
             const ordersWithStatus: Order[] = ordersData.map((order: any) => {
-                const totalStock = stockBySku.get(order.sku) || 0;
+                const stockInfo = stockBySku.get(order.sku) || { total: 0, location: 'N/A' };
                 return {
                     ...order,
-                    status: order.qty > totalStock ? 'Out of Stock' : 'Payment Accepted',
-                    total_stock_on_hand: totalStock,
+                    status: order.qty > stockInfo.total ? 'Out of Stock' : 'Payment Accepted',
+                    total_stock_on_hand: stockInfo.total,
+                    location: stockInfo.location,
                 };
             });
 
@@ -594,7 +604,7 @@ export default function MyOrdersPage() {
                                                                 <TableHead>SKU</TableHead>
                                                                 <TableHead>QTY</TableHead>
                                                                 <TableHead>STOCK</TableHead>
-                                                                <TableHead>BY</TableHead>
+                                                                <TableHead>LOCATION</TableHead>
                                                             </TableRow>
                                                         </TableHeader>
                                                         <TableBody>
@@ -602,7 +612,7 @@ export default function MyOrdersPage() {
                                                                 <TableCell>{order.sku}</TableCell>
                                                                 <TableCell>{order.qty}</TableCell>
                                                                 <TableCell>{order.total_stock_on_hand}</TableCell>
-                                                                <TableCell>{user?.name}</TableCell>
+                                                                <TableCell>{order.location}</TableCell>
                                                             </TableRow>
                                                         </TableBody>
                                                     </Table>
