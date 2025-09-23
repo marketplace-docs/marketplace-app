@@ -83,6 +83,9 @@ export async function POST(request: Request) {
   
   // Use Promise.all to generate document numbers in parallel if needed, or sequentially to guarantee order
   const docsToInsert = await Promise.all(documents.map(async (doc) => {
+    if (!doc.expdate) {
+        throw new Error(`Expiration date (expdate) is missing for SKU: ${doc.sku}`);
+    }
     const newDocNumber = await generateNewDocumentNumber(doc.status);
     return {
         nodocument: newDocNumber,
@@ -136,3 +139,4 @@ type ProductOutStatus =
     | 'Receipt'
     | 'Adjusment - Loc'; // Keep for backwards compatibility if needed
     
+
