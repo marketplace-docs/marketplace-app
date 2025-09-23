@@ -110,17 +110,17 @@ export default function GoPickerPage() {
                                 <Label htmlFor="orderRef">Scan Order</Label>
                                 <Input id="orderRef" name="orderRef" placeholder="Scan or type order reference..." value={scanData.orderRef} onChange={handleInputChange} required />
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="location">Scan Location</Label>
-                                <Input id="location" name="location" placeholder="Scan or type location..." value={scanData.location} onChange={handleInputChange} required />
-                            </div>
-                            <div className="space-y-2">
+                             <div className="space-y-2">
                                 <Label htmlFor="productBarcode">Scan Product</Label>
                                 <Input id="productBarcode" name="productBarcode" placeholder="Scan or type product barcode..." value={scanData.productBarcode} onChange={handleInputChange} required />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="quantity">Scan Quantity</Label>
                                 <Input id="quantity" name="quantity" type="number" placeholder="Enter picked quantity..." value={scanData.quantity} onChange={handleInputChange} required />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="location">Scan Location</Label>
+                                <Input id="location" name="location" placeholder="Scan or type location..." value={scanData.location} onChange={handleInputChange} required />
                             </div>
                             <Button type="submit" className="w-full" disabled={isSubmitting}>
                                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
