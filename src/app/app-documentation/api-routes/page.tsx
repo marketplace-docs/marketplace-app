@@ -25,6 +25,19 @@ const apiRoutes = [
         ]
     },
     {
+        category: "Manajemen Pesanan Manual & Wave",
+        endpoints: [
+            { method: "GET", path: "/api/manual-orders", description: "Mengambil semua data pesanan manual yang siap diproses." },
+            { method: "POST", path: "/api/manual-orders", description: "Membuat pesanan manual baru (tunggal atau massal via CSV)." },
+            { method: "DELETE", path: "/api/manual-orders/[id]", description: "Menghapus pesanan manual (digunakan saat melaporkan OOS ke CS)." },
+            { method: "GET", path: "/api/waves", description: "Mengambil semua 'wave' yang telah dibuat." },
+            { method: "POST", path: "/api/waves", description: "Membuat 'wave' baru dari pesanan manual yang dipilih." },
+            { method: "GET", path: "/api/waves/[id]", description: "Mengambil detail pesanan dari 'wave' tertentu." },
+            { method: "PATCH", path: "/api/waves/[id]", description: "Memperbarui status 'wave' (misal: menjadi 'Wave Done')." },
+            { method: "DELETE", path: "/api/waves/[id]", description: "Membatalkan/menghapus 'wave' beserta pesanan di dalamnya." },
+        ]
+    },
+    {
         category: "Backlog Marketplace",
         endpoints: [
             { method: "GET", path: "/api/backlog-items", description: "Mengambil semua item backlog." },
@@ -75,7 +88,7 @@ const apiRoutes = [
         category: "Dokumen Product Out (Goods Issue)",
         endpoints: [
             { method: "GET", path: "/api/product-out-documents", description: "Mengambil semua dokumen product out." },
-            { method: "POST", path: "/api/product-out-documents", description: "Membuat dokumen product out baru (tunggal atau massal)." },
+            { method: "POST", path: "/api/product-out-documents", description: "Membuat dokumen product out baru (digunakan oleh proses Outbound)." },
             { method: "POST", path: "/api/product-out-documents/batch-upload", description: "Upload massal dokumen product out via CSV dengan logika FEFO." },
         ]
     },
