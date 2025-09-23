@@ -338,13 +338,53 @@ export default function MyOrdersPage() {
             setIsSubmitting(false);
         }
     };
+    
+    const handleReportToCs = async (order: Order) => {
+        if (!user) {
+            toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to report.' });
+            return;
+        }
+        
+        // 1. Delete the order from the database
+        try {
+            const response = await fetch(`/api/manual-orders/${order.id}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-User-Name': user.name,
+                    'X-User-Email': user.email,
+                    'X-User-Role': user.role,
+                }
+            });
+             if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "Failed to delete the order after reporting.");
+            }
+            
+            // 2. Open mail client
+            const subject = `Out of Stock Report for Order: ${order.reference}`;
+            const body = `Hi CS Team,\n\nPlease be advised that the following order is currently out of stock and has been removed from the wave creation list:\n\nOrder Reference: ${order.reference}\nSKU: ${order.sku}\nQuantity: ${order.qty}\nCustomer: ${order.customer}\n\nPlease take the necessary action.\n\nThanks,\n${user?.name || 'Warehouse Team'}`;
+            window.location.href = `mailto:project.teamedit@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            
+            toast({ title: 'Reported & Removed', description: `Order ${order.reference} has been reported and removed.` });
+            
+            // 3. Refresh the data
+            await fetchOrders();
+
+        } catch (error: any) {
+             toast({
+                variant: 'destructive',
+                title: 'Action Failed',
+                description: error.message,
+            });
+        }
+    }
 
 
     return (
         <MainLayout>
              <div className="w-full space-y-6">
                 <div>
-                    <h1 className="text-2xl font-bold">Create Wave eCommerce</h1>
+                    <h1 className="text-2xl font-bold">Wave Marketplace</h1>
                     <p className="text-sm text-muted-foreground">Only order with <span className="font-semibold text-primary">Payment accepted</span>, and <span className="font-semibold text-primary">Ready To Be Shipped</span> can be proceesed</p>
                 </div>
                 
@@ -636,14 +676,12 @@ export default function MyOrdersPage() {
                                              <TooltipProvider>
                                                 <Tooltip>
                                                     <TooltipTrigger asChild>
-                                                        <a href={`mailto:project.teamedit@gmail.com?subject=Out of Stock Report for Order: ${order.reference}&body=Hi CS Team,%0D%0A%0D%0APlease be advised that the following order is currently out of stock:%0D%0A%0D%0AOrder Reference: ${order.reference}%0D%0ASKU: ${order.sku}%0D%0AQuantity: ${order.qty}%0D%0ACustomer: ${order.customer}%0D%0A%0D%0APlease take the necessary action.%0D%0A%0D%0AThanks,%0D%0A${user?.name || 'Warehouse Team'}`}>
-                                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500 hover:text-red-600">
-                                                                <MessageSquareText className="h-4 w-4" />
-                                                            </Button>
-                                                        </a>
+                                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500 hover:text-red-600" onClick={() => handleReportToCs(order)}>
+                                                            <MessageSquareText className="h-4 w-4" />
+                                                        </Button>
                                                     </TooltipTrigger>
                                                     <TooltipContent>
-                                                        <p>Report to CS</p>
+                                                        <p>Report to CS & Remove</p>
                                                     </TooltipContent>
                                                 </Tooltip>
                                             </TooltipProvider>
