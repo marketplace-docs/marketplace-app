@@ -96,7 +96,7 @@ export default function OutboundPage() {
         }
     };
 
-    const handleConfirmOutbound = async () => {
+    const handleConfirmPacking = async () => {
         if (!foundOrder || !user) {
             toast({ variant: 'destructive', title: 'Error', description: 'No order data loaded or user not logged in.' });
             return;
@@ -128,7 +128,7 @@ export default function OutboundPage() {
             }
 
             toast({
-                title: 'Outbound Confirmed',
+                title: 'Packing Confirmed',
                 description: `Order ${foundOrder.order_reference} processed. Stock has been deducted.`,
             });
             
@@ -146,15 +146,15 @@ export default function OutboundPage() {
     return (
         <MainLayout>
             <div className="w-full space-y-6">
-                <h1 className="text-2xl font-bold">Outbound Process</h1>
+                <h1 className="text-2xl font-bold">Packing Orders</h1>
                 <Card className="max-w-2xl mx-auto">
                     <CardHeader>
                         <div className="flex items-center justify-center mb-4">
                             <PackageMinus className="h-16 w-16 text-primary" />
                         </div>
-                        <CardTitle className="text-center">Scan & Confirm Outbound</CardTitle>
+                        <CardTitle className="text-center">Packing Information Station</CardTitle>
                         <CardDescription className="text-center">
-                            Scan the order reference to confirm it's leaving the warehouse. This will deduct the stock from the system.
+                            Scan the picked order to verify details and finalize for shipment. This action marks the order as complete and adjusts stock levels.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -191,9 +191,9 @@ export default function OutboundPage() {
                                         </div>
                                     </div>
 
-                                    <Button onClick={handleConfirmOutbound} className="w-full" disabled={isSubmitting}>
+                                    <Button onClick={handleConfirmPacking} className="w-full" disabled={isSubmitting}>
                                         {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                        Confirm Outbound
+                                        Confirm Packing
                                     </Button>
                                 </div>
                             )}
