@@ -677,7 +677,7 @@ export default function MyOrdersPage() {
                                     </TableCell>
                                     <TableCell>
                                         {isEditing ? (
-                                            <Input value={order.reference} onChange={(e) => handleOrderChange(order.id, 'reference', e.target.value)} className="h-8" />
+                                            <Input value={editedOrders[order.id]?.reference ?? order.reference} onChange={(e) => handleOrderChange(order.id, 'reference', e.target.value)} className="h-8" />
                                         ) : (
                                             <Popover>
                                                 <PopoverTrigger asChild>
@@ -739,12 +739,12 @@ export default function MyOrdersPage() {
                                       </div>
                                     </TableCell>
                                     <TableCell>{format(new Date(order.order_date), 'yyyy-MM-dd HH:mm:ss')}</TableCell>
-                                    <TableCell>{isEditing ? <Input value={order.customer} onChange={(e) => handleOrderChange(order.id, 'customer', e.target.value)} className="h-8" /> : order.customer}</TableCell>
-                                    <TableCell>{isEditing ? <Input value={order.city} onChange={(e) => handleOrderChange(order.id, 'city', e.target.value)} className="h-8" /> : order.city}</TableCell>
-                                    <TableCell>{isEditing ? <Input value={order.type} onChange={(e) => handleOrderChange(order.id, 'type', e.target.value)} className="h-8" /> : order.type}</TableCell>
-                                    <TableCell>{isEditing ? <Input value={order.from} onChange={(e) => handleOrderChange(order.id, 'from', e.target.value)} className="h-8" /> : order.from}</TableCell>
-                                    <TableCell>{isEditing ? <Input value={order.delivery_type} onChange={(e) => handleOrderChange(order.id, 'delivery_type', e.target.value)} className="h-8" /> : order.delivery_type}</TableCell>
-                                    <TableCell>{isEditing ? <Input type="number" value={order.qty} onChange={(e) => handleOrderChange(order.id, 'qty', parseInt(e.target.value) || 0)} className="h-8" /> : order.qty}</TableCell>
+                                    <TableCell>{isEditing ? <Input value={editedOrders[order.id]?.customer ?? order.customer} onChange={(e) => handleOrderChange(order.id, 'customer', e.target.value)} className="h-8" /> : order.customer}</TableCell>
+                                    <TableCell>{isEditing ? <Input value={editedOrders[order.id]?.city ?? order.city} onChange={(e) => handleOrderChange(order.id, 'city', e.target.value)} className="h-8" /> : order.city}</TableCell>
+                                    <TableCell>{isEditing ? <Input value={editedOrders[order.id]?.type ?? order.type} onChange={(e) => handleOrderChange(order.id, 'type', e.target.value)} className="h-8" /> : order.type}</TableCell>
+                                    <TableCell>{isEditing ? <Input value={editedOrders[order.id]?.from ?? order.from} onChange={(e) => handleOrderChange(order.id, 'from', e.target.value)} className="h-8" /> : order.from}</TableCell>
+                                    <TableCell>{isEditing ? <Input value={editedOrders[order.id]?.delivery_type ?? order.delivery_type} onChange={(e) => handleOrderChange(order.id, 'delivery_type', e.target.value)} className="h-8" /> : order.delivery_type}</TableCell>
+                                    <TableCell>{isEditing ? <Input type="number" value={editedOrders[order.id]?.qty ?? order.qty} onChange={(e) => handleOrderChange(order.id, 'qty', parseInt(e.target.value) || 0)} className="h-8" /> : order.qty}</TableCell>
                                 </TableRow>
                                 ))
                             ) : (

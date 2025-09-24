@@ -19,6 +19,15 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     if (Object.keys(fieldsToUpdate).length === 0) {
         return NextResponse.json({ error: 'No fields to update provided.' }, { status: 400 });
     }
+    
+    // Ensure `qty` is a number if it exists
+    if (fieldsToUpdate.qty !== undefined) {
+      fieldsToUpdate.qty = parseInt(fieldsToUpdate.qty, 10);
+      if (isNaN(fieldsToUpdate.qty)) {
+        delete fieldsToUpdate.qty; // Don't update if it's not a valid number
+      }
+    }
+
 
     // Find the order to get its reference for logging
     const { data: orderData, error: findError } = await supabaseService
@@ -61,6 +70,11 @@ export async function PATCH(request: Request, { params }: { params: { id: string
         action: 'UPDATE_MANUAL_ORDER',
         details: details,
     });
+
+    // Ensure returned ID is a string
+    if (data) {
+        data.id = data.id.toString();
+    }
 
     return NextResponse.json(data);
 }

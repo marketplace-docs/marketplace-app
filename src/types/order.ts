@@ -1,6 +1,6 @@
 
 export type Order = {
-  id: string; // Changed to string as requested
+  id: string; 
   reference: string;
   sku: string;
   status: 'Payment Accepted' | 'Out of Stock';

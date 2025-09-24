@@ -66,7 +66,7 @@ export async function POST(request: Request) {
         // 2. Create the wave_orders entries, now including all necessary data for rollback
         const waveOrdersToInsert = orders.map((order: any) => ({
             wave_id: waveData.id,
-            order_id: order.id,
+            order_id: parseInt(order.id, 10), // Ensure order_id is an integer
             order_reference: order.reference,
             sku: order.sku,
             qty: order.qty,
