@@ -80,31 +80,97 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const { id } = params;
   const body = await request.json();
-  const { status, user } = body;
+  const { action, status, user, orderId } = body;
 
   if (!user?.role) {
     return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
   }
 
-  const { data, error } = await supabaseService
-    .from('waves')
-    .update({ status })
-    .eq('id', id)
-    .select()
-    .single();
+  // Handle marking an order as Out of Stock
+  if (action === 'mark_oos') {
+    if (!orderId) {
+        return NextResponse.json({ error: 'Order ID is required to mark as Out of Stock.' }, { status: 400 });
+    }
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+    // 1. Get the order details from wave_orders
+    const { data: waveOrder, error: findError } = await supabaseService
+        .from('wave_orders')
+        .select('*')
+        .eq('order_id', orderId)
+        .eq('wave_id', id)
+        .single();
+    
+    if (findError || !waveOrder) {
+        return NextResponse.json({ error: 'Order not found in this wave.' }, { status: 404 });
+    }
+    
+    // 2. Re-insert the order into manual_orders with OOS status
+    const { error: insertError } = await supabaseService
+        .from('manual_orders')
+        .insert({
+            id: waveOrder.order_id,
+            reference: waveOrder.order_reference,
+            sku: waveOrder.sku,
+            qty: waveOrder.qty,
+            customer: waveOrder.customer,
+            city: waveOrder.city,
+            // Add defaults for other fields
+            order_date: new Date().toISOString(),
+            type: 'N/A',
+            from: 'N/A',
+            delivery_type: 'N/A',
+            status: 'Out of Stock' // The important part
+        });
 
-  if (user.name && user.email) {
+    if (insertError) {
+        console.error('Error re-inserting OOS order into manual_orders:', insertError);
+        return NextResponse.json({ error: 'Failed to move order to OOS list.' }, { status: 500 });
+    }
+    
+    // 3. Delete the order from wave_orders
+    const { error: deleteError } = await supabaseService
+        .from('wave_orders')
+        .delete()
+        .eq('id', waveOrder.id);
+    
+    if (deleteError) {
+        // This is not ideal, as we've already re-inserted it. Log and alert.
+        console.error('CRITICAL: Failed to delete order from wave after marking OOS. Manual cleanup needed.', deleteError);
+    }
+    
     await logActivity({
         userName: user.name,
         userEmail: user.email,
-        action: 'UPDATE_WAVE_STATUS',
-        details: `Wave ID: ${id} status changed to ${status}`,
+        action: 'MARK_OOS_PICKING',
+        details: `Order ${waveOrder.order_reference} marked as OOS during picking from wave ID ${id}.`,
     });
+    
+    return NextResponse.json({ message: 'Order marked as Out of Stock.' });
   }
 
-  return NextResponse.json(data);
+  // Handle normal status updates
+  if (action === 'update_status') {
+     const { data, error } = await supabaseService
+        .from('waves')
+        .update({ status })
+        .eq('id', id)
+        .select()
+        .single();
+
+    if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    if (user.name && user.email) {
+        await logActivity({
+            userName: user.name,
+            userEmail: user.email,
+            action: 'UPDATE_WAVE_STATUS',
+            details: `Wave ID: ${id} status changed to ${status}`,
+        });
+    }
+     return NextResponse.json(data);
+  }
+
+  return NextResponse.json({ error: 'Invalid action specified.' }, { status: 400 });
 }

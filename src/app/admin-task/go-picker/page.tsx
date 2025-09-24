@@ -91,7 +91,6 @@ export default function GoPickerPage() {
                 location: availableBatch.location,
                 waveId: targetWave.id,
                 wave_document_number: targetWave.wave_document_number,
-                // These fields are not in wave_orders, add defaults
                 customer: orderInWave.customer || 'N/A',
                 city: orderInWave.city || 'N/A',
                 type: 'N/A',
@@ -130,12 +129,19 @@ export default function GoPickerPage() {
         try {
             if (pickedQty === 0) {
                 // If qty is 0, mark as OOS and move back to manual_orders
-                const response = await fetch(`/api/manual-orders/${foundOrder.id}`, {
+                const response = await fetch(`/api/waves/${foundOrder.waveId}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status: 'Out of Stock', user }),
+                    body: JSON.stringify({ 
+                        action: 'mark_oos', 
+                        orderId: foundOrder.id,
+                        user 
+                    }),
                 });
-                if (!response.ok) throw new Error('Failed to mark order as Out of Stock.');
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to mark order as Out of Stock.');
+                }
 
                 toast({ title: 'Marked as OOS', description: `Order ${foundOrder.reference} moved to Out of Stock management.` });
 
@@ -144,7 +150,11 @@ export default function GoPickerPage() {
                 const response = await fetch(`/api/waves/${foundOrder.waveId}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status: 'Wave Done', user }),
+                    body: JSON.stringify({ 
+                        action: 'update_status', 
+                        status: 'Wave Done', 
+                        user 
+                    }),
                 });
 
                 if (!response.ok) throw new Error('Failed to update wave status.');
@@ -162,8 +172,6 @@ export default function GoPickerPage() {
             setFoundOrder(null);
             setOrderRef('');
             setActualQty('');
-            // Optional: redirect after action
-            // router.push('/admin-task/monitoring-orders');
 
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Error', description: error.message });
