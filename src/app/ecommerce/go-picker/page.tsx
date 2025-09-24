@@ -124,12 +124,17 @@ export default function GoPickerPage() {
             toast({ variant: 'destructive', title: 'Invalid Quantity', description: 'Please enter a valid number for the actual quantity.' });
             return;
         }
+        
+        if (pickedQty > foundOrder.qty) {
+            toast({ variant: 'destructive', title: 'Invalid Quantity', description: 'Actual quantity cannot be greater than the required quantity.' });
+            return;
+        }
 
         setIsSubmitting(true);
 
         try {
-            if (pickedQty === 0) {
-                // If qty is 0, mark as OOS and move back to manual_orders
+            if (pickedQty < foundOrder.qty) {
+                // If qty is less than required (including 0), mark as OOS and move back to manual_orders
                 const response = await fetch(`/api/waves/${foundOrder.waveId}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
@@ -143,10 +148,14 @@ export default function GoPickerPage() {
                     const errorData = await response.json();
                     throw new Error(errorData.error || 'Failed to mark order as Out of Stock.');
                 }
+                
+                const toastMessage = pickedQty === 0 
+                    ? `Order ${foundOrder.reference} moved to Out of Stock management.`
+                    : `Partial pick recorded. Order ${foundOrder.reference} moved to Out of Stock for review.`;
 
-                toast({ title: 'Marked as OOS', description: `Order ${foundOrder.reference} moved to Out of Stock management.` });
+                toast({ title: 'Marked as OOS', description: toastMessage });
 
-            } else if (pickedQty === foundOrder.qty) {
+            } else { // This is the case where pickedQty === foundOrder.qty
                  // 1. Create product_out_document to log the pick
                 const issueDocPayload = {
                     documents: [{
@@ -189,10 +198,6 @@ export default function GoPickerPage() {
                     title: 'Pick Confirmed',
                     description: `Order ${foundOrder.reference} picked and logged. Ready for packing.`,
                 });
-            } else {
-                 toast({ variant: 'destructive', title: 'Quantity Mismatch', description: `Picked quantity (${pickedQty}) does not match required quantity (${foundOrder.qty}). Please recount or report as OOS (0).` });
-                 setIsSubmitting(false);
-                 return;
             }
             
             setFoundOrder(null);
@@ -279,7 +284,7 @@ export default function GoPickerPage() {
                                                 className="text-center text-xl h-12 mt-2"
                                                 placeholder="Enter quantity"
                                             />
-                                            <p className="text-xs text-muted-foreground mt-1">Enter 0 if item is out of stock.</p>
+                                            <p className="text-xs text-muted-foreground mt-1">Enter quantity less than required to report as partial/OOS.</p>
                                         </div>
                                     </CardContent>
                                 </Card>
