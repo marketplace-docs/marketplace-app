@@ -303,6 +303,17 @@ export default function MyOrdersPage() {
             toast({ variant: 'destructive', title: 'Invalid Orders', description: 'Cannot start a wave with "Out of Stock" orders.' });
             return;
         }
+        
+        const references = selectedOrders.map(o => o.reference);
+        const uniqueReferences = new Set(references);
+        if (references.length !== uniqueReferences.size) {
+            toast({
+                variant: 'destructive',
+                title: 'Duplicate References',
+                description: 'Cannot process wave with duplicate order references. Please check your selection.',
+            });
+            return;
+        }
 
         setIsSubmitting(true);
 
