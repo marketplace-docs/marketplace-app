@@ -92,6 +92,8 @@ export default function MyOrdersPage() {
         reserved: false,
         ecobox: false,
     });
+    
+    const [uniqueFromOptions, setUniqueFromOptions] = useState<string[]>([]);
 
 
     const selectedCount = Object.values(selection).filter(Boolean).length;
@@ -137,6 +139,10 @@ export default function MyOrdersPage() {
 
             setAllOrders(ordersWithStatus);
             setFilteredOrders(ordersWithStatus);
+            
+            const fromSet = new Set(ordersWithStatus.map(order => order.from));
+            setUniqueFromOptions(Array.from(fromSet));
+
 
         } catch (err: any) {
             setError(err.message);
@@ -149,11 +155,6 @@ export default function MyOrdersPage() {
         fetchOrders();
     }, [fetchOrders]);
     
-    const uniqueFromOptions = useMemo(() => {
-        const fromSet = new Set(allOrders.map(order => order.from));
-        return Array.from(fromSet);
-    }, [allOrders]);
-
     const handleFilterChange = (name: keyof Filters, value: any) => {
         setFilters(prev => ({ ...prev, [name]: value }));
     };
@@ -766,3 +767,4 @@ export default function MyOrdersPage() {
         </MainLayout>
     );
 }
+
