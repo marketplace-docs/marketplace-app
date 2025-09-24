@@ -87,7 +87,6 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
         if (waveOrders.length > 0) {
             // 2. Re-insert orders back into manual_orders with complete data
             const ordersToReinsert = waveOrders.map(wo => ({
-                id: wo.order_id,
                 reference: wo.order_reference,
                 sku: wo.sku,
                 qty: wo.qty,
@@ -209,7 +208,6 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     const { error: insertError } = await supabaseService
         .from('manual_orders')
         .insert({
-            id: waveOrder.order_id,
             reference: waveOrder.order_reference,
             sku: waveOrder.sku,
             qty: waveOrder.qty,

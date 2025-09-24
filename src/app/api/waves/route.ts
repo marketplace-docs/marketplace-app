@@ -64,7 +64,7 @@ export async function POST(request: Request) {
         }
 
         // 2. Create the wave_orders entries, now including all necessary data for rollback
-        const waveOrdersToInsert = orders.map(order => ({
+        const waveOrdersToInsert = orders.map((order: any) => ({
             wave_id: waveData.id,
             order_id: order.id,
             order_reference: order.reference,
@@ -90,7 +90,7 @@ export async function POST(request: Request) {
         }
 
         // 3. Delete the orders from manual_orders
-        const orderIdsToDelete = orders.map(order => order.id);
+        const orderIdsToDelete = orders.map((order: any) => order.id);
         const { error: deleteError } = await supabaseService
             .from('manual_orders')
             .delete()
