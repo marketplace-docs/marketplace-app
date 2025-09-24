@@ -1,3 +1,3 @@
-reference,sku,customer,city,type,from,delivery_type,qty
-ORD-001,SKU-A,John Doe,Jakarta,Normal,iOS,Regular,1
-ORD-002,SKU-B,Jane Smith,Bandung,On Sale,Android,Express,2
+reference,sku,qty,store_name,customer,city,delivery_type
+SOCO-123456,SC001,1,Soco by Sociolla,John Doe,Jakarta,REGULAR
+TIKTOK-789012,BT002,2,Beauty Journal,Jane Smith,Surabaya,EXPRESS
