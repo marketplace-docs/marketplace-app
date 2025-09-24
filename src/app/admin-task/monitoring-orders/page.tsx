@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, AlertCircle, PackageSearch, RefreshCw, Printer, List, X } from "lucide-react";
+import { Loader2, AlertCircle, PackageSearch, RefreshCw, Printer, List, X, Check, UserCheck } from "lucide-react";
 import { format } from "date-fns";
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -32,6 +32,7 @@ type WaveOrder = {
     sku: string;
     qty: number;
     location: string;
+    status: 'Assigned' | 'Picked';
 };
 
 
@@ -130,6 +131,7 @@ export default function MonitoringOrdersPage() {
                     sku: order.sku,
                     qty: order.qty,
                     location: availableBatch ? availableBatch.location : 'N/A - OOS?',
+                    status: wave.status === 'Wave Progress' ? 'Assigned' : 'Picked',
                 };
             });
 
@@ -277,6 +279,7 @@ export default function MonitoringOrdersPage() {
                                         <TableHead>SKU</TableHead>
                                         <TableHead>Qty</TableHead>
                                         <TableHead>Location</TableHead>
+                                        <TableHead>Status</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -286,9 +289,15 @@ export default function MonitoringOrdersPage() {
                                             <TableCell>{order.sku}</TableCell>
                                             <TableCell>{order.qty}</TableCell>
                                             <TableCell>{order.location}</TableCell>
+                                            <TableCell>
+                                                <Badge className={cn('gap-1', order.status === 'Assigned' ? 'bg-orange-400' : 'bg-green-500')}>
+                                                    {order.status === 'Assigned' ? <UserCheck className="h-3 w-3" /> : <Check className="h-3 w-3" />}
+                                                    {order.status}
+                                                </Badge>
+                                            </TableCell>
                                         </TableRow>
                                     )) : (
-                                         <TableRow><TableCell colSpan={4} className="text-center h-24">No orders found for this wave.</TableCell></TableRow>
+                                         <TableRow><TableCell colSpan={5} className="text-center h-24">No orders found for this wave.</TableCell></TableRow>
                                     )}
                                 </TableBody>
                             </Table>
