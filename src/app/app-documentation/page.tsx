@@ -28,9 +28,6 @@ const featureDescriptions: FeatureDescription[] = [
         children: [
             { label: "Create", description: "Membuat data manpower baru untuk pekerjaan spesifik." },
             { label: "Monitoring Manpower", description: "Melihat, mengedit, dan menghapus data manpower yang telah dibuat. Hak akses disesuaikan per peran." },
-            { label: "My Orders (Wave Marketplace)", description: "Mengelola pesanan manual yang masuk, mengunggah pesanan via CSV, dan membuat 'wave' untuk diproses oleh tim picker." },
-            { label: "Monitoring Orders", description: "Memantau status semua 'wave' yang telah dibuat (Wave Progress, Wave Done), melihat detail pesanan di dalamnya, dan membatalkan wave." },
-            { label: "Go-Picker", description: "Fitur untuk tim picker. Memindai pesanan, produk, kuantitas, dan lokasi untuk menyelesaikan proses pengambilan barang. Setelah selesai, status wave akan berubah menjadi 'Wave Done'." },
             { label: "Task", description: "Dasbor operasional yang menampilkan ringkasan semua tugas gudang yang tertunda (pending), seperti Putaway dan Cycle Count." },
         ]
     },
@@ -68,14 +65,25 @@ const featureDescriptions: FeatureDescription[] = [
         ]
     },
     {
+        label: "e-Commerce",
+        icon: NAV_LINKS.find(l => l.label === "e-Commerce")!.icon,
+        description: "Mengelola seluruh alur kerja pesanan dari marketplace, mulai dari pesanan masuk hingga barang keluar dari gudang.",
+        children: [
+            { label: "My Orders", description: "Mengelola pesanan manual, mengunggah pesanan via CSV, dan membuat 'wave' untuk diproses oleh tim picker." },
+            { label: "Monitoring Orders", description: "Memantau status semua 'wave' yang telah dibuat (Wave Progress, Wave Done), melihat detail pesanan di dalamnya, dan membatalkan wave." },
+            { label: "Go-Picker", description: "Fitur untuk tim picker. Memindai pesanan, mengambil barang dari lokasi, dan mengonfirmasi pengambilan yang secara otomatis memotong stok." },
+            { label: "Outbound", description: "Stasiun kerja untuk tim packer. Memindai pesanan yang sudah di-pick, memverifikasi detail, dan mengonfirmasi bahwa pesanan sudah dikemas." },
+            { label: "Outbound Monitoring", description: "Melihat riwayat lengkap semua pesanan yang telah di-pick dan di-pack, termasuk siapa yang mengerjakan dan kapan." },
+            { label: "Out of Stock", description: "Menampilkan laporan produk yang stoknya habis di semua lokasi." },
+        ]
+    },
+    {
         label: "Master Product",
         icon: NAV_LINKS.find(l => l.label === "Master Product")!.icon,
         description: "Pusat data untuk semua informasi terkait produk, stok, dan lokasi gudang.",
         children: [
             { label: "Batch Product", description: "Menampilkan data stok terkini yang diagregasi per batch (berdasarkan lokasi & tanggal kedaluwarsa)." },
-            { label: "Stock In", description: "Menampilkan total stok masuk (goods receipt) yang diagregasi per SKU." },
-            { label: "Outbound", description: "Memproses pengeluaran barang dari gudang berdasarkan pesanan yang telah selesai di-pick, yang akan secara otomatis mengurangi stok." },
-            { label: "Out of Stock", description: "Menampilkan laporan produk yang stoknya habis di semua lokasi." },
+            { label: "Stock In", description: "Menampilkan riwayat lengkap semua barang yang masuk ke gudang (goods receipt)." },
             { label: "Stock Log", description: "Menampilkan riwayat lengkap semua pergerakan stok (masuk, keluar, dan pembaruan internal)." },
             { label: "Location", description: "Mengelola data master semua lokasi gudang. Mendukung penambahan massal via upload CSV." },
         ]

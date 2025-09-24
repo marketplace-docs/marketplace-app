@@ -25,7 +25,7 @@ const apiRoutes = [
         ]
     },
     {
-        category: "Manajemen Pesanan Manual & Wave",
+        category: "e-Commerce (Pesanan Manual & Wave)",
         endpoints: [
             { method: "GET", path: "/api/manual-orders", description: "Mengambil semua data pesanan manual yang siap diproses." },
             { method: "POST", path: "/api/manual-orders", description: "Membuat pesanan manual baru (tunggal atau massal via CSV)." },
@@ -88,7 +88,8 @@ const apiRoutes = [
         category: "Dokumen Product Out (Goods Issue)",
         endpoints: [
             { method: "GET", path: "/api/product-out-documents", description: "Mengambil semua dokumen product out." },
-            { method: "POST", path: "/api/product-out-documents", description: "Membuat dokumen product out baru (digunakan oleh proses Outbound)." },
+            { method: "POST", path: "/api/product-out-documents", description: "Membuat dokumen product out baru (misal: untuk memotong stok saat picking)." },
+            { method: "PATCH", path: "/api/product-out-documents/[id]", description: "Memperbarui dokumen (misal: menambahkan nama packer saat konfirmasi packing)." },
             { method: "POST", path: "/api/product-out-documents/batch-upload", description: "Upload massal dokumen product out via CSV dengan logika FEFO." },
         ]
     },
@@ -191,5 +192,3 @@ export default function ApiRoutesPage() {
         </MainLayout>
     );
 }
-
-    
