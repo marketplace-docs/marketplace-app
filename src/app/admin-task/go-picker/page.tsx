@@ -12,13 +12,9 @@ import { Loader2, ScanLine, Search, Package, Waypoints, ShoppingBasket } from 'l
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import type { BatchProduct } from '@/types/batch-product';
+import type { Order } from '@/types/order';
 
-type FoundOrder = {
-    order_reference: string;
-    sku: string;
-    barcode: string;
-    qty: number;
-    location: string;
+type FoundOrder = Order & {
     waveId: number;
     wave_document_number: string;
 }
@@ -32,6 +28,7 @@ export default function GoPickerPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [foundOrder, setFoundOrder] = useState<FoundOrder | null>(null);
+    const [actualQty, setActualQty] = useState<string>('');
 
     const handleSearchOrder = async () => {
         if (!orderRef) {
@@ -41,20 +38,20 @@ export default function GoPickerPage() {
         
         setIsLoading(true);
         setFoundOrder(null);
+        setActualQty('');
         try {
             const wavesResponse = await fetch('/api/waves');
             if (!wavesResponse.ok) throw new Error('Could not fetch waves to find the order.');
             const waves = await wavesResponse.json();
 
             let targetWave;
-            let orderInWave;
+            let orderInWave: any;
 
             for (const wave of waves) {
-                // Only check waves that are in progress
                 if (wave.status !== 'Wave Progress') continue;
 
                 const waveDetailsRes = await fetch(`/api/waves/${wave.id}`);
-                if (!waveDetailsRes.ok) continue; // Skip if we can't get details
+                if (!waveDetailsRes.ok) continue;
 
                 const waveDetails = await waveDetailsRes.json();
                 const found = waveDetails.orders.find((o: any) => o.order_reference === orderRef);
@@ -72,12 +69,10 @@ export default function GoPickerPage() {
                 return;
             }
             
-            // Find an available batch for the SKU to get location and barcode
             const allBatchesRes = await fetch(`/api/master-product/batch-products`);
             if (!allBatchesRes.ok) throw new Error('Failed to fetch product stock data.');
             const allBatches: BatchProduct[] = await allBatchesRes.json();
 
-            // Simple FEFO: sort by exp_date and find the first batch with enough stock
             const availableBatch = allBatches
                 .filter(b => b.sku === orderInWave.sku && b.stock > 0)
                 .sort((a, b) => new Date(a.exp_date).getTime() - new Date(b.exp_date).getTime())
@@ -87,15 +82,28 @@ export default function GoPickerPage() {
                 throw new Error(`No available stock batch found for SKU ${orderInWave.sku}. The order might be Out of Stock.`);
             }
             
-            setFoundOrder({
-                order_reference: orderInWave.order_reference,
+            const orderDetails: FoundOrder = {
+                id: orderInWave.order_id,
+                reference: orderInWave.order_reference,
                 sku: orderInWave.sku,
                 barcode: availableBatch.barcode,
                 qty: orderInWave.qty,
                 location: availableBatch.location,
                 waveId: targetWave.id,
                 wave_document_number: targetWave.wave_document_number,
-            });
+                // These fields are not in wave_orders, add defaults
+                customer: orderInWave.customer || 'N/A',
+                city: orderInWave.city || 'N/A',
+                type: 'N/A',
+                from: 'N/A',
+                delivery_type: 'N/A',
+                order_date: new Date().toISOString(),
+                total_stock_on_hand: availableBatch.stock,
+                status: 'Payment Accepted',
+            };
+            
+            setFoundOrder(orderDetails);
+            setActualQty(orderDetails.qty.toString());
 
         } catch (error: any) {
              toast({ variant: 'destructive', title: 'Error', description: error.message });
@@ -111,27 +119,51 @@ export default function GoPickerPage() {
             return;
         }
 
+        const pickedQty = parseInt(actualQty, 10);
+        if (isNaN(pickedQty) || pickedQty < 0) {
+            toast({ variant: 'destructive', title: 'Invalid Quantity', description: 'Please enter a valid number for the actual quantity.' });
+            return;
+        }
+
         setIsSubmitting(true);
 
         try {
-            const response = await fetch(`/api/waves/${foundOrder.waveId}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: 'Wave Done', user }),
-            });
+            if (pickedQty === 0) {
+                // If qty is 0, mark as OOS and move back to manual_orders
+                const response = await fetch(`/api/manual-orders/${foundOrder.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: 'Out of Stock', user }),
+                });
+                if (!response.ok) throw new Error('Failed to mark order as Out of Stock.');
 
-            if (!response.ok) {
-                throw new Error('Failed to update wave status.');
+                toast({ title: 'Marked as OOS', description: `Order ${foundOrder.reference} moved to Out of Stock management.` });
+
+            } else if (pickedQty === foundOrder.qty) {
+                // If qty matches, proceed with picking
+                const response = await fetch(`/api/waves/${foundOrder.waveId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: 'Wave Done', user }),
+                });
+
+                if (!response.ok) throw new Error('Failed to update wave status.');
+                
+                toast({
+                    title: 'Pick Confirmed',
+                    description: `Order ${foundOrder.reference} picked. Wave ${foundOrder.wave_document_number} status updated.`,
+                });
+            } else {
+                 toast({ variant: 'destructive', title: 'Quantity Mismatch', description: `Picked quantity (${pickedQty}) does not match required quantity (${foundOrder.qty}). Please recount or report as OOS (0).` });
+                 setIsSubmitting(false);
+                 return;
             }
-            
-            toast({
-                title: 'Pick Confirmed',
-                description: `Order ${foundOrder.order_reference} picked. Wave ${foundOrder.wave_document_number} status updated to "Wave Done".`,
-            });
             
             setFoundOrder(null);
             setOrderRef('');
-            router.push('/admin-task/monitoring-orders');
+            setActualQty('');
+            // Optional: redirect after action
+            // router.push('/admin-task/monitoring-orders');
 
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Error', description: error.message });
@@ -179,7 +211,7 @@ export default function GoPickerPage() {
                              <div className="space-y-4 pt-6 border-t-2 border-dashed">
                                 <Card>
                                     <CardHeader>
-                                        <CardTitle>Pick Details for Order: {foundOrder.order_reference}</CardTitle>
+                                        <CardTitle>Pick Details for Order: {foundOrder.reference}</CardTitle>
                                     </CardHeader>
                                     <CardContent className="space-y-4 text-lg">
                                         <div className="flex items-center gap-4">
@@ -202,6 +234,18 @@ export default function GoPickerPage() {
                                                 <p className="text-sm font-medium text-muted-foreground">Pick From Location</p>
                                                 <p className="font-semibold">{foundOrder.location}</p>
                                             </div>
+                                        </div>
+                                        <div className="pt-4 border-t">
+                                            <Label htmlFor="actualQty">Actual Picked Quantity</Label>
+                                            <Input
+                                                id="actualQty"
+                                                type="number"
+                                                value={actualQty}
+                                                onChange={(e) => setActualQty(e.target.value)}
+                                                className="text-center text-xl h-12 mt-2"
+                                                placeholder="Enter quantity"
+                                            />
+                                            <p className="text-xs text-muted-foreground mt-1">Enter 0 if item is out of stock.</p>
                                         </div>
                                     </CardContent>
                                 </Card>

@@ -4,12 +4,25 @@ import { NextResponse } from 'next/server';
 import { logActivity } from '@/lib/logger';
 import { parse } from 'date-fns';
 
-export async function GET() {
-  const { data, error } = await supabaseService
-    .from('manual_orders')
-    .select('id, reference, sku, order_date, customer, city, type, from, delivery_type, qty')
-    .order('order_date', { ascending: false });
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const status = searchParams.get('status');
 
+  let query = supabaseService
+    .from('manual_orders')
+    .select('id, reference, sku, order_date, customer, city, type, from, delivery_type, qty, status, location, total_stock_on_hand');
+
+  if (status) {
+      query = query.eq('status', status);
+  } else {
+      // Default behavior: only get orders that are not 'Out of Stock'
+      query = query.neq('status', 'Out of Stock');
+  }
+  
+  query = query.order('order_date', { ascending: false });
+
+  const { data, error } = await query;
+  
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

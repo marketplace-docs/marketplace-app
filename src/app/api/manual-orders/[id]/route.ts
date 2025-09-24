@@ -3,7 +3,61 @@ import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 import { logActivity } from '@/lib/logger';
 
-const DELETE_ROLES = ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin', 'Staff'];
+const ALLOWED_ROLES = ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin', 'Staff'];
+
+export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+    const { id } = params;
+    const { status, user } = await request.json();
+
+    if (!user?.role || !ALLOWED_ROLES.includes(user.role)) {
+        return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
+    }
+
+    if (!status) {
+        return NextResponse.json({ error: 'Status is required for update.' }, { status: 400 });
+    }
+
+    // Find the order to get its reference for logging
+    const { data: orderData, error: findError } = await supabaseService
+        .from('manual_orders')
+        .select('reference')
+        .eq('id', id)
+        .single();
+    
+    if (findError) {
+        console.error("Error finding order to update:", findError);
+        return NextResponse.json({ error: 'Order not found.' }, { status: 404 });
+    }
+
+    const { data, error } = await supabaseService
+        .from('manual_orders')
+        .update({ status: status })
+        .eq('id', id)
+        .select()
+        .single();
+
+    if (error) {
+        console.error("Error updating manual order status:", error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    let details = `Updated order ID ${id} to status: ${status}.`;
+    if (status === 'Out of Stock') {
+        details = `Order ${orderData.reference} marked as Out of Stock during picking.`;
+    } else if (status === 'Payment Accepted') {
+        details = `Order ${orderData.reference} sent back to packing queue from OOS.`;
+    }
+
+    await logActivity({
+        userName: user.name,
+        userEmail: user.email,
+        action: 'UPDATE_ORDER_STATUS',
+        details: details,
+    });
+
+    return NextResponse.json(data);
+}
+
 
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   const { id } = params;
@@ -13,7 +67,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
       role: request.headers.get('X-User-Role')
   };
 
-  if (!user.role || !DELETE_ROLES.includes(user.role)) {
+  if (!user.role || !ALLOWED_ROLES.includes(user.role)) {
     return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
   }
 
@@ -32,7 +86,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
         userName: user.name,
         userEmail: user.email,
         action: 'DELETE_OOS_ORDER',
-        details: `Deleted Out of Stock manual order ID: ${id}`,
+        details: `Removed Out of Stock manual order ID: ${id}`,
     });
   }
 

@@ -6,44 +6,43 @@ import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { format } from 'date-fns';
-import { Loader2, ChevronLeft, ChevronRight, PackageSearch, AlertCircle, Download } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight, PackageSearch, AlertCircle, Send, Undo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
+import type { Order } from '@/types/order';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
-type BatchProduct = {
-    id: string;
-    sku: string;
-    barcode: string;
-    brand: string;
-    exp_date: string;
-    location: string;
-    stock: number;
-};
-
-export default function OutOfStockPage() {
-    const [inventoryData, setInventoryData] = useState<BatchProduct[]>([]);
+export default function OutOfStockManagementPage() {
+    const [oosOrders, setOosOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
+    
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+    const [isReturnDialogOpen, setReturnDialogOpen] = useState(false);
+
+    const { user } = useAuth();
     const { toast } = useToast();
 
-    const fetchInventoryData = useCallback(async () => {
+    const canManage = user?.role && ['Super Admin', 'Manager', 'Supervisor'].includes(user.role);
+
+    const fetchOosOrders = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch('/api/master-product/batch-products');
+            const response = await fetch('/api/manual-orders?status=Out of Stock');
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to fetch inventory data');
+                throw new Error(errorData.error || 'Failed to fetch Out of Stock orders');
             }
-            const data: BatchProduct[] = await response.json();
-            setInventoryData(data);
+            const data: Order[] = await response.json();
+            setOosOrders(data);
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -52,37 +51,16 @@ export default function OutOfStockPage() {
     }, []);
 
     useEffect(() => {
-        fetchInventoryData();
-    }, [fetchInventoryData]);
-
-    const outOfStockData = useMemo(() => {
-        const productMap = new Map<string, { sku: string; barcode: string; brand: string; totalStock: number; lastLocation: string }>();
-
-        inventoryData.forEach(product => {
-            if (!productMap.has(product.sku)) {
-                productMap.set(product.sku, {
-                    sku: product.sku,
-                    barcode: product.barcode,
-                    brand: product.brand,
-                    totalStock: 0,
-                    lastLocation: product.location,
-                });
-            }
-            const existing = productMap.get(product.sku)!;
-            existing.totalStock += product.stock;
-            existing.lastLocation = product.location;
-        });
-
-        return Array.from(productMap.values()).filter(p => p.totalStock <= 0);
-    }, [inventoryData]);
+        fetchOosOrders();
+    }, [fetchOosOrders]);
 
     const filteredData = useMemo(() => {
-        return outOfStockData.filter(product =>
-            product.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            product.barcode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (product.brand && product.brand.toLowerCase().includes(searchTerm.toLowerCase()))
+        return oosOrders.filter(order =>
+            order.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            order.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (order.customer && order.customer.toLowerCase().includes(searchTerm.toLowerCase()))
         );
-    }, [outOfStockData, searchTerm]);
+    }, [oosOrders, searchTerm]);
 
     useEffect(() => {
         setCurrentPage(1);
@@ -94,45 +72,67 @@ export default function OutOfStockPage() {
         currentPage * rowsPerPage
     );
 
-    const handleNextPage = () => {
-        setCurrentPage((prev) => (prev < totalPages ? prev + 1 : prev));
-    };
+    const handleNextPage = () => setCurrentPage((prev) => (prev < totalPages ? prev + 1 : prev));
+    const handlePrevPage = () => setCurrentPage((prev) => (prev > 1 ? prev - 1 : prev));
+    
+    const handleSendToPacking = async (orderId: string) => {
+        if (!user || !canManage) return;
+        setIsSubmitting(true);
+        try {
+            const response = await fetch(`/api/manual-orders/${orderId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'Payment Accepted', user })
+            });
 
-    const handlePrevPage = () => {
-        setCurrentPage((prev) => (prev > 1 ? prev - 1 : prev));
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to update order status');
+            }
+            
+            toast({ title: "Success", description: "Order has been sent back to My Orders for packing." });
+            await fetchOosOrders();
+
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Action Failed', description: error.message });
+        } finally {
+            setIsSubmitting(false);
+        }
     };
     
-    const handleExport = () => {
-        if (filteredData.length === 0) {
-            toast({ variant: "destructive", title: "No Data", description: "There is no out-of-stock data to export." });
-            return;
+    const handleReturnToProduct = async () => {
+        if (!selectedOrder || !user || !canManage) return;
+        setIsSubmitting(true);
+        try {
+            const response = await fetch(`/api/manual-orders/${selectedOrder.id}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-User-Name': user.name,
+                    'X-User-Email': user.email,
+                    'X-User-Role': user.role
+                }
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to remove the order.');
+            }
+
+            toast({ title: "Order Removed", description: "The out of stock order has been removed.", variant: 'destructive' });
+            setReturnDialogOpen(false);
+            await fetchOosOrders();
+
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Action Failed', description: error.message });
+        } finally {
+            setIsSubmitting(false);
         }
-        const headers = ["SKU", "Barcode", "Brand", "Last Known Location"];
-        const csvContent = [
-            headers.join(","),
-            ...filteredData.map(item => [
-                `"${item.sku.replace(/"/g, '""')}"`,
-                `"${item.barcode.replace(/"/g, '""')}"`,
-                `"${item.brand.replace(/"/g, '""')}"`,
-                `"${item.lastLocation.replace(/"/g, '""')}"`
-            ].join(","))
-        ].join("\n");
-    
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
-        const url = URL.createObjectURL(blob);
-        link.setAttribute("download", `out_of_stock_report_${format(new Date(), "yyyyMMdd")}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        toast({ title: "Success", description: "Out of stock data exported." });
     };
 
     return (
         <MainLayout>
              <div className="w-full space-y-6">
-                <h1 className="text-2xl font-bold">Out of Stock Report</h1>
+                <h1 className="text-2xl font-bold">Out of Stock Orders</h1>
                 {error && (
                     <Alert variant="destructive" className="mb-4">
                         <AlertCircle className="h-4 w-4" />
@@ -140,30 +140,16 @@ export default function OutOfStockPage() {
                         <AlertDescription>{error}</AlertDescription>
                     </Alert>
                 )}
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Total SKU Out of Stock</CardTitle>
-                            <PackageSearch className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{outOfStockData.length.toLocaleString()}</div>}
-                        </CardContent>
-                    </Card>
-                </div>
                 <Card>
                     <CardHeader>
                         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                             <div className="flex-1">
-                                <CardTitle>Out of Stock Products</CardTitle>
-                                <CardDescription>List of all products with a total stock of zero or less.</CardDescription>
+                                <CardTitle>OOS Management</CardTitle>
+                                <CardDescription>Orders that were not found during picking. Decide to re-process or remove them.</CardDescription>
                             </div>
                              <div className="flex w-full md:w-auto items-center gap-2">
-                                <Button variant="outline" onClick={handleExport}>
-                                    <Download className="mr-2 h-4 w-4" /> Export
-                                </Button>
                                 <Input 
-                                    placeholder="Search SKU, Barcode, or Brand..." 
+                                    placeholder="Search Reference, SKU, Customer..." 
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     className="w-full md:w-auto md:max-w-sm"
@@ -176,38 +162,49 @@ export default function OutOfStockPage() {
                            <Table>
                                 <TableHeader>
                                     <TableRow>
+                                        <TableHead>Order Reference</TableHead>
                                         <TableHead>SKU</TableHead>
-                                        <TableHead>Barcode</TableHead>
-                                        <TableHead>Brand</TableHead>
-                                        <TableHead>Last Known Location</TableHead>
-                                        <TableHead>Stock</TableHead>
+                                        <TableHead>Customer</TableHead>
+                                        <TableHead>Last Location</TableHead>
+                                        <TableHead>Qty</TableHead>
+                                        {canManage && <TableHead className="text-right">Actions</TableHead>}
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {loading ? (
                                         <TableRow>
-                                            <TableCell colSpan={5} className="h-24 text-center">
+                                            <TableCell colSpan={canManage ? 6 : 5} className="h-24 text-center">
                                                 <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                                             </TableCell>
                                         </TableRow>
                                     ) : paginatedData.length > 0 ? (
-                                        paginatedData.map((product) => (
-                                            <TableRow key={product.sku}>
-                                                <TableCell className="font-medium">{product.sku}</TableCell>
-                                                <TableCell>{product.barcode}</TableCell>
-                                                <TableCell>{product.brand}</TableCell>
-                                                <TableCell>{product.lastLocation}</TableCell>
-                                                <TableCell>
-                                                    <Badge variant="destructive">{product.totalStock.toLocaleString()}</Badge>
-                                                </TableCell>
+                                        paginatedData.map((order) => (
+                                            <TableRow key={order.id}>
+                                                <TableCell className="font-medium">{order.reference}</TableCell>
+                                                <TableCell>{order.sku}</TableCell>
+                                                <TableCell>{order.customer}</TableCell>
+                                                <TableCell>{order.location}</TableCell>
+                                                <TableCell>{order.qty}</TableCell>
+                                                {canManage && (
+                                                    <TableCell className="text-right">
+                                                        <div className="flex items-center justify-end gap-2">
+                                                            <Button size="sm" variant="outline" onClick={() => handleSendToPacking(order.id)} disabled={isSubmitting}>
+                                                                <Send className="mr-2 h-4 w-4" /> Send to Packing
+                                                            </Button>
+                                                            <Button size="sm" variant="destructive" onClick={() => { setSelectedOrder(order); setReturnDialogOpen(true); }} disabled={isSubmitting}>
+                                                                <Undo2 className="mr-2 h-4 w-4" /> Return to Product
+                                                            </Button>
+                                                        </div>
+                                                    </TableCell>
+                                                )}
                                             </TableRow>
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={5} className="h-24 text-center">
+                                            <TableCell colSpan={canManage ? 6 : 5} className="h-24 text-center">
                                                 <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
                                                      <PackageSearch className="h-8 w-8" />
-                                                     <span>No out-of-stock products found.</span>
+                                                     <span>No out-of-stock orders found.</span>
                                                 </div>
                                             </TableCell>
                                         </TableRow>
@@ -219,45 +216,39 @@ export default function OutOfStockPage() {
                             <div className="flex-1 text-sm text-muted-foreground">
                                 Page {filteredData.length > 0 ? currentPage : 0} of {totalPages}
                             </div>
-                            <div className="flex items-center space-x-2">
+                             <div className="flex items-center space-x-2">
                                 <span className="text-sm text-muted-foreground">Rows per page:</span>
-                                <Select
-                                    value={`${rowsPerPage}`}
-                                    onValueChange={(value) => {
-                                        setRowsPerPage(Number(value));
-                                    }}
-                                >
-                                    <SelectTrigger className="h-8 w-[70px]">
-                                        <SelectValue placeholder={rowsPerPage} />
-                                    </SelectTrigger>
+                                <Select value={`${rowsPerPage}`} onValueChange={(value) => { setRowsPerPage(Number(value)); }}>
+                                    <SelectTrigger className="h-8 w-[70px]"><SelectValue placeholder={rowsPerPage} /></SelectTrigger>
                                     <SelectContent side="top">
-                                        {[10, 25, 50, 100].map((pageSize) => (
-                                        <SelectItem key={pageSize} value={`${pageSize}`}>
-                                            {pageSize}
-                                        </SelectItem>
-                                        ))}
+                                        {[10, 25, 50, 100].map((pageSize) => (<SelectItem key={pageSize} value={`${pageSize}`}>{pageSize}</SelectItem>))}
                                     </SelectContent>
                                 </Select>
                             </div>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={handlePrevPage}
-                                disabled={currentPage === 1}
-                            >
-                                <ChevronLeft className="h-4 w-4" />
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={handleNextPage}
-                                disabled={currentPage === totalPages || totalPages === 0}
-                            >
-                                <ChevronRight className="h-4 w-4" />
-                            </Button>
+                            <Button variant="outline" size="sm" onClick={handlePrevPage} disabled={currentPage === 1}><ChevronLeft className="h-4 w-4" /></Button>
+                            <Button variant="outline" size="sm" onClick={handleNextPage} disabled={currentPage === totalPages || totalPages === 0}><ChevronRight className="h-4 w-4" /></Button>
                         </div>
                     </CardContent>
                 </Card>
+
+                 <Dialog open={isReturnDialogOpen} onOpenChange={setReturnDialogOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Confirm Return to Product</DialogTitle>
+                            <DialogDescription>
+                                Are you sure you want to remove order <span className="font-bold">{selectedOrder?.reference}</span>? This action cannot be undone and the order will need to be re-uploaded if this was a mistake.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setReturnDialogOpen(false)}>Cancel</Button>
+                            <Button variant="destructive" onClick={handleReturnToProduct} disabled={isSubmitting}>
+                                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Yes, Remove Order
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
             </div>
         </MainLayout>
     );
