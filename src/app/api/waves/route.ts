@@ -45,13 +45,13 @@ export async function POST(request: Request) {
         }
 
         // 1. Get all order references from the payload
-        const orderReferences = orders.map((order: any) => order.reference);
+        const orderIds = orders.map((order: any) => order.id);
 
-        // 2. Fetch the full, valid order data from the database using the references
+        // 2. Fetch the full, valid order data from the database using the IDs
         const { data: dbOrders, error: fetchError } = await supabaseService
             .from('manual_orders')
             .select('*')
-            .in('reference', orderReferences);
+            .in('id', orderIds);
 
         if (fetchError) {
             console.error('Error fetching orders from database:', fetchError);
