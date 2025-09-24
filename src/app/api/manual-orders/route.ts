@@ -91,42 +91,49 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'CSV is empty or has only a header.' }, { status: 400 });
         }
 
-        const header = lines.shift()!.split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
-        const requiredHeaders = ['reference', 'sku', 'customer', 'city', 'type', 'from', 'delivery_type', 'qty'];
-        if (!requiredHeaders.every(h => header.includes(h))) {
-            return NextResponse.json({ error: `Invalid CSV headers. Required: ${requiredHeaders.join(', ')}` }, { status: 400 });
+        const headerLine = lines.shift();
+        if (!headerLine) {
+             return NextResponse.json({ error: 'CSV header not found.' }, { status: 400 });
         }
+        const header = headerLine.split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
+
+        const requiredHeaders = ['reference', 'sku', 'qty'];
+        if (!requiredHeaders.every(h => header.includes(h))) {
+            return NextResponse.json({ error: `Invalid CSV headers. Required headers include: ${requiredHeaders.join(', ')}` }, { status: 400 });
+        }
+        
+        const referenceIndex = header.indexOf('reference');
+        const skuIndex = header.indexOf('sku');
+        const qtyIndex = header.indexOf('qty');
+        const customerIndex = header.indexOf('customer');
+        const cityIndex = header.indexOf('city');
+        const typeIndex = header.indexOf('type');
+        const fromIndex = header.indexOf('from');
+        const deliveryTypeIndex = header.indexOf('delivery_type');
 
         const ordersToInsert = lines.map((line, index) => {
             const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
             
-            const orderData: { [key: string]: string | number | undefined } = {};
-            header.forEach((h, i) => {
-                if (h === 'qty') {
-                    const qty = parseInt(values[i], 10);
-                    orderData[h] = isNaN(qty) ? undefined : qty;
-                } else {
-                    orderData[h] = values[i] || undefined;
-                }
-            });
+            const reference = values[referenceIndex];
+            const sku = values[skuIndex];
+            const qty = parseInt(values[qtyIndex], 10);
 
-
-            if (!orderData.reference || !orderData.sku || orderData.qty === undefined) {
-                 console.warn(`Skipping row ${index + 2}: Missing reference, sku, or qty.`);
+            if (!reference || !sku || isNaN(qty)) {
+                console.warn(`Skipping row ${index + 2}: Missing or invalid required fields (reference, sku, qty).`);
                 return null;
             }
             
             return {
-                reference: orderData.reference,
-                sku: orderData.sku,
-                order_date: new Date().toISOString(), // Automatically set order date
-                customer: orderData.customer,
-                city: orderData.city,
-                type: orderData.type,
-                from: orderData.from,
-                delivery_type: orderData.delivery_type,
-                qty: orderData.qty,
-                // Status will be set by default in the database
+                reference,
+                sku,
+                qty,
+                order_date: new Date().toISOString(),
+                customer: customerIndex > -1 ? values[customerIndex] : '',
+                city: cityIndex > -1 ? values[cityIndex] : '',
+                type: typeIndex > -1 ? values[typeIndex] : '',
+                from: fromIndex > -1 ? values[fromIndex] : '',
+                delivery_type: deliveryTypeIndex > -1 ? values[deliveryTypeIndex] : '',
+                status: 'Payment Accepted', // Default status
             };
         }).filter((order): order is NonNullable<typeof order> => order !== null);
 
@@ -141,6 +148,10 @@ export async function POST(request: Request) {
 
         if (error) {
             console.error('Error inserting manual orders:', error);
+            // Provide a more specific error message if possible
+            if (error.code === '23505') { // unique_violation
+                 throw new Error(`Database error: One or more order references already exist.`);
+            }
             throw new Error(`Database error: ${error.message}`);
         }
 
