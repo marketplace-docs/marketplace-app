@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { supabaseService } from '@/lib/supabase-service';
@@ -196,7 +197,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     const { data: waveOrder, error: findError } = await supabaseService
         .from('wave_orders')
         .select('*')
-        .eq('order_id', orderId)
+        .eq('order_id', orderId.toString()) // Ensure we query by string
         .eq('wave_id', id)
         .single();
     
@@ -272,3 +273,4 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
   return NextResponse.json({ error: 'Invalid action specified.' }, { status: 400 });
 }
+

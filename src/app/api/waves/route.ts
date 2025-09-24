@@ -72,7 +72,7 @@ export async function POST(request: Request) {
             }
             return {
                 wave_id: waveData.id,
-                order_id: parseInt(order.id, 10), // Ensure order_id is an integer
+                order_id: order.id.toString(), // Ensure order_id is a string
                 order_reference: order.reference,
                 sku: order.sku,
                 qty: order.qty,
@@ -141,3 +141,4 @@ export async function GET() {
         return NextResponse.json({ error: 'Failed to fetch waves.' }, { status: 500 });
     }
 }
+
