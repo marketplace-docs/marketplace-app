@@ -24,7 +24,8 @@ type ProductOutDocument = {
   status: string;
   date: string;
   location: string;
-  validatedby: string;
+  validatedby: string; // This is the Picker
+  packer_name: string | null; // This is the Packer
 };
 
 export default function OutboundMonitoringPage() {
@@ -46,7 +47,6 @@ export default function OutboundMonitoringPage() {
                 throw new Error(errorData.error || 'Failed to fetch outbound documents');
             }
             const data: ProductOutDocument[] = await response.json();
-            // Filter for only 'Issue - Order' status
             const outboundData = data.filter(doc => doc.status === 'Issue - Order');
             setDocuments(outboundData);
         } catch (err: any) {
@@ -65,7 +65,8 @@ export default function OutboundMonitoringPage() {
             doc.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
             doc.barcode.toLowerCase().includes(searchTerm.toLowerCase()) ||
             doc.nodocument.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            doc.validatedby.toLowerCase().includes(searchTerm.toLowerCase())
+            doc.validatedby.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (doc.packer_name && doc.packer_name.toLowerCase().includes(searchTerm.toLowerCase()))
         );
     }, [documents, searchTerm]);
     
@@ -92,7 +93,7 @@ export default function OutboundMonitoringPage() {
             toast({ variant: "destructive", title: "No Data", description: "There is no outbound data to export." });
             return;
         }
-        const headers = ["No Document", "Date", "SKU", "Barcode", "Quantity", "Packed By"];
+        const headers = ["No Document", "Date", "SKU", "Barcode", "Quantity", "Picked By", "Packed By"];
         const csvContent = [
             headers.join(","),
             ...filteredData.map(item => [
@@ -101,7 +102,8 @@ export default function OutboundMonitoringPage() {
                 `"${item.sku}"`,
                 `"${item.barcode}"`,
                 item.qty,
-                `"${item.validatedby}"`
+                `"${item.validatedby}"`,
+                `"${item.packer_name || 'N/A'}"`
             ].join(","))
         ].join("\n");
     
@@ -157,13 +159,14 @@ export default function OutboundMonitoringPage() {
                                         <TableHead>SKU</TableHead>
                                         <TableHead>Barcode</TableHead>
                                         <TableHead>QTY</TableHead>
+                                        <TableHead>Picked By</TableHead>
                                         <TableHead>Packed By</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {loading ? (
                                         <TableRow>
-                                            <TableCell colSpan={6} className="h-24 text-center">
+                                            <TableCell colSpan={7} className="h-24 text-center">
                                                 <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                                             </TableCell>
                                         </TableRow>
@@ -176,11 +179,12 @@ export default function OutboundMonitoringPage() {
                                                 <TableCell>{doc.barcode}</TableCell>
                                                 <TableCell><Badge variant="default">{doc.qty.toLocaleString()}</Badge></TableCell>
                                                 <TableCell>{doc.validatedby}</TableCell>
+                                                <TableCell>{doc.packer_name || '-'}</TableCell>
                                             </TableRow>
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={6} className="h-24 text-center">
+                                            <TableCell colSpan={7} className="h-24 text-center">
                                                 <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
                                                      <PackageCheck className="h-8 w-8" />
                                                      <span>No outbound orders found.</span>

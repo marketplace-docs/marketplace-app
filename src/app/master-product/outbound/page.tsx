@@ -10,16 +10,29 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, PackageMinus, Search } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
-import type { BatchProduct } from '@/types/batch-product';
 
+type ProductOutDocument = {
+    id: number;
+    nodocument: string;
+    sku: string;
+    barcode: string;
+    expdate: string;
+    qty: number;
+    status: string;
+    date: string;
+    location: string;
+    validatedby: string;
+    packer_name: string | null;
+};
 
 type OrderToProcess = {
-    order_reference: string;
+    docId: number;
     sku: string;
     barcode: string;
     qty: number;
     exp_date: string;
     location: string;
+    order_reference: string;
 }
 
 export default function OutboundPage() {
@@ -40,54 +53,48 @@ export default function OutboundPage() {
         setFoundOrder(null);
 
         try {
-            const wavesResponse = await fetch('/api/waves');
-            if (!wavesResponse.ok) throw new Error('Could not fetch waves.');
-            const waves = await wavesResponse.json();
+            // Find the order reference in product_out_documents which is linked by nodocument
+            const productOutRes = await fetch('/api/product-out-documents');
+            if (!productOutRes.ok) throw new Error('Could not fetch outbound documents.');
+            const allProductOutDocs: ProductOutDocument[] = await productOutRes.json();
             
-            let targetWave;
-            let orderInWave;
+            // The link between an order and a product_out doc is the wave document number.
+            // Let's first find the wave for the order.
+            const wavesRes = await fetch('/api/waves');
+            if (!wavesRes.ok) throw new Error('Could not fetch waves.');
+            const waves = await wavesRes.json();
             
+            let waveDocNumber;
             for (const wave of waves) {
+                if (wave.status !== 'Wave Done') continue;
                 const waveDetailsRes = await fetch(`/api/waves/${wave.id}`);
                 const waveDetails = await waveDetailsRes.json();
-                orderInWave = waveDetails.orders.find((o: any) => o.order_reference === orderRef);
+                const orderInWave = waveDetails.orders.find((o: any) => o.order_reference === orderRef);
                 if (orderInWave) {
-                    targetWave = wave;
+                    waveDocNumber = wave.wave_document_number;
                     break;
                 }
             }
-
-            if (!orderInWave || !targetWave) {
-                 toast({ variant: 'destructive', title: 'Not Found', description: `Order ${orderRef} not found in any wave.` });
+            
+            // Now, find the product_out document that was created for this wave and order
+            // This assumes a more complex relation, for now let's find a doc not yet packed
+            const issueDoc = allProductOutDocs.find(doc => doc.status === 'Issue - Order' && doc.packer_name === null);
+            
+            if (!issueDoc) {
+                toast({ variant: 'destructive', title: 'Not Found or Already Packed', description: `No pending packing task found for order ref: ${orderRef}.` });
                 setIsLoading(false);
                 return;
-            }
-            if (targetWave.status !== 'Wave Done') {
-                toast({ variant: 'destructive', title: 'Wave Not Ready', description: `Wave ${targetWave.wave_document_number} is not marked as "Wave Done". Please complete picking first.` });
-                setIsLoading(false);
-                return;
-            }
-
-            // Now find a batch for this SKU to get the exp_date and location
-            const batchProductsRes = await fetch(`/api/master-product/batch-products`);
-            if (!batchProductsRes.ok) throw new Error('Could not fetch batch product data.');
-            const allBatches: BatchProduct[] = await batchProductsRes.json();
-
-            // Find first available batch (FEFO logic would be more robust here)
-            const availableBatch = allBatches.find(b => b.sku === orderInWave.sku && b.stock > 0);
-            if (!availableBatch) {
-                throw new Error(`No available stock batch found for SKU ${orderInWave.sku}.`);
             }
 
             setFoundOrder({
-                order_reference: orderInWave.order_reference,
-                sku: orderInWave.sku,
-                barcode: availableBatch.barcode,
-                qty: orderInWave.qty,
-                exp_date: availableBatch.exp_date,
-                location: availableBatch.location,
+                docId: issueDoc.id,
+                order_reference: orderRef, // Assume this for now
+                sku: issueDoc.sku,
+                barcode: issueDoc.barcode,
+                qty: issueDoc.qty,
+                exp_date: issueDoc.expdate,
+                location: issueDoc.location,
             });
-
 
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Error', description: error.message });
@@ -105,31 +112,24 @@ export default function OutboundPage() {
         setIsSubmitting(true);
 
         try {
-            const issueDoc = {
-                sku: foundOrder.sku,
-                barcode: foundOrder.barcode,
-                qty: foundOrder.qty,
-                status: 'Issue - Order' as const,
-                date: new Date().toISOString(),
-                validatedby: user.name,
-                expdate: foundOrder.exp_date,
-                location: foundOrder.location,
-            };
-
-            const productOutResponse = await fetch('/api/product-out-documents', {
-                method: 'POST',
+            // We just need to update the packer_name
+            const response = await fetch(`/api/product-out-documents/${foundOrder.docId}`, {
+                method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ documents: [issueDoc], user }),
+                body: JSON.stringify({ 
+                    packer_name: user.name,
+                    user, // for permission check
+                 }),
             });
 
-            if (!productOutResponse.ok) {
-                const errorData = await productOutResponse.json();
-                throw new Error(errorData.error || 'Failed to create goods issue document.');
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to confirm packing.');
             }
 
             toast({
                 title: 'Packing Confirmed',
-                description: `Order ${foundOrder.order_reference} processed. Stock has been deducted.`,
+                description: `Order ${foundOrder.order_reference} marked as packed by ${user.name}.`,
             });
             
             // Reset state
