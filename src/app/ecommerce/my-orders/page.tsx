@@ -683,39 +683,7 @@ export default function MyOrdersPage() {
                                         {isEditing ? (
                                             <Input value={editedOrders[order.id]?.reference ?? order.reference} onChange={(e) => handleOrderChange(order.id, 'reference', e.target.value)} className="h-8" />
                                         ) : (
-                                            <Popover>
-                                                <PopoverTrigger asChild>
-                                                    <Button variant="link" className="p-0 h-auto font-medium text-blue-600 hover:underline cursor-pointer">
-                                                        {order.reference}
-                                                    </Button>
-                                                </PopoverTrigger>
-                                                <PopoverContent className="w-80">
-                                                {order.status === 'Payment Accepted' ? (
-                                                        <Table>
-                                                            <TableHeader>
-                                                                <TableRow>
-                                                                    <TableHead>SKU</TableHead>
-                                                                    <TableHead>QTY</TableHead>
-                                                                    <TableHead>STOCK</TableHead>
-                                                                    <TableHead>LOCATION</TableHead>
-                                                                </TableRow>
-                                                            </TableHeader>
-                                                            <TableBody>
-                                                                <TableRow>
-                                                                    <TableCell>{order.sku}</TableCell>
-                                                                    <TableCell>{order.qty}</TableCell>
-                                                                    <TableCell>{order.total_stock_on_hand}</TableCell>
-                                                                    <TableCell>{order.location}</TableCell>
-                                                                </TableRow>
-                                                            </TableBody>
-                                                        </Table>
-                                                ) : (
-                                                        <Badge variant="secondary" className="w-full justify-center text-base bg-gray-200 text-gray-800">
-                                                            Out of Stock
-                                                        </Badge>
-                                                )}
-                                                </PopoverContent>
-                                            </Popover>
+                                            order.reference
                                         )}
                                     </TableCell>
                                     <TableCell>
