@@ -71,11 +71,6 @@ export async function PATCH(request: Request, { params }: { params: { id: string
         details: details,
     });
 
-    // Ensure returned ID is a string
-    if (data) {
-        data.id = data.id.toString();
-    }
-
     return NextResponse.json(data);
 }
 

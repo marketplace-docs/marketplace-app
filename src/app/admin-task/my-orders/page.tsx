@@ -63,11 +63,11 @@ export default function MyOrdersPage() {
     const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [selection, setSelection] = useState<Record<string, boolean>>({});
+    const [selection, setSelection] = useState<Record<number, boolean>>({});
     const fileInputRef = useRef<HTMLInputElement>(null);
     
     const [isEditing, setIsEditing] = useState(false);
-    const [editedOrders, setEditedOrders] = useState<Record<string, Partial<Order>>>({});
+    const [editedOrders, setEditedOrders] = useState<Record<number, Partial<Order>>>({});
     
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isWaveDialogOpen, setWaveDialogOpen] = useState(false);
@@ -129,7 +129,7 @@ export default function MyOrdersPage() {
                 const stockInfo = stockBySku.get(order.sku) || { total: 0, location: 'N/A' };
                 return {
                     ...order,
-                    id: order.id.toString(), // Ensure ID is a string
+                    id: order.id,
                     status: order.qty > stockInfo.total ? 'Out of Stock' : 'Payment Accepted',
                     total_stock_on_hand: stockInfo.total,
                     location: stockInfo.location,
@@ -223,7 +223,7 @@ export default function MyOrdersPage() {
             // We'll add these new orders to our current state.
             const newOrdersWithStatus = result.data.map((order: any) => ({
                 ...order,
-                id: order.id.toString(), // Ensure ID is a string
+                id: order.id,
                 status: 'Payment Accepted', // Assume new orders are ready
                 total_stock_on_hand: 0, // We'd need to re-fetch stock to be accurate, but this is ok for now
                 location: 'N/A',
@@ -424,7 +424,7 @@ export default function MyOrdersPage() {
         }
     };
 
-    const handleOrderChange = (id: string, field: keyof Order, value: string | number) => {
+    const handleOrderChange = (id: number, field: keyof Order, value: string | number) => {
         setEditedOrders(prev => ({
             ...prev,
             [id]: { ...prev[id], [field]: value }
@@ -643,7 +643,7 @@ export default function MyOrdersPage() {
                                     <Checkbox
                                         checked={selectedCount === filteredOrders.length && filteredOrders.length > 0}
                                         onCheckedChange={(checked) => {
-                                            const newSelection: Record<string, boolean> = {};
+                                            const newSelection: Record<number, boolean> = {};
                                             if (checked) {
                                                 filteredOrders.forEach(o => newSelection[o.id] = true);
                                             }

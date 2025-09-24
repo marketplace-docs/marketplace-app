@@ -27,14 +27,8 @@ export async function GET(request: Request) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-  
-  // Ensure all IDs are strings
-  const dataWithStrId = data.map(order => ({
-      ...order,
-      id: order.id.toString(),
-  }));
 
-  return NextResponse.json(dataWithStrId);
+  return NextResponse.json(data);
 }
 
 
@@ -63,12 +57,7 @@ export async function POST(request: Request) {
             details: `Created manual order: ${ordersToInsert[0].reference}`,
         });
         
-        const dataWithStrId = data.map(order => ({
-            ...order,
-            id: order.id.toString(),
-        }));
-
-        return NextResponse.json({ message: 'Order created', data: dataWithStrId }, { status: 201 });
+        return NextResponse.json({ message: 'Order created', data }, { status: 201 });
     }
     
     // Handle FormData for bulk upload from CSV
@@ -147,13 +136,7 @@ export async function POST(request: Request) {
             details: `Uploaded ${ordersToInsert.length} manual orders.`,
         });
 
-        // Convert all IDs in the returned data to strings before sending
-        const dataWithStrId = data.map(order => ({
-          ...order,
-          id: order.id.toString(),
-        }));
-
-        return NextResponse.json({ message: 'Upload successful', successCount: ordersToInsert.length, data: dataWithStrId }, { status: 201 });
+        return NextResponse.json({ message: 'Upload successful', successCount: ordersToInsert.length, data }, { status: 201 });
 
     } catch (error: any) {
         console.error("Manual order upload error:", error);

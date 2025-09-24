@@ -66,13 +66,13 @@ export async function POST(request: Request) {
 
         // 2. Create the wave_orders entries, now including all necessary data for rollback
         const waveOrdersToInsert = orders.map((order: any) => {
-            if (!order.id) {
+            if (order.id === undefined) {
                 console.error('CRITICAL: Attempted to create a wave with an order that has no ID.', order);
                 throw new Error(`Order with reference ${order.reference} is missing a valid ID.`);
             }
             return {
                 wave_id: waveData.id,
-                order_id: order.id.toString(), // Ensure order_id is a string
+                order_id: order.id.toString(), // Ensure order_id is a string for the text column
                 order_reference: order.reference,
                 sku: order.sku,
                 qty: order.qty,
@@ -141,4 +141,3 @@ export async function GET() {
         return NextResponse.json({ error: 'Failed to fetch waves.' }, { status: 500 });
     }
 }
-
