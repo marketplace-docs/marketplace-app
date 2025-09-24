@@ -8,60 +8,113 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ScanLine } from 'lucide-react';
+import { Loader2, ScanLine, Search, Package, Waypoints, ShoppingBasket } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
+import type { BatchProduct } from '@/types/batch-product';
+
+type FoundOrder = {
+    order_reference: string;
+    sku: string;
+    barcode: string;
+    qty: number;
+    location: string;
+    waveId: number;
+    wave_document_number: string;
+}
 
 export default function GoPickerPage() {
     const { user } = useAuth();
     const { toast } = useToast();
     const router = useRouter();
+    
+    const [orderRef, setOrderRef] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [scanData, setScanData] = useState({
-        orderRef: '',
-        location: '',
-        productBarcode: '',
-        quantity: '',
-    });
+    const [foundOrder, setFoundOrder] = useState<FoundOrder | null>(null);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!scanData.orderRef || !scanData.location || !scanData.productBarcode || !scanData.quantity) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Please fill all fields.' });
+    const handleSearchOrder = async () => {
+        if (!orderRef) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Please scan or enter an order reference.' });
             return;
         }
+        
+        setIsLoading(true);
+        setFoundOrder(null);
+        try {
+            const wavesResponse = await fetch('/api/waves');
+            if (!wavesResponse.ok) throw new Error('Could not fetch waves to find the order.');
+            const waves = await wavesResponse.json();
 
-        if (!user) {
-             toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
+            let targetWave;
+            let orderInWave;
+
+            for (const wave of waves) {
+                // Only check waves that are in progress
+                if (wave.status !== 'Wave Progress') continue;
+
+                const waveDetailsRes = await fetch(`/api/waves/${wave.id}`);
+                if (!waveDetailsRes.ok) continue; // Skip if we can't get details
+
+                const waveDetails = await waveDetailsRes.json();
+                const found = waveDetails.orders.find((o: any) => o.order_reference === orderRef);
+                
+                if (found) {
+                    targetWave = wave;
+                    orderInWave = found;
+                    break;
+                }
+            }
+
+            if (!orderInWave || !targetWave) {
+                toast({ variant: 'destructive', title: 'Not Found', description: `Order ${orderRef} not found in any active wave.` });
+                setIsLoading(false);
+                return;
+            }
+            
+            // Find an available batch for the SKU to get location and barcode
+            const allBatchesRes = await fetch(`/api/master-product/batch-products`);
+            if (!allBatchesRes.ok) throw new Error('Failed to fetch product stock data.');
+            const allBatches: BatchProduct[] = await allBatchesRes.json();
+
+            // Simple FEFO: sort by exp_date and find the first batch with enough stock
+            const availableBatch = allBatches
+                .filter(b => b.sku === orderInWave.sku && b.stock > 0)
+                .sort((a, b) => new Date(a.exp_date).getTime() - new Date(b.exp_date).getTime())
+                [0];
+
+            if (!availableBatch) {
+                throw new Error(`No available stock batch found for SKU ${orderInWave.sku}. The order might be Out of Stock.`);
+            }
+            
+            setFoundOrder({
+                order_reference: orderInWave.order_reference,
+                sku: orderInWave.sku,
+                barcode: availableBatch.barcode,
+                qty: orderInWave.qty,
+                location: availableBatch.location,
+                waveId: targetWave.id,
+                wave_document_number: targetWave.wave_document_number,
+            });
+
+        } catch (error: any) {
+             toast({ variant: 'destructive', title: 'Error', description: error.message });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+
+    const handleConfirmPick = async () => {
+        if (!foundOrder || !user) {
+             toast({ variant: 'destructive', title: 'Error', description: 'No order loaded or user not logged in.' });
             return;
         }
 
         setIsSubmitting(true);
 
         try {
-            // In a real scenario, you would find the wave associated with this order reference.
-            // This requires an API endpoint to search waves by order reference.
-            // For now, we will simulate this by assuming we know the wave ID.
-            
-            // This is a placeholder. You'd need a way to get the real waveId.
-            // For example: const waveId = await findWaveIdForOrder(scanData.orderRef);
-            // Let's find a wave that's in progress to update it.
-            const wavesResponse = await fetch('/api/waves');
-            if (!wavesResponse.ok) throw new Error('Could not fetch waves to find a target.');
-            const waves = await wavesResponse.json();
-            const waveToUpdate = waves.find((w: any) => w.status === 'Wave Progress');
-            
-            if (!waveToUpdate) {
-                toast({
-                    variant: 'destructive',
-                    title: 'No Wave to Update',
-                    description: 'Could not find a wave in "Progress" status to update. Please start a new wave.',
-                });
-                setIsSubmitting(false);
-                return;
-            }
-
-            const response = await fetch(`/api/waves/${waveToUpdate.id}`, {
+            const response = await fetch(`/api/waves/${foundOrder.waveId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: 'Wave Done', user }),
@@ -73,10 +126,11 @@ export default function GoPickerPage() {
             
             toast({
                 title: 'Pick Confirmed',
-                description: `Order pick confirmed. Wave ${waveToUpdate.wave_document_number} status updated to "Wave Done".`,
+                description: `Order ${foundOrder.order_reference} picked. Wave ${foundOrder.wave_document_number} status updated to "Wave Done".`,
             });
             
-            setScanData({ orderRef: '', location: '', productBarcode: '', quantity: '' });
+            setFoundOrder(null);
+            setOrderRef('');
             router.push('/admin-task/monitoring-orders');
 
         } catch (error: any) {
@@ -84,10 +138,6 @@ export default function GoPickerPage() {
         } finally {
             setIsSubmitting(false);
         }
-    };
-    
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setScanData(prev => ({ ...prev, [e.target.name]: e.target.value }));
     };
 
     return (
@@ -99,34 +149,68 @@ export default function GoPickerPage() {
                         <div className="flex items-center justify-center mb-4">
                             <ScanLine className="h-16 w-16 text-primary" />
                         </div>
-                        <CardTitle className="text-center">Scan & Pick</CardTitle>
+                        <CardTitle className="text-center">Scan Picking Order</CardTitle>
                         <CardDescription className="text-center">
-                            Scan the order, location, product, and enter the quantity to complete the picking process.
+                            Scan the order reference to see the item, quantity, and location to pick.
                         </CardDescription>
                     </CardHeader>
-                    <CardContent>
-                        <form onSubmit={handleSubmit} className="space-y-6">
-                            <div className="space-y-2">
-                                <Label htmlFor="orderRef">Scan Order</Label>
-                                <Input id="orderRef" name="orderRef" placeholder="Scan or type order reference..." value={scanData.orderRef} onChange={handleInputChange} required />
+                    <CardContent className="space-y-6">
+                         <div className="flex items-end gap-2">
+                            <div className="flex-1 space-y-2">
+                                <Label htmlFor="orderRef" className="text-lg">#</Label>
+                                <Input 
+                                    id="orderRef" 
+                                    name="orderRef" 
+                                    placeholder="Scan or type order reference..." 
+                                    value={orderRef} 
+                                    onChange={(e) => setOrderRef(e.target.value)} 
+                                    onKeyDown={(e) => e.key === 'Enter' && handleSearchOrder()}
+                                    className="text-center text-xl h-12"
+                                    disabled={isLoading || isSubmitting}
+                                />
                             </div>
-                             <div className="space-y-2">
-                                <Label htmlFor="productBarcode">Scan Product</Label>
-                                <Input id="productBarcode" name="productBarcode" placeholder="Scan or type product barcode..." value={scanData.productBarcode} onChange={handleInputChange} required />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="quantity">Scan Quantity</Label>
-                                <Input id="quantity" name="quantity" type="number" placeholder="Enter picked quantity..." value={scanData.quantity} onChange={handleInputChange} required />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="location">Scan Location</Label>
-                                <Input id="location" name="location" placeholder="Scan or type location..." value={scanData.location} onChange={handleInputChange} required />
-                            </div>
-                            <Button type="submit" className="w-full" disabled={isSubmitting}>
-                                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Confirm Pick
+                            <Button onClick={handleSearchOrder} disabled={isLoading || isSubmitting || !orderRef} className="h-12">
+                                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
+                                Search
                             </Button>
-                        </form>
+                        </div>
+                        
+                        {foundOrder && (
+                             <div className="space-y-4 pt-6 border-t-2 border-dashed">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Pick Details for Order: {foundOrder.order_reference}</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4 text-lg">
+                                        <div className="flex items-center gap-4">
+                                            <Package className="h-6 w-6 text-primary" />
+                                            <div className="flex-1">
+                                                <p className="text-sm font-medium text-muted-foreground">SKU / Barcode</p>
+                                                <p className="font-semibold">{foundOrder.sku} / {foundOrder.barcode}</p>
+                                            </div>
+                                        </div>
+                                         <div className="flex items-center gap-4">
+                                            <ShoppingBasket className="h-6 w-6 text-primary" />
+                                            <div>
+                                                <p className="text-sm font-medium text-muted-foreground">Quantity to Pick</p>
+                                                <p className="font-semibold">{foundOrder.qty.toLocaleString()}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                            <Waypoints className="h-6 w-6 text-primary" />
+                                            <div>
+                                                <p className="text-sm font-medium text-muted-foreground">Pick From Location</p>
+                                                <p className="font-semibold">{foundOrder.location}</p>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                                <Button onClick={handleConfirmPick} className="w-full h-12 text-lg" disabled={isSubmitting}>
+                                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Confirm Pick
+                                </Button>
+                             </div>
+                        )}
                     </CardContent>
                 </Card>
             </div>
