@@ -197,7 +197,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     const { data: waveOrder, error: findError } = await supabaseService
         .from('wave_orders')
         .select('*')
-        .eq('order_id', orderId)
+        .eq('order_id', orderId.toString())
         .eq('wave_id', id)
         .single();
     

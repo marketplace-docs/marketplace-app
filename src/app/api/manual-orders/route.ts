@@ -3,7 +3,6 @@
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 import { logActivity } from '@/lib/logger';
-import { parse } from 'date-fns';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -119,8 +118,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'No valid orders found in the file.' }, { status: 400 });
         }
         
-        // Use .select() to get the inserted data back, including the generated IDs
-        const { data, error } = await supabaseService
+        const { error } = await supabaseService
             .from('manual_orders')
             .insert(ordersToInsert)
             .select('id, reference, sku, order_date, customer, city, type, from, delivery_type, qty, status');
@@ -136,7 +134,7 @@ export async function POST(request: Request) {
             details: `Uploaded ${ordersToInsert.length} manual orders.`,
         });
 
-        return NextResponse.json({ message: 'Upload successful', successCount: ordersToInsert.length, data }, { status: 201 });
+        return NextResponse.json({ message: 'Upload successful', successCount: ordersToInsert.length }, { status: 201 });
 
     } catch (error: any) {
         console.error("Manual order upload error:", error);

@@ -38,7 +38,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import type { Order } from '@/types/order';
 
 
-type NewOrder = Omit<Order, 'id' | 'status' | 'order_date' | 'total_stock_on_hand' | 'location'> & { order_date: Date };
+type NewOrder = Omit<Order, 'id' | 'status' | 'order_date' | 'total_stock_on_hand' | 'location'>;
 
 type Filters = {
     reference: string;
@@ -219,25 +219,12 @@ export default function MyOrdersPage() {
                 throw new Error(result.error || 'An unknown error occurred during upload.');
             }
 
-            // The API now returns the newly created orders with their IDs.
-            // We'll add these new orders to our current state.
-            const newOrdersWithStatus = result.data.map((order: any) => ({
-                ...order,
-                id: order.id,
-                status: 'Payment Accepted', // Assume new orders are ready
-                total_stock_on_hand: 0, // We'd need to re-fetch stock to be accurate, but this is ok for now
-                location: 'N/A',
-            }));
-
-            setAllOrders(prev => [...newOrdersWithStatus, ...prev]);
-            setFilteredOrders(prev => [...newOrdersWithStatus, ...prev]);
-
-            setUploadDialogOpen(false);
-
             toast({
                 title: 'Upload Successful',
                 description: `${result.successCount} orders have been uploaded.`,
             });
+            await fetchOrders();
+            setUploadDialogOpen(false);
             
         } catch (error: any) {
             toast({
@@ -255,15 +242,15 @@ export default function MyOrdersPage() {
       if (!user) return;
       setIsSubmitting(true);
       try {
-        const payload = [{
+        const payload = {
           ...newOrder,
           order_date: new Date().toISOString()
-        }]
+        }
         const response = await fetch('/api/manual-orders', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                ordersToInsert: payload,
+                ordersToInsert: [payload],
                 user,
             }),
         });
