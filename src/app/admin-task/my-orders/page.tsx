@@ -286,17 +286,22 @@ export default function MyOrdersPage() {
         }
 
         const selectedOrderRefs = Object.keys(selection).filter(ref => selection[ref]);
-
-        // Validation 1: Ensure no 'Out of Stock' orders are included by checking the original data.
         const selectedOrdersFull = allOrders.filter(order => selectedOrderRefs.includes(order.reference));
         
+        // Validation 1: Ensure no 'Out of Stock' orders are included
         if (selectedOrdersFull.some(order => order.status === 'Out of Stock')) {
             toast({ variant: 'destructive', title: 'Invalid Orders', description: 'Cannot start a wave with "Out of Stock" orders.' });
             setWaveDialogOpen(false);
             return;
         }
-        
-        // Validation 2: is already implicitly handled by using reference as key in selection object.
+
+        // Validation 2: Check for duplicate references
+        const refSet = new Set(selectedOrdersFull.map(o => o.reference));
+        if (refSet.size !== selectedOrdersFull.length) {
+            toast({ variant: 'destructive', title: 'Invalid Selection', description: 'Duplicate order references found in selection. Please check your data.' });
+            setWaveDialogOpen(false);
+            return;
+        }
 
         setIsSubmitting(true);
 

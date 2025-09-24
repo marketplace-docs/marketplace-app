@@ -10,7 +10,7 @@ export async function GET(request: Request) {
 
   let query = supabaseService
     .from('manual_orders')
-    .select('id, reference, sku, order_date, customer, city, type, from, delivery_type, qty, status');
+    .select('*');
 
   if (status) {
       query = query.eq('status', status);
@@ -27,7 +27,14 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json(data);
+  // Ensure all orders have a numeric ID
+    const processedData = data.map(order => ({
+        ...order,
+        id: Number(order.id) 
+    }));
+
+
+  return NextResponse.json(processedData);
 }
 
 
@@ -91,11 +98,20 @@ export async function POST(request: Request) {
         }
 
         const ordersToInsert = lines.map((line, index) => {
-            const values = line.split(',');
-            const orderData: { [key: string]: string } = {};
-            header.forEach((h, i) => orderData[h] = values[i]?.trim().replace(/"/g, '') || '');
+            const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
+            
+            const orderData: { [key: string]: string | number | undefined } = {};
+            header.forEach((h, i) => {
+                if (h === 'qty') {
+                    const qty = parseInt(values[i], 10);
+                    orderData[h] = isNaN(qty) ? undefined : qty;
+                } else {
+                    orderData[h] = values[i] || undefined;
+                }
+            });
 
-            if (!orderData.reference || !orderData.qty || !orderData.sku) {
+
+            if (!orderData.reference || !orderData.sku || orderData.qty === undefined) {
                  console.warn(`Skipping row ${index + 2}: Missing reference, sku, or qty.`);
                 return null;
             }
@@ -109,9 +125,10 @@ export async function POST(request: Request) {
                 type: orderData.type,
                 from: orderData.from,
                 delivery_type: orderData.delivery_type,
-                qty: parseInt(orderData.qty, 10),
+                qty: orderData.qty,
+                // Status will be set by default in the database
             };
-        }).filter((order): order is NonNullable<typeof order> => order !== null && !isNaN(order.qty));
+        }).filter((order): order is NonNullable<typeof order> => order !== null);
 
 
         if (ordersToInsert.length === 0) {
@@ -120,11 +137,11 @@ export async function POST(request: Request) {
         
         const { error } = await supabaseService
             .from('manual_orders')
-            .insert(ordersToInsert)
-            .select('id, reference, sku, order_date, customer, city, type, from, delivery_type, qty, status');
+            .insert(ordersToInsert);
 
         if (error) {
-            throw new Error(error.message);
+            console.error('Error inserting manual orders:', error);
+            throw new Error(`Database error: ${error.message}`);
         }
 
         await logActivity({
