@@ -54,7 +54,7 @@ export async function POST(request: Request) {
             status = 'Adjustment - Loc';
             prefix = 'MP-ADJ';
         } else {
-            status = 'Receipt'; // Assuming positive variance is a stock 'receipt'
+            status = 'Receipt'; // Positive variance is a stock 'receipt'
             prefix = 'MP-RCP';
         }
 
