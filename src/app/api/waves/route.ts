@@ -44,16 +44,34 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'No orders selected for the wave.' }, { status: 400 });
         }
 
+        // 1. Get all order references from the payload
+        const orderReferences = orders.map((order: any) => order.reference);
+
+        // 2. Fetch the full, valid order data from the database using the references
+        const { data: dbOrders, error: fetchError } = await supabaseService
+            .from('manual_orders')
+            .select('*')
+            .in('reference', orderReferences);
+
+        if (fetchError) {
+            console.error('Error fetching orders from database:', fetchError);
+            throw new Error('Could not validate selected orders against the database.');
+        }
+
+        if (dbOrders.length !== orders.length) {
+            console.warn('Mismatch between selected orders and database orders. Some orders may have been processed already.');
+        }
+        
         const waveDocumentNumber = await generateWaveDocumentNumber();
 
-        // 1. Create the wave entry
+        // 3. Create the wave entry
         const { data: waveData, error: waveError } = await supabaseService
             .from('waves')
             .insert({
                 wave_document_number: waveDocumentNumber,
                 wave_type: waveType,
                 status: 'Wave Progress',
-                total_orders: orders.length,
+                total_orders: dbOrders.length,
                 created_by: user.name,
             })
             .select()
@@ -64,26 +82,20 @@ export async function POST(request: Request) {
             throw new Error(waveError.message);
         }
 
-        // 2. Create the wave_orders entries, now including all necessary data for rollback
-        const waveOrdersToInsert = orders.map((order: any) => {
-            if (order.id === undefined) {
-                console.error('CRITICAL: Attempted to create a wave with an order that has no ID.', order);
-                throw new Error(`Order with reference ${order.reference} is missing a valid ID.`);
-            }
-            return {
-                wave_id: waveData.id,
-                order_id: order.id.toString(), // Ensure order_id is a string for the text column
-                order_reference: order.reference,
-                sku: order.sku,
-                qty: order.qty,
-                customer: order.customer,
-                city: order.city,
-                order_date: order.order_date,
-                type: order.type,
-                from: order.from,
-                delivery_type: order.delivery_type,
-            }
-        });
+        // 4. Create the wave_orders entries using the valid data from the database
+        const waveOrdersToInsert = dbOrders.map((order: any) => ({
+            wave_id: waveData.id,
+            order_id: order.id.toString(), // Convert number to string for the text column
+            order_reference: order.reference,
+            sku: order.sku,
+            qty: order.qty,
+            customer: order.customer,
+            city: order.city,
+            order_date: order.order_date,
+            type: order.type,
+            from: order.from,
+            delivery_type: order.delivery_type,
+        }));
 
         const { error: waveOrdersError } = await supabaseService
             .from('wave_orders')
@@ -91,13 +103,13 @@ export async function POST(request: Request) {
 
         if (waveOrdersError) {
             console.error('Error inserting wave orders:', waveOrdersError);
-            // Optional: Rollback wave creation
+            // Rollback wave creation
             await supabaseService.from('waves').delete().eq('id', waveData.id);
             throw new Error('Failed to associate orders with the wave.');
         }
 
-        // 3. Delete the orders from manual_orders
-        const orderIdsToDelete = orders.map((order: any) => order.id);
+        // 5. Delete the orders from manual_orders
+        const orderIdsToDelete = dbOrders.map((order: any) => order.id);
         const { error: deleteError } = await supabaseService
             .from('manual_orders')
             .delete()
@@ -113,7 +125,7 @@ export async function POST(request: Request) {
             userName: user.name,
             userEmail: user.email,
             action: 'CREATE_WAVE',
-            details: `Created wave ${waveDocumentNumber} with ${orders.length} orders.`,
+            details: `Created wave ${waveDocumentNumber} with ${dbOrders.length} orders.`,
         });
 
         return NextResponse.json({ message: 'Wave created successfully', wave: waveData }, { status: 201 });
