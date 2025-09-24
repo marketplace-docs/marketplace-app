@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -75,7 +76,7 @@ export default function OutOfStockManagementPage() {
     const handleNextPage = () => setCurrentPage((prev) => (prev < totalPages ? prev + 1 : prev));
     const handlePrevPage = () => setCurrentPage((prev) => (prev > 1 ? prev - 1 : prev));
     
-    const handleSendToPacking = async (orderId: string) => {
+    const handleSendToPacking = async (orderId: number) => {
         if (!user || !canManage) return;
         setIsSubmitting(true);
         try {

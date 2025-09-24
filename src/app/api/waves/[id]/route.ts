@@ -88,7 +88,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
         if (waveOrders.length > 0) {
             // 2. Re-insert orders back into manual_orders with complete data, INCLUDING THE ORIGINAL ID
             const ordersToReinsert = waveOrders.map(wo => ({
-                id: wo.order_id, // **THE CRUCIAL FIX: Preserve the original ID**
+                id: wo.order_id, 
                 reference: wo.order_reference,
                 sku: wo.sku,
                 qty: wo.qty,
@@ -103,7 +103,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
 
             const { error: reinsertError } = await supabaseService
                 .from('manual_orders')
-                .insert(ordersToReinsert);
+                .upsert(ordersToReinsert, { onConflict: 'id' });
 
             if (reinsertError) {
                 console.error('Error re-inserting cancelled orders into manual_orders:', reinsertError);
@@ -198,7 +198,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     const { data: waveOrder, error: findError } = await supabaseService
         .from('wave_orders')
         .select('*')
-        .eq('order_reference', orderId) // Use order_reference which should be unique
+        .eq('order_reference', orderId)
         .eq('wave_id', id)
         .single();
     
@@ -209,8 +209,8 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     // 2. Re-insert the order into manual_orders with OOS status
     const { error: insertError } = await supabaseService
         .from('manual_orders')
-        .insert({
-            id: waveOrder.order_id, // **THE CRUCIAL FIX: Preserve the original ID**
+        .upsert({
+            id: waveOrder.order_id, 
             reference: waveOrder.order_reference,
             sku: waveOrder.sku,
             qty: waveOrder.qty,
@@ -220,8 +220,8 @@ export async function PATCH(request: Request, { params }: { params: { id: string
             type: waveOrder.type,
             from: waveOrder.from,
             delivery_type: waveOrder.delivery_type,
-            status: 'Out of Stock' // The important part
-        });
+            status: 'Out of Stock'
+        }, { onConflict: 'id' });
 
     if (insertError) {
         console.error('Error re-inserting OOS order into manual_orders:', insertError);
@@ -235,7 +235,6 @@ export async function PATCH(request: Request, { params }: { params: { id: string
         .eq('id', waveOrder.id);
     
     if (deleteError) {
-        // This is not ideal, as we've already re-inserted it. Log and alert.
         console.error('CRITICAL: Failed to delete order from wave after marking OOS. Manual cleanup needed.', deleteError);
     }
     
@@ -275,5 +274,3 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
   return NextResponse.json({ error: 'Invalid action specified.' }, { status: 400 });
 }
-
-    
