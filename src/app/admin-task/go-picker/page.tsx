@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState } from 'react';
@@ -134,7 +135,7 @@ export default function GoPickerPage() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         action: 'mark_oos', 
-                        orderId: foundOrder.id,
+                        orderId: foundOrder.reference,
                         user 
                     }),
                 });

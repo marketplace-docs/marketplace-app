@@ -43,7 +43,7 @@ export async function POST(request: Request) {
         if (!Array.isArray(orderReferences) || orderReferences.length === 0) {
             return NextResponse.json({ error: 'No orders selected for the wave.' }, { status: 400 });
         }
-
+        
         // 1. Fetch the full, valid order data from the database using the references
         const { data: dbOrders, error: fetchError } = await supabaseService
             .from('manual_orders')
@@ -56,8 +56,6 @@ export async function POST(request: Request) {
         }
 
         if (dbOrders.length !== orderReferences.length) {
-            console.warn('Mismatch between selected orders and database orders. Some orders may have been processed already or do not exist.');
-             // Find which references were not found
             const foundRefs = new Set(dbOrders.map(o => o.reference));
             const notFoundRefs = orderReferences.filter(ref => !foundRefs.has(ref));
             if (notFoundRefs.length > 0) {
@@ -88,7 +86,6 @@ export async function POST(request: Request) {
         // 3. Create the wave_orders entries using the valid data from the database
         const waveOrdersToInsert = dbOrders.map((order: any) => ({
             wave_id: waveData.id,
-            order_id: order.id, // FIX: Send as number, not string
             order_reference: order.reference,
             sku: order.sku,
             qty: order.qty,
