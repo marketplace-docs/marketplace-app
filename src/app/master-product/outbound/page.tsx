@@ -11,14 +11,15 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, PackageCheck, Search } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import type { ProductOutDocument } from '@/types/product-out-document';
+import { format } from 'date-fns';
 
 type OrderToProcess = {
-    docId: number;
+    docIds: number[];
     sku: string;
     barcode: string;
     qty: number;
     exp_date: string;
-    location: string;
+    locations: string[];
     order_reference: string;
 }
 
@@ -44,28 +45,39 @@ export default function OutboundPage() {
             if (!productOutRes.ok) throw new Error('Could not fetch outbound documents.');
             const allProductOutDocs: ProductOutDocument[] = await productOutRes.json();
             
-            // Find the specific 'Issue - Order' document that has not been packed yet
-            const issueDoc = allProductOutDocs.find(
+            // Find all 'Issue - Order' documents for this reference that have not been packed yet
+            const issueDocs = allProductOutDocs.filter(
                 doc => doc.status === 'Issue - Order' && 
                        doc.packer_name === null &&
                        doc.order_reference === orderRef
             );
             
-            if (!issueDoc) {
+            if (issueDocs.length === 0) {
                 toast({ variant: 'destructive', title: 'Not Found or Already Packed', description: `No pending packing task found for order ref: ${orderRef}.` });
                 setIsLoading(false);
                 return;
             }
-
-            setFoundOrder({
-                docId: issueDoc.id,
-                order_reference: issueDoc.order_reference || orderRef, // Use the reference from doc
-                sku: issueDoc.sku,
-                barcode: issueDoc.barcode,
-                qty: issueDoc.qty,
-                exp_date: issueDoc.expdate,
-                location: issueDoc.location,
+            
+            // Aggregate data from all found documents
+            const aggregatedOrder: OrderToProcess = issueDocs.reduce((acc, doc) => {
+                acc.docIds.push(doc.id);
+                acc.qty += doc.qty;
+                if (!acc.locations.includes(doc.location)) {
+                    acc.locations.push(doc.location);
+                }
+                return acc;
+            }, {
+                docIds: [] as number[],
+                order_reference: issueDocs[0].order_reference || orderRef,
+                sku: issueDocs[0].sku,
+                barcode: issueDocs[0].barcode,
+                qty: 0,
+                exp_date: issueDocs[0].expdate, // Assume same exp_date for simplicity of display
+                locations: [] as string[],
             });
+
+
+            setFoundOrder(aggregatedOrder);
 
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Error', description: error.message });
@@ -83,19 +95,24 @@ export default function OutboundPage() {
         setIsSubmitting(true);
 
         try {
-            const response = await fetch(`/api/product-out-documents/${foundOrder.docId}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    packer_name: user.name,
-                    user, 
-                 }),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to confirm packing.');
+            const updatePromises = foundOrder.docIds.map(docId =>
+                fetch(`/api/product-out-documents/${docId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        packer_name: user.name,
+                        user, 
+                     }),
+                })
+            );
+            
+            const results = await Promise.all(updatePromises);
+            
+            const failedUpdates = results.filter(res => !res.ok);
+            if (failedUpdates.length > 0) {
+                throw new Error(`Failed to confirm packing for ${failedUpdates.length} parts of the order.`);
             }
+
 
             toast({
                 title: 'Packing Confirmed',
@@ -123,7 +140,7 @@ export default function OutboundPage() {
                         </div>
                         <CardTitle className="text-center">Packing Information Station</CardTitle>
                         <CardDescription className="text-center">
-                            Scan the picked order to verify details and finalize for shipment. This action marks the order as complete and adjusts stock levels.
+                            Scan the picked order to verify details and finalize for shipment. This action marks the order as complete.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -152,11 +169,15 @@ export default function OutboundPage() {
                                         </div>
                                         <div>
                                             <p className="font-medium text-muted-foreground">Quantity</p>
-                                            <p className="font-semibold">{foundOrder.qty}</p>
+                                            <p className="font-semibold">{foundOrder.qty.toLocaleString()}</p>
                                         </div>
-                                        <div>
-                                            <p className="font-medium text-muted-foreground">From Location</p>
-                                            <p className="font-semibold">{foundOrder.location}</p>
+                                         <div>
+                                            <p className="font-medium text-muted-foreground">From Locations</p>
+                                            <p className="font-semibold">{foundOrder.locations.join(', ')}</p>
+                                        </div>
+                                         <div>
+                                            <p className="font-medium text-muted-foreground">EXP Date</p>
+                                            <p className="font-semibold">{format(new Date(foundOrder.exp_date), 'dd MMMM yyyy')}</p>
                                         </div>
                                     </div>
 
@@ -173,7 +194,3 @@ export default function OutboundPage() {
         </MainLayout>
     );
 }
-
-    
-
-    
