@@ -86,7 +86,7 @@ export async function POST(request: Request) {
         // 3. Create the wave_orders entries using the valid data from the database
         const waveOrdersToInsert = dbOrders.map((order: any) => ({
             wave_id: waveData.id,
-            order_id: order.id, // Menggunakan order.id (number) untuk kolom order_id (int8) yang baru
+            order_id: order.id,
             order_reference: order.reference,
             sku: order.sku,
             qty: order.qty,

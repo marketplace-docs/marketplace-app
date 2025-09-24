@@ -86,18 +86,19 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
         }
 
         if (waveOrders.length > 0) {
-            // 2. Re-insert orders back into manual_orders with complete data
+            // 2. Re-insert orders back into manual_orders with complete data, INCLUDING THE ORIGINAL ID
             const ordersToReinsert = waveOrders.map(wo => ({
+                id: wo.order_id, // **THE CRUCIAL FIX: Preserve the original ID**
                 reference: wo.order_reference,
                 sku: wo.sku,
                 qty: wo.qty,
                 status: 'Payment Accepted', // Reset status
                 customer: wo.customer,
                 city: wo.city,
-                order_date: wo.order_date, // Use original order date
-                type: wo.type, // Restore original type
-                from: wo.from, // Restore original from
-                delivery_type: wo.delivery_type, // Restore original delivery_type
+                order_date: wo.order_date,
+                type: wo.type,
+                from: wo.from,
+                delivery_type: wo.delivery_type,
             }));
 
             const { error: reinsertError } = await supabaseService
@@ -209,6 +210,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     const { error: insertError } = await supabaseService
         .from('manual_orders')
         .insert({
+            id: waveOrder.order_id, // **THE CRUCIAL FIX: Preserve the original ID**
             reference: waveOrder.order_reference,
             sku: waveOrder.sku,
             qty: waveOrder.qty,
