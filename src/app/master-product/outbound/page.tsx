@@ -40,15 +40,26 @@ export default function OutboundPage() {
         setFoundOrder(null);
 
         try {
-            // Find a product_out document that represents a picked order but has not yet been packed.
+            // This logic needs to be robust. We assume the picker created a `product_out_documents` entry
+            // with status 'Issue - Order'. We need to find that document.
+            // The link between the original manual_order.reference and product_out_documents.nodocument
+            // is not direct. A better way would be to store the order_reference in product_out_documents.
+            // For now, we'll try to find a match based on what we have.
+
             const productOutRes = await fetch('/api/product-out-documents');
             if (!productOutRes.ok) throw new Error('Could not fetch outbound documents.');
             const allProductOutDocs: ProductOutDocument[] = await productOutRes.json();
             
-            // For now, we assume a simple logic: Find any unpacked 'Issue - Order' document.
-            // A more robust solution would involve linking nodocument to order_reference.
+            // The most reliable way to find the picked order is to search for a document that
+            // has been issued for an order but not yet packed.
             const issueDoc = allProductOutDocs.find(
-                doc => doc.status === 'Issue - Order' && doc.packer_name === null && (doc.nodocument.includes(orderRef) || doc.barcode === orderRef || doc.sku === orderRef)
+                doc => doc.status === 'Issue - Order' && 
+                       doc.packer_name === null &&
+                       // We need a reliable field to search by. Let's assume for now that the picker's
+                       // `validatedby` field is linked to an order reference or similar.
+                       // A better search would be on a dedicated `order_reference` field in the table.
+                       // Let's broaden the search to barcode or SKU for now as a fallback.
+                       (doc.barcode === orderRef || doc.sku === orderRef || doc.nodocument.toLowerCase().includes(orderRef.toLowerCase()))
             );
             
             if (!issueDoc) {
@@ -59,7 +70,7 @@ export default function OutboundPage() {
 
             setFoundOrder({
                 docId: issueDoc.id,
-                order_reference: orderRef, 
+                order_reference: orderRef, // Use the scanned reference
                 sku: issueDoc.sku,
                 barcode: issueDoc.barcode,
                 qty: issueDoc.qty,
@@ -131,9 +142,9 @@ export default function OutboundPage() {
                             <div className="flex items-end gap-2">
                                 <div className="flex-1 space-y-2">
                                     <Label htmlFor="orderRef">Scan Order</Label>
-                                    <Input id="orderRef" name="orderRef" placeholder="Scan or type order reference..." value={orderRef} onChange={e => setOrderRef(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearchOrder()} disabled={isLoading}/>
+                                    <Input id="orderRef" name="orderRef" placeholder="Scan or type order reference..." value={orderRef} onChange={e => setOrderRef(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearchOrder()} disabled={isLoading || isSubmitting}/>
                                 </div>
-                                <Button onClick={handleSearchOrder} disabled={isLoading || !orderRef}>
+                                <Button onClick={handleSearchOrder} disabled={isLoading || isSubmitting || !orderRef}>
                                     {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
                                     Find Order
                                 </Button>
@@ -173,3 +184,5 @@ export default function OutboundPage() {
         </MainLayout>
     );
 }
+
+    
