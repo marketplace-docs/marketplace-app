@@ -27,14 +27,15 @@ const apiRoutes = [
     {
         category: "e-Commerce (Pesanan Manual & Wave)",
         endpoints: [
-            { method: "GET", path: "/api/manual-orders", description: "Mengambil semua data pesanan manual yang siap diproses." },
-            { method: "POST", path: "/api/manual-orders", description: "Membuat pesanan manual baru (tunggal atau massal via CSV)." },
+            { method: "GET", path: "/api/manual-orders", description: "Mengambil semua data pesanan manual yang siap diproses. Gunakan ?status=Out of Stock untuk melihat pesanan OOS." },
+            { method: "POST", path: "/api/manual-orders", description: "Membuat pesanan manual baru (tunggal atau massal via CSV dengan pengisian otomatis 'from' dan 'type')." },
+            { method: "PATCH", path: "/api/manual-orders/[id]", description: "Mengubah status pesanan, misal dari OOS ke 'Payment Accepted'." },
             { method: "DELETE", path: "/api/manual-orders/[id]", description: "Menghapus pesanan manual (digunakan saat melaporkan OOS ke CS)." },
             { method: "GET", path: "/api/waves", description: "Mengambil semua 'wave' yang telah dibuat." },
             { method: "POST", path: "/api/waves", description: "Membuat 'wave' baru dari pesanan manual yang dipilih." },
             { method: "GET", path: "/api/waves/[id]", description: "Mengambil detail pesanan dari 'wave' tertentu." },
-            { method: "PATCH", path: "/api/waves/[id]", description: "Memperbarui status 'wave' (misal: menjadi 'Wave Done')." },
-            { method: "DELETE", path: "/api/waves/[id]", description: "Membatalkan/menghapus 'wave' beserta pesanan di dalamnya." },
+            { method: "PATCH", path: "/api/waves/[id]", description: "Memperbarui status 'wave' (misal: 'Wave Done') atau memindahkan pesanan OOS." },
+            { method: "DELETE", path: "/api/waves/[id]", description: "Membatalkan/menghapus 'wave' dan mengembalikan stok secara otomatis." },
         ]
     },
     {

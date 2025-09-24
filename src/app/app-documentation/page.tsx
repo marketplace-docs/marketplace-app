@@ -74,7 +74,7 @@ const featureDescriptions: FeatureDescription[] = [
             { label: "Go-Picker", description: "Fitur untuk tim picker. Memindai pesanan, mengambil barang dari lokasi, dan mengonfirmasi pengambilan yang secara otomatis memotong stok." },
             { label: "Outbound", description: "Stasiun kerja untuk tim packer. Memindai pesanan yang sudah di-pick, memverifikasi detail, dan mengonfirmasi bahwa pesanan sudah dikemas." },
             { label: "Outbound Monitoring", description: "Melihat riwayat lengkap semua pesanan yang telah di-pick dan di-pack, termasuk siapa yang mengerjakan dan kapan." },
-            { label: "Out of Stock", description: "Menampilkan laporan produk yang stoknya habis di semua lokasi." },
+            { label: "Out of Stock", description: "Pusat manajemen untuk pesanan yang tidak dapat dipenuhi (OOS). Memungkinkan admin mengirim kembali pesanan ke antrian packing atau menghapusnya." },
         ]
     },
     {
