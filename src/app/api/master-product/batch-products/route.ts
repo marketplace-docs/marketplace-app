@@ -1,7 +1,7 @@
 
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
-import { format } from 'date-fns';
+import { format, differenceInMonths, isBefore } from 'date-fns';
 
 type ProductDoc = {
     id: string;
@@ -32,7 +32,6 @@ type CombinedDoc = {
 };
 
 type AggregatedProduct = {
-    // This ID is now a composite key, not a DB ID
     id: string; 
     sku: string;
     barcode: string;
@@ -40,14 +39,17 @@ type AggregatedProduct = {
     exp_date: string;
     location: string;
     stock: number;
+    status: ProductStatus;
 };
+
+type ProductStatus = 'All' | 'Sellable' | 'Expiring' | 'Expired' | 'Out of Stock' | 'Quarantine' | 'Damaged' | 'Marketplace' | 'Sensitive MP';
+
 
 const createStockKey = (barcode: string, location: string, exp_date: string): string => {
     const loc = location || 'no-location';
     let exp = 'no-exp-date';
     try {
         if (exp_date) {
-            // Standardize date format to avoid discrepancies (e.g., timezone issues)
             exp = format(new Date(exp_date), 'yyyy-MM-dd');
         }
     } catch (e) {
@@ -56,17 +58,37 @@ const createStockKey = (barcode: string, location: string, exp_date: string): st
     return `${barcode}|${loc}|${exp}`;
 };
 
+const getProductStatus = (expDate: string, stock: number, location: string): Omit<ProductStatus, 'All'> => {
+    const lowerCaseLocation = location.toLowerCase();
+    if (lowerCaseLocation.includes('marketplace')) return 'Marketplace';
+    if (lowerCaseLocation.includes('sensitive')) return 'Sensitive MP';
+    if (lowerCaseLocation.includes('quarantine')) return 'Quarantine';
+    if (lowerCaseLocation.includes('damaged')) return 'Damaged';
+    
+    if (stock <= 0) return 'Out of Stock';
+
+    const today = new Date();
+    const expiryDate = new Date(expDate);
+    
+    if (isBefore(expiryDate, today)) return 'Expired';
+
+    const monthsUntilExpiry = differenceInMonths(expiryDate, today);
+    if (monthsUntilExpiry < 3) return 'Expiring';
+    
+    return 'Sellable';
+};
+
+
 // Define statuses that represent a DECREASE in stock.
 const REAL_STOCK_OUT_STATUSES = [
     'Issue - Order',
     'Issue - Internal Transfer',
     'Issue - Adjustment Manual',
     'Adjustment - Loc',
-    'Issue - Putaway', // Moving stock out of a location
-    'Issue - Return', // Returning goods to a supplier
+    'Issue - Putaway',
+    'Issue - Return',
     'Issue - Return Putaway',
     'Issue - Update Expired',
-    // 'Receipt' statuses are IN, so they are excluded here.
 ];
 
 
@@ -83,12 +105,10 @@ export async function GET() {
         if (putawayError) throw putawayError;
         if (productOutError) throw productOutError;
         
-        const stockMap = new Map<string, AggregatedProduct>();
+        const stockMap = new Map<string, Omit<AggregatedProduct, 'status'>>();
 
-        // All putaway documents are IN transactions
-        const inTransactions = putawayData.map(doc => ({ type: 'IN' as const, date: new Date(doc.date), doc }));
+        const inTransactions = (putawayData || []).map(doc => ({ type: 'IN' as const, date: new Date(doc.date), doc }));
 
-        // Process product_out documents to determine if they are IN or OUT
         const outOrInFromProductOut = (productOutData as ProductOutDoc[]).map(doc => {
             const isOut = REAL_STOCK_OUT_STATUSES.includes(doc.status);
             return { type: (isOut ? 'OUT' : 'IN') as 'IN' | 'OUT', date: new Date(doc.date), doc };
@@ -96,7 +116,6 @@ export async function GET() {
 
         const allTransactions: CombinedDoc[] = [...inTransactions, ...outOrInFromProductOut];
 
-        // Initialize map with all possible batches from ALL documents
         allTransactions.forEach(tx => {
             const doc = tx.doc;
             const exp_date = 'exp_date' in doc ? doc.exp_date : doc.expdate;
@@ -114,7 +133,6 @@ export async function GET() {
             }
         });
 
-        // Chronologically process all transactions to calculate final stock
         allTransactions.sort((a, b) => a.date.getTime() - b.date.getTime());
         
         allTransactions.forEach(tx => {
@@ -130,15 +148,16 @@ export async function GET() {
                 } else { 
                     entry.stock -= doc.qty;
                 }
-                // Fill in brand if it's missing and this is a putaway doc
                 if (tx.type === 'IN' && 'brand' in doc && !entry.brand) {
                     entry.brand = doc.brand;
                 }
             } 
         });
 
-
-        const finalInventory = Array.from(stockMap.values());
+        const finalInventory: AggregatedProduct[] = Array.from(stockMap.values()).map(product => ({
+            ...product,
+            status: getProductStatus(product.exp_date, product.stock, product.location)
+        }));
 
         return NextResponse.json(finalInventory);
 

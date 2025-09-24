@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -17,6 +18,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useToast } from '@/hooks/use-toast';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
+type ProductStatus = 'All' | 'Sellable' | 'Expiring' | 'Expired' | 'Out of Stock' | 'Quarantine' | 'Damaged' | 'Marketplace' | 'Sensitive MP';
+
 type BatchProduct = {
     id: string;
     sku: string;
@@ -25,7 +28,7 @@ type BatchProduct = {
     exp_date: string;
     location: string;
     stock: number;
-    status: 'Sellable' | 'Expiring' | 'Expired' | 'Out of Stock' | 'Quarantine' | 'Damaged' | 'Marketplace' | 'Sensitive MP';
+    status: ProductStatus;
 };
 
 type AggregatedBySku = {
@@ -35,29 +38,6 @@ type AggregatedBySku = {
     totalStock: number;
     batches: BatchProduct[];
 };
-
-type ProductStatus = 'All' | 'Sellable' | 'Expiring' | 'Expired' | 'Out of Stock' | 'Quarantine' | 'Damaged' | 'Marketplace' | 'Sensitive MP';
-
-const getProductStatus = (expDate: string, stock: number, location: string): Omit<ProductStatus, 'All'> => {
-    const lowerCaseLocation = location.toLowerCase();
-    if (lowerCaseLocation.includes('marketplace')) return 'Marketplace';
-    if (lowerCaseLocation.includes('sensitive')) return 'Sensitive MP';
-    if (lowerCaseLocation.includes('quarantine')) return 'Quarantine';
-    if (lowerCaseLocation.includes('damaged')) return 'Damaged';
-    
-    if (stock <= 0) return 'Out of Stock';
-
-    const today = new Date();
-    const expiryDate = new Date(expDate);
-    
-    if (isBefore(expiryDate, today)) return 'Expired';
-
-    const monthsUntilExpiry = differenceInMonths(expiryDate, today);
-    if (monthsUntilExpiry < 3) return 'Expiring';
-    
-    return 'Sellable';
-};
-
 
 const statusVariantMap: Record<Omit<ProductStatus, 'All'>, 'default' | 'secondary' | 'destructive' | 'outline'> = {
     'Sellable': 'default',
@@ -111,12 +91,8 @@ export default function BatchProductPage() {
                 const errorData = await response.json();
                 throw new Error(errorData.error || 'Failed to fetch inventory data');
             }
-            const data: Omit<BatchProduct, 'status'>[] = await response.json();
-            const dataWithStatus = data.map(product => ({
-                ...product,
-                status: getProductStatus(product.exp_date, product.stock, product.location)
-            }));
-            setInventoryData(dataWithStatus);
+            const data: BatchProduct[] = await response.json();
+            setInventoryData(data);
         } catch (err: any) {
             setError(err.message);
         } finally {
