@@ -40,26 +40,15 @@ export default function OutboundPage() {
         setFoundOrder(null);
 
         try {
-            // This logic needs to be robust. We assume the picker created a `product_out_documents` entry
-            // with status 'Issue - Order'. We need to find that document.
-            // The link between the original manual_order.reference and product_out_documents.nodocument
-            // is not direct. A better way would be to store the order_reference in product_out_documents.
-            // For now, we'll try to find a match based on what we have.
-
             const productOutRes = await fetch('/api/product-out-documents');
             if (!productOutRes.ok) throw new Error('Could not fetch outbound documents.');
             const allProductOutDocs: ProductOutDocument[] = await productOutRes.json();
             
-            // The most reliable way to find the picked order is to search for a document that
-            // has been issued for an order but not yet packed.
+            // Find the specific 'Issue - Order' document that has not been packed yet
             const issueDoc = allProductOutDocs.find(
                 doc => doc.status === 'Issue - Order' && 
                        doc.packer_name === null &&
-                       // We need a reliable field to search by. Let's assume for now that the picker's
-                       // `validatedby` field is linked to an order reference or similar.
-                       // A better search would be on a dedicated `order_reference` field in the table.
-                       // Let's broaden the search to barcode or SKU for now as a fallback.
-                       (doc.barcode === orderRef || doc.sku === orderRef || doc.nodocument.toLowerCase().includes(orderRef.toLowerCase()))
+                       doc.order_reference === orderRef
             );
             
             if (!issueDoc) {
@@ -70,7 +59,7 @@ export default function OutboundPage() {
 
             setFoundOrder({
                 docId: issueDoc.id,
-                order_reference: orderRef, // Use the scanned reference
+                order_reference: issueDoc.order_reference || orderRef, // Use the reference from doc
                 sku: issueDoc.sku,
                 barcode: issueDoc.barcode,
                 qty: issueDoc.qty,
@@ -184,5 +173,7 @@ export default function OutboundPage() {
         </MainLayout>
     );
 }
+
+    
 
     

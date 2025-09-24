@@ -97,6 +97,7 @@ export async function POST(request: Request) {
         date: doc.date,
         validatedby: doc.validatedby,
         expdate: doc.expdate,
+        order_reference: doc.order_reference, // Add order_reference
     };
   }));
 
@@ -140,3 +141,5 @@ type ProductOutStatus =
     | 'Adjusment - Loc'; // Keep for backwards compatibility if needed
     
 
+
+    

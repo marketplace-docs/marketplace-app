@@ -11,4 +11,7 @@ export type ProductOutDocument = {
   location: string;
   validatedby: string;
   packer_name: string | null;
+  order_reference?: string;
 };
+
+    

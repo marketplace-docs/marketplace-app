@@ -146,7 +146,32 @@ export default function GoPickerPage() {
                 toast({ title: 'Marked as OOS', description: `Order ${foundOrder.reference} moved to Out of Stock management.` });
 
             } else if (pickedQty === foundOrder.qty) {
-                // If qty matches, proceed with picking
+                 // 1. Create product_out_document to log the pick
+                const issueDocPayload = {
+                    documents: [{
+                        sku: foundOrder.sku,
+                        barcode: foundOrder.barcode,
+                        expdate: new Date().toISOString(), // Assuming FEFO, so we just need a valid date.
+                        location: foundOrder.location,
+                        qty: pickedQty,
+                        status: 'Issue - Order' as const,
+                        date: new Date().toISOString(),
+                        validatedby: user.name,
+                        order_reference: foundOrder.reference, // CRUCIAL for linking
+                    }],
+                    user,
+                };
+                const issueRes = await fetch('/api/product-out-documents', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(issueDocPayload),
+                });
+                if (!issueRes.ok) {
+                    const errorData = await issueRes.json();
+                    throw new Error(errorData.error || 'Failed to create picking log document.');
+                }
+
+                // 2. Update the wave status to "Wave Done"
                 const response = await fetch(`/api/waves/${foundOrder.waveId}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
@@ -161,7 +186,7 @@ export default function GoPickerPage() {
                 
                 toast({
                     title: 'Pick Confirmed',
-                    description: `Order ${foundOrder.reference} picked. Wave ${foundOrder.wave_document_number} status updated.`,
+                    description: `Order ${foundOrder.reference} picked and logged. Ready for packing.`,
                 });
             } else {
                  toast({ variant: 'destructive', title: 'Quantity Mismatch', description: `Picked quantity (${pickedQty}) does not match required quantity (${foundOrder.qty}). Please recount or report as OOS (0).` });
@@ -269,3 +294,5 @@ export default function GoPickerPage() {
         </MainLayout>
     );
 }
+
+    
