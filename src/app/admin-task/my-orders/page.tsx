@@ -66,7 +66,7 @@ export default function MyOrdersPage() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     
     const [isEditing, setIsEditing] = useState(false);
-    const [editedOrders, setEditedOrders] = useState<Record<number, Partial<Order>>>({});
+    const [editedOrders, setEditedOrders] = useState<Record<string, Partial<Order>>>({});
     
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isWaveDialogOpen, setWaveDialogOpen] = useState(false);
@@ -128,6 +128,7 @@ export default function MyOrdersPage() {
                 const stockInfo = stockBySku.get(order.sku) || { total: 0, location: 'N/A' };
                 return {
                     ...order,
+                    id: order.id.toString(), // Ensure ID is a string
                     status: order.qty > stockInfo.total ? 'Out of Stock' : 'Payment Accepted',
                     total_stock_on_hand: stockInfo.total,
                     location: stockInfo.location,
@@ -285,7 +286,7 @@ export default function MyOrdersPage() {
             return;
         }
 
-        const selectedOrders = allOrders.filter(order => selection[order.id.toString()]);
+        const selectedOrders = allOrders.filter(order => selection[order.id]);
 
         if (selectedOrders.some(order => order.status === 'Out of Stock')) {
             toast({ variant: 'destructive', title: 'Invalid Orders', description: 'Cannot start a wave with "Out of Stock" orders.' });
@@ -410,7 +411,7 @@ export default function MyOrdersPage() {
         }
     };
 
-    const handleOrderChange = (id: number, field: keyof Order, value: string | number) => {
+    const handleOrderChange = (id: string, field: keyof Order, value: string | number) => {
         setEditedOrders(prev => ({
             ...prev,
             [id]: { ...prev[id], [field]: value }
@@ -631,7 +632,7 @@ export default function MyOrdersPage() {
                                         onCheckedChange={(checked) => {
                                             const newSelection: Record<string, boolean> = {};
                                             if (checked) {
-                                                filteredOrders.forEach(o => newSelection[o.id.toString()] = true);
+                                                filteredOrders.forEach(o => newSelection[o.id] = true);
                                             }
                                             setSelection(newSelection);
                                         }}
@@ -667,11 +668,11 @@ export default function MyOrdersPage() {
                                 </TableRow>
                             ) : filteredOrders.length > 0 ? (
                                 filteredOrders.map(order => (
-                                <TableRow key={order.id} data-state={selection[order.id.toString()] && "selected"}>
+                                <TableRow key={order.id} data-state={selection[order.id] && "selected"}>
                                     <TableCell>
                                         <Checkbox
-                                            checked={selection[order.id.toString()] || false}
-                                            onCheckedChange={(checked) => setSelection(prev => ({...prev, [order.id.toString()]: !!checked}))}
+                                            checked={selection[order.id] || false}
+                                            onCheckedChange={(checked) => setSelection(prev => ({...prev, [order.id]: !!checked}))}
                                         />
                                     </TableCell>
                                     <TableCell>
