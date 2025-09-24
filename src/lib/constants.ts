@@ -1,6 +1,6 @@
 
 
-import { LayoutDashboard, ListTodo, Store, FileText, Settings, type LucideIcon, Briefcase, Users, Archive, BarChart3, AppWindow, BookText, Database, History, FilePlus, Eye, File, PieChart, Users2, Shield, Menu, Monitor, Undo2, Route, Package, PackagePlus, PackageMinus, Boxes, CalendarClock, Warehouse, Calculator, PackageX, ClipboardList, ScanLine, PackageCheck } from 'lucide-react';
+import { LayoutDashboard, ListTodo, Store, FileText, Settings, type LucideIcon, Briefcase, Users, Archive, BarChart3, AppWindow, BookText, Database, History, FilePlus, Eye, File, PieChart, Users2, Shield, Menu, Monitor, Undo2, Route, Package, PackagePlus, PackageMinus, Boxes, CalendarClock, Warehouse, Calculator, PackageX, ClipboardList, ScanLine, PackageCheck, ShoppingCart } from 'lucide-react';
 
 export type NavLink = {
     href: string;
@@ -34,21 +34,6 @@ export const NAV_LINKS: NavLink[] = [
                 href: '/admin-task/task',
                 label: 'Task',
                 icon: ListTodo,
-            },
-            {
-                href: '/admin-task/my-orders',
-                label: 'My Orders',
-                icon: ClipboardList,
-            },
-            {
-                href: '/admin-task/monitoring-orders',
-                label: 'Monitoring Orders',
-                icon: Monitor,
-            },
-            {
-                href: '/admin-task/go-picker',
-                label: 'Go-Picker',
-                icon: ScanLine,
             },
         ]
     },
@@ -133,20 +118,25 @@ export const NAV_LINKS: NavLink[] = [
             },
         ]
     },
-    {
-        href: '/master-product',
-        label: 'Master Product',
-        icon: Package,
+     {
+        href: '#',
+        label: 'e-Commerce',
+        icon: ShoppingCart,
         children: [
-             {
-                href: '/master-product/batch-product',
-                label: 'Batch Product',
-                icon: Boxes,
+            {
+                href: '/admin-task/my-orders',
+                label: 'My Orders',
+                icon: ClipboardList,
             },
             {
-                href: '/master-product/product-in',
-                label: 'Stock In',
-                icon: PackagePlus,
+                href: '/admin-task/monitoring-orders',
+                label: 'Monitoring Orders',
+                icon: Monitor,
+            },
+            {
+                href: '/admin-task/go-picker',
+                label: 'Go-Picker',
+                icon: ScanLine,
             },
             {
                 href: '/master-product/outbound',
@@ -162,6 +152,23 @@ export const NAV_LINKS: NavLink[] = [
                 href: '/master-product/out-of-stock',
                 label: 'Out of Stock',
                 icon: PackageX,
+            },
+        ]
+    },
+    {
+        href: '/master-product',
+        label: 'Master Product',
+        icon: Package,
+        children: [
+             {
+                href: '/master-product/batch-product',
+                label: 'Batch Product',
+                icon: Boxes,
+            },
+            {
+                href: '/master-product/product-in',
+                label: 'Stock In',
+                icon: PackagePlus,
             },
             {
                 href: '/master-product/stock-log',
