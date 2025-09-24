@@ -1,4 +1,5 @@
 
+
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 import { logActivity } from '@/lib/logger';
@@ -7,20 +8,22 @@ const ALLOWED_ROLES = ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
     const { id } = params;
-    const { status, user } = await request.json();
+    const body = await request.json();
+    const { user, ...fieldsToUpdate } = body;
+
 
     if (!user?.role || !ALLOWED_ROLES.includes(user.role)) {
         return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
     }
 
-    if (!status) {
-        return NextResponse.json({ error: 'Status is required for update.' }, { status: 400 });
+    if (Object.keys(fieldsToUpdate).length === 0) {
+        return NextResponse.json({ error: 'No fields to update provided.' }, { status: 400 });
     }
 
     // Find the order to get its reference for logging
     const { data: orderData, error: findError } = await supabaseService
         .from('manual_orders')
-        .select('reference')
+        .select('reference, status')
         .eq('id', id)
         .single();
     
@@ -31,27 +34,31 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
     const { data, error } = await supabaseService
         .from('manual_orders')
-        .update({ status: status })
+        .update(fieldsToUpdate)
         .eq('id', id)
         .select()
         .single();
 
     if (error) {
-        console.error("Error updating manual order status:", error);
+        console.error("Error updating manual order:", error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    let details = `Updated order ID ${id} to status: ${status}.`;
-    if (status === 'Out of Stock') {
-        details = `Order ${orderData.reference} marked as Out of Stock during picking.`;
-    } else if (status === 'Payment Accepted') {
-        details = `Order ${orderData.reference} sent back to packing queue from OOS.`;
+    let details = `Updated order ${orderData.reference} (ID: ${id}).`;
+    if (fieldsToUpdate.status && fieldsToUpdate.status !== orderData.status) {
+        details = `Updated order ID ${id} status: ${orderData.status} -> ${fieldsToUpdate.status}.`;
+        if (fieldsToUpdate.status === 'Out of Stock') {
+            details = `Order ${orderData.reference} marked as Out of Stock during picking.`;
+        } else if (fieldsToUpdate.status === 'Payment Accepted') {
+            details = `Order ${orderData.reference} sent back to packing queue from OOS.`;
+        }
     }
+
 
     await logActivity({
         userName: user.name,
         userEmail: user.email,
-        action: 'UPDATE_ORDER_STATUS',
+        action: 'UPDATE_MANUAL_ORDER',
         details: details,
     });
 

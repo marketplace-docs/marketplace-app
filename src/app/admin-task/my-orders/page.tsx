@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
 import { format, isWithinInterval } from 'date-fns';
-import { Loader2, AlertCircle, PackageMinus, Search, SlidersHorizontal, Calendar as CalendarIcon, Upload, Play, Plus, MessageSquareText } from 'lucide-react';
+import { Loader2, AlertCircle, PackageMinus, Search, SlidersHorizontal, Calendar as CalendarIcon, Upload, Play, Plus, MessageSquareText, Pencil, Save } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
@@ -34,23 +34,8 @@ import { useToast } from '@/hooks/use-toast';
 import type { BatchProduct } from '@/types/batch-product';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import type { Order } from '@/types/order';
 
-
-type Order = {
-  id: number;
-  reference: string;
-  sku: string;
-  status: 'Payment Accepted' | 'Out of Stock';
-  order_date: string;
-  customer: string;
-  city: string;
-  type: string;
-  from: string;
-  delivery_type: string;
-  qty: number;
-  total_stock_on_hand: number;
-  location: string;
-};
 
 type NewOrder = Omit<Order, 'id' | 'status' | 'order_date' | 'total_stock_on_hand' | 'location'> & { order_date: Date };
 
@@ -79,6 +64,9 @@ export default function MyOrdersPage() {
     const [error, setError] = useState<string | null>(null);
     const [selection, setSelection] = useState<Record<string, boolean>>({});
     const fileInputRef = useRef<HTMLInputElement>(null);
+    
+    const [isEditing, setIsEditing] = useState(false);
+    const [editedOrders, setEditedOrders] = useState<Record<number, Partial<Order>>>({});
     
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isWaveDialogOpen, setWaveDialogOpen] = useState(false);
@@ -388,7 +376,49 @@ export default function MyOrdersPage() {
                 description: error.message,
             });
         }
-    }
+    };
+
+    const handleToggleEdit = async () => {
+        if (isEditing) { // When clicking "Save Changes"
+            if (Object.keys(editedOrders).length === 0) {
+                toast({ title: 'No changes to save.' });
+                setIsEditing(false);
+                return;
+            }
+            setIsSubmitting(true);
+            try {
+                const updatePromises = Object.entries(editedOrders).map(([id, changes]) =>
+                    fetch(`/api/manual-orders/${id}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ ...changes, user }),
+                    })
+                );
+                
+                await Promise.all(updatePromises);
+                toast({ title: 'Success', description: 'All changes have been saved.' });
+                setEditedOrders({});
+                await fetchOrders();
+            } catch (err: any) {
+                toast({ variant: 'destructive', title: 'Save Failed', description: err.message });
+            } finally {
+                setIsSubmitting(false);
+                setIsEditing(false);
+            }
+        } else { // When clicking "Edit Orders"
+            setIsEditing(true);
+        }
+    };
+
+    const handleOrderChange = (id: number, field: keyof Order, value: string | number) => {
+        setEditedOrders(prev => ({
+            ...prev,
+            [id]: { ...prev[id], [field]: value }
+        }));
+        setFilteredOrders(prev => prev.map(order => 
+            order.id === id ? { ...order, [field]: value } : order
+        ));
+    };
 
 
     return (
@@ -533,6 +563,10 @@ export default function MyOrdersPage() {
                                             </DialogFooter>
                                         </DialogContent>
                                     </Dialog>
+                                    <Button variant="link" className="text-violet-600" onClick={handleToggleEdit} disabled={isSubmitting}>
+                                        {isEditing ? <Save className="mr-2 h-4 w-4" /> : <Pencil className="mr-2 h-4 w-4" />}
+                                        {isEditing ? 'SAVE CHANGES' : 'EDIT ORDERS'}
+                                    </Button>
                                     <Dialog open={isUploadDialogOpen} onOpenChange={setUploadDialogOpen}>
                                         <DialogTrigger asChild>
                                             <Button variant="link" className="text-violet-600"><Upload className="mr-2 h-4 w-4"/>UPLOAD MANUAL ORDER</Button>
@@ -641,39 +675,43 @@ export default function MyOrdersPage() {
                                         />
                                     </TableCell>
                                     <TableCell>
-                                        <Popover>
-                                            <PopoverTrigger asChild>
-                                                 <Button variant="link" className="p-0 h-auto font-medium text-blue-600 hover:underline cursor-pointer">
-                                                    {order.reference}
-                                                </Button>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-80">
-                                               {order.status === 'Payment Accepted' ? (
-                                                    <Table>
-                                                        <TableHeader>
-                                                            <TableRow>
-                                                                <TableHead>SKU</TableHead>
-                                                                <TableHead>QTY</TableHead>
-                                                                <TableHead>STOCK</TableHead>
-                                                                <TableHead>LOCATION</TableHead>
-                                                            </TableRow>
-                                                        </TableHeader>
-                                                        <TableBody>
-                                                            <TableRow>
-                                                                <TableCell>{order.sku}</TableCell>
-                                                                <TableCell>{order.qty}</TableCell>
-                                                                <TableCell>{order.total_stock_on_hand}</TableCell>
-                                                                <TableCell>{order.location}</TableCell>
-                                                            </TableRow>
-                                                        </TableBody>
-                                                    </Table>
-                                               ) : (
-                                                    <Badge variant="secondary" className="w-full justify-center text-base bg-gray-200 text-gray-800">
-                                                        Out of Stock
-                                                    </Badge>
-                                               )}
-                                            </PopoverContent>
-                                        </Popover>
+                                        {isEditing ? (
+                                            <Input value={order.reference} onChange={(e) => handleOrderChange(order.id, 'reference', e.target.value)} className="h-8" />
+                                        ) : (
+                                            <Popover>
+                                                <PopoverTrigger asChild>
+                                                    <Button variant="link" className="p-0 h-auto font-medium text-blue-600 hover:underline cursor-pointer">
+                                                        {order.reference}
+                                                    </Button>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-80">
+                                                {order.status === 'Payment Accepted' ? (
+                                                        <Table>
+                                                            <TableHeader>
+                                                                <TableRow>
+                                                                    <TableHead>SKU</TableHead>
+                                                                    <TableHead>QTY</TableHead>
+                                                                    <TableHead>STOCK</TableHead>
+                                                                    <TableHead>LOCATION</TableHead>
+                                                                </TableRow>
+                                                            </TableHeader>
+                                                            <TableBody>
+                                                                <TableRow>
+                                                                    <TableCell>{order.sku}</TableCell>
+                                                                    <TableCell>{order.qty}</TableCell>
+                                                                    <TableCell>{order.total_stock_on_hand}</TableCell>
+                                                                    <TableCell>{order.location}</TableCell>
+                                                                </TableRow>
+                                                            </TableBody>
+                                                        </Table>
+                                                ) : (
+                                                        <Badge variant="secondary" className="w-full justify-center text-base bg-gray-200 text-gray-800">
+                                                            Out of Stock
+                                                        </Badge>
+                                                )}
+                                                </PopoverContent>
+                                            </Popover>
+                                        )}
                                     </TableCell>
                                     <TableCell>
                                       <div className="flex items-center gap-2">
@@ -700,12 +738,12 @@ export default function MyOrdersPage() {
                                       </div>
                                     </TableCell>
                                     <TableCell>{format(new Date(order.order_date), 'yyyy-MM-dd HH:mm:ss')}</TableCell>
-                                    <TableCell>{order.customer}</TableCell>
-                                    <TableCell>{order.city}</TableCell>
-                                    <TableCell>{order.type}</TableCell>
-                                    <TableCell>{order.from}</TableCell>
-                                    <TableCell>{order.delivery_type}</TableCell>
-                                    <TableCell>{order.qty}</TableCell>
+                                    <TableCell>{isEditing ? <Input value={order.customer} onChange={(e) => handleOrderChange(order.id, 'customer', e.target.value)} className="h-8" /> : order.customer}</TableCell>
+                                    <TableCell>{isEditing ? <Input value={order.city} onChange={(e) => handleOrderChange(order.id, 'city', e.target.value)} className="h-8" /> : order.city}</TableCell>
+                                    <TableCell>{isEditing ? <Input value={order.type} onChange={(e) => handleOrderChange(order.id, 'type', e.target.value)} className="h-8" /> : order.type}</TableCell>
+                                    <TableCell>{isEditing ? <Input value={order.from} onChange={(e) => handleOrderChange(order.id, 'from', e.target.value)} className="h-8" /> : order.from}</TableCell>
+                                    <TableCell>{isEditing ? <Input value={order.delivery_type} onChange={(e) => handleOrderChange(order.id, 'delivery_type', e.target.value)} className="h-8" /> : order.delivery_type}</TableCell>
+                                    <TableCell>{isEditing ? <Input type="number" value={order.qty} onChange={(e) => handleOrderChange(order.id, 'qty', parseInt(e.target.value) || 0)} className="h-8" /> : order.qty}</TableCell>
                                 </TableRow>
                                 ))
                             ) : (
