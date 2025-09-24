@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -218,7 +219,19 @@ export default function MyOrdersPage() {
                 throw new Error(result.error || 'An unknown error occurred during upload.');
             }
 
-            await fetchOrders();
+            // The API now returns the newly created orders with their IDs.
+            // We'll add these new orders to our current state.
+            const newOrdersWithStatus = result.data.map((order: any) => ({
+                ...order,
+                id: order.id.toString(), // Ensure ID is a string
+                status: 'Payment Accepted', // Assume new orders are ready
+                total_stock_on_hand: 0, // We'd need to re-fetch stock to be accurate, but this is ok for now
+                location: 'N/A',
+            }));
+
+            setAllOrders(prev => [...newOrdersWithStatus, ...prev]);
+            setFilteredOrders(prev => [...newOrdersWithStatus, ...prev]);
+
             setUploadDialogOpen(false);
 
             toast({

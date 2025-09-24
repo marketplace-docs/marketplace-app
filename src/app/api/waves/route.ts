@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { supabaseService } from '@/lib/supabase-service';
@@ -64,19 +65,25 @@ export async function POST(request: Request) {
         }
 
         // 2. Create the wave_orders entries, now including all necessary data for rollback
-        const waveOrdersToInsert = orders.map((order: any) => ({
-            wave_id: waveData.id,
-            order_id: parseInt(order.id, 10), // Ensure order_id is an integer
-            order_reference: order.reference,
-            sku: order.sku,
-            qty: order.qty,
-            customer: order.customer,
-            city: order.city,
-            order_date: order.order_date,
-            type: order.type,
-            from: order.from,
-            delivery_type: order.delivery_type,
-        }));
+        const waveOrdersToInsert = orders.map((order: any) => {
+            if (!order.id) {
+                console.error('CRITICAL: Attempted to create a wave with an order that has no ID.', order);
+                throw new Error(`Order with reference ${order.reference} is missing a valid ID.`);
+            }
+            return {
+                wave_id: waveData.id,
+                order_id: parseInt(order.id, 10), // Ensure order_id is an integer
+                order_reference: order.reference,
+                sku: order.sku,
+                qty: order.qty,
+                customer: order.customer,
+                city: order.city,
+                order_date: order.order_date,
+                type: order.type,
+                from: order.from,
+                delivery_type: order.delivery_type,
+            }
+        });
 
         const { error: waveOrdersError } = await supabaseService
             .from('wave_orders')

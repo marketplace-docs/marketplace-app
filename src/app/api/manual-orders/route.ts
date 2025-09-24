@@ -50,7 +50,7 @@ export async function POST(request: Request) {
         const { data, error } = await supabaseService
             .from('manual_orders')
             .insert(ordersToInsert)
-            .select('*, id');
+            .select('id');
 
         if (error) {
             return NextResponse.json({ error: error.message }, { status: 500 });
@@ -62,8 +62,7 @@ export async function POST(request: Request) {
             action: 'CREATE_MANUAL_ORDER',
             details: `Created manual order: ${ordersToInsert[0].reference}`,
         });
-
-        // Ensure returned ID is a string before sending
+        
         const dataWithStrId = data.map(order => ({
             ...order,
             id: order.id.toString(),
@@ -131,10 +130,11 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'No valid orders found in the file.' }, { status: 400 });
         }
         
+        // Use .select() to get the inserted data back, including the generated IDs
         const { data, error } = await supabaseService
             .from('manual_orders')
             .insert(ordersToInsert)
-            .select('*, id');
+            .select('id, reference, sku, order_date, customer, city, type, from, delivery_type, qty, status');
 
         if (error) {
             throw new Error(error.message);
