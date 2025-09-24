@@ -324,15 +324,13 @@ export default function MyOrdersPage() {
             
             const { wave } = await response.json();
 
-            toast({ title: 'Wave Created', description: `Wave ${wave.wave_document_number} has been started with ${selectedCount} orders.` });
+            toast({ title: 'Wave Created', description: `Wave ${wave.wave_document_number} started. Redirecting...` });
             
-            setWaveDialogOpen(false);
-            setSelection({});
-            await fetchOrders(); // Refresh the list
-            router.push('/admin-task/monitoring-orders');
+            // Redirect to monitoring page with params to trigger print
+            router.push(`/admin-task/monitoring-orders?wave_id=${wave.id}&print=true`);
 
-
-        } catch (error: any) {
+        } catch (error: any)
+ {
             toast({ variant: 'destructive', title: 'Wave Creation Failed', description: error.message });
         } finally {
             setIsSubmitting(false);

@@ -1,7 +1,8 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -35,10 +36,11 @@ type WaveOrder = {
     status: 'Assigned' | 'Picked';
 };
 
-
-export default function MonitoringOrdersPage() {
+function MonitoringOrdersContent() {
     const { user } = useAuth();
     const { toast } = useToast();
+    const searchParams = useSearchParams();
+
     const [waves, setWaves] = useState<Wave[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -50,7 +52,6 @@ export default function MonitoringOrdersPage() {
     const [waveOrders, setWaveOrders] = useState<WaveOrder[]>([]);
     const [loadingDetails, setLoadingDetails] = useState(false);
 
-
     const fetchWaves = useCallback(async () => {
         setLoading(true);
         setError(null);
@@ -61,49 +62,16 @@ export default function MonitoringOrdersPage() {
             }
             const data: Wave[] = await response.json();
             setWaves(data);
+            return data; // Return data for chaining
         } catch (err: any) {
             setError(err.message);
         } finally {
             setLoading(false);
         }
+        return [];
     }, []);
 
-    useEffect(() => {
-        fetchWaves();
-    }, [fetchWaves]);
-    
-    const handlePrint = () => {
-        window.print();
-    };
-    
-    const handleCancelWave = async () => {
-        if (!selectedWave || !user) return;
-        setIsSubmitting(true);
-        try {
-            const response = await fetch(`/api/waves/${selectedWave.id}`, {
-                method: 'DELETE',
-                headers: {
-                    'X-User-Name': user.name,
-                    'X-User-Email': user.email,
-                    'X-User-Role': user.role,
-                },
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to cancel wave.');
-            }
-            toast({ title: 'Success', description: 'Wave has been cancelled.', variant: 'destructive' });
-            fetchWaves();
-            setCancelDialogOpen(false);
-        } catch (error: any) {
-            toast({ variant: 'destructive', title: 'Error', description: error.message });
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-    
-    const handleViewDetails = async (wave: Wave) => {
+    const handleViewDetails = useCallback(async (wave: Wave) => {
         setSelectedWave(wave);
         setDetailsDialogOpen(true);
         setLoadingDetails(true);
@@ -141,8 +109,61 @@ export default function MonitoringOrdersPage() {
         } finally {
             setLoadingDetails(false);
         }
-    };
+    }, [toast]);
 
+    useEffect(() => {
+        fetchWaves().then((fetchedWaves) => {
+             const waveIdToPrint = searchParams.get('wave_id');
+             const shouldPrint = searchParams.get('print');
+
+             if (waveIdToPrint && shouldPrint === 'true' && fetchedWaves.length > 0) {
+                 const waveToPrint = fetchedWaves.find(w => w.id.toString() === waveIdToPrint);
+                 if (waveToPrint) {
+                     handleViewDetails(waveToPrint);
+                     // Allow time for dialog to render before printing
+                     setTimeout(() => {
+                         const printableContent = document.getElementById('picklist-content');
+                         const originalContent = document.body.innerHTML;
+                         const printContent = printableContent?.innerHTML;
+
+                         if (printContent) {
+                            document.body.innerHTML = printContent;
+                            window.print();
+                            document.body.innerHTML = originalContent;
+                            window.location.reload();
+                         }
+                     }, 1000);
+                 }
+             }
+        });
+    }, [searchParams, fetchWaves, handleViewDetails]);
+    
+    const handleCancelWave = async () => {
+        if (!selectedWave || !user) return;
+        setIsSubmitting(true);
+        try {
+            const response = await fetch(`/api/waves/${selectedWave.id}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-User-Name': user.name,
+                    'X-User-Email': user.email,
+                    'X-User-Role': user.role,
+                },
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to cancel wave.');
+            }
+            toast({ title: 'Success', description: 'Wave has been cancelled.', variant: 'destructive' });
+            fetchWaves();
+            setCancelDialogOpen(false);
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Error', description: error.message });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     return (
         <MainLayout>
@@ -163,11 +184,8 @@ export default function MonitoringOrdersPage() {
                                 <CardDescription>A list of all order waves created.</CardDescription>
                             </div>
                             <div className="flex items-center gap-2 no-print">
-                                <Button variant="outline" size="icon" onClick={fetchWaves}>
+                                <Button variant="outline" size="icon" onClick={() => fetchWaves()}>
                                     <RefreshCw className="h-4 w-4" />
-                                </Button>
-                                <Button variant="outline" size="icon" onClick={handlePrint}>
-                                    <Printer className="h-4 w-4" />
                                 </Button>
                             </div>
                         </div>
@@ -266,43 +284,52 @@ export default function MonitoringOrdersPage() {
                     <DialogHeader>
                         <DialogTitle>Details for Wave: {selectedWave?.wave_document_number}</DialogTitle>
                     </DialogHeader>
-                    {loadingDetails ? (
-                        <div className="flex justify-center items-center h-48">
-                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                        </div>
-                    ) : (
-                        <div className="max-h-[60vh] overflow-y-auto border rounded-lg">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Order Ref.</TableHead>
-                                        <TableHead>SKU</TableHead>
-                                        <TableHead>Qty</TableHead>
-                                        <TableHead>Location</TableHead>
-                                        <TableHead>Status</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {waveOrders.length > 0 ? waveOrders.map(order => (
-                                        <TableRow key={order.id}>
-                                            <TableCell>{order.order_reference}</TableCell>
-                                            <TableCell>{order.sku}</TableCell>
-                                            <TableCell>{order.qty}</TableCell>
-                                            <TableCell>{order.location}</TableCell>
-                                            <TableCell>
-                                                <Badge className={cn('gap-1', order.status === 'Assigned' ? 'bg-orange-400' : 'bg-green-500')}>
-                                                    {order.status === 'Assigned' ? <UserCheck className="h-3 w-3" /> : <Check className="h-3 w-3" />}
-                                                    {order.status}
-                                                </Badge>
-                                            </TableCell>
+                    <div id="picklist-content">
+                        {loadingDetails ? (
+                            <div className="flex justify-center items-center h-48">
+                                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                            </div>
+                        ) : (
+                            <>
+                            <div className="max-h-[60vh] overflow-y-auto border rounded-lg">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Order Ref.</TableHead>
+                                            <TableHead>SKU</TableHead>
+                                            <TableHead>Qty</TableHead>
+                                            <TableHead>Location</TableHead>
+                                            <TableHead>Status</TableHead>
                                         </TableRow>
-                                    )) : (
-                                         <TableRow><TableCell colSpan={5} className="text-center h-24">No orders found for this wave.</TableCell></TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    )}
+                                    </TableHeader>
+                                    <TableBody>
+                                        {waveOrders.length > 0 ? waveOrders.map(order => (
+                                            <TableRow key={order.id}>
+                                                <TableCell>{order.order_reference}</TableCell>
+                                                <TableCell>{order.sku}</TableCell>
+                                                <TableCell>{order.qty}</TableCell>
+                                                <TableCell>{order.location}</TableCell>
+                                                <TableCell>
+                                                    <Badge className={cn('gap-1', order.status === 'Assigned' ? 'bg-orange-400' : 'bg-green-500')}>
+                                                        {order.status === 'Assigned' ? <UserCheck className="h-3 w-3" /> : <Check className="h-3 w-3" />}
+                                                        {order.status}
+                                                    </Badge>
+                                                </TableCell>
+                                            </TableRow>
+                                        )) : (
+                                             <TableRow><TableCell colSpan={5} className="text-center h-24">No orders found for this wave.</TableCell></TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                             <div className="flex justify-end mt-4 no-print">
+                                <Button onClick={() => window.print()}>
+                                    <Printer className="mr-2 h-4 w-4" /> Print Picklist
+                                </Button>
+                            </div>
+                            </>
+                        )}
+                    </div>
                 </DialogContent>
             </Dialog>
 
@@ -311,10 +338,10 @@ export default function MonitoringOrdersPage() {
                   body > * {
                     visibility: hidden;
                   }
-                  #printable-content, #printable-content * {
+                  #picklist-content, #picklist-content * {
                     visibility: visible;
                   }
-                   #printable-content {
+                   #picklist-content {
                     position: absolute;
                     left: 0;
                     top: 0;
@@ -331,5 +358,13 @@ export default function MonitoringOrdersPage() {
                 }
             `}</style>
         </MainLayout>
+    );
+}
+
+export default function MonitoringOrdersPage() {
+    return (
+        <Suspense fallback={<MainLayout><Loader2 className="h-8 w-8 animate-spin" /></MainLayout>}>
+            <MonitoringOrdersContent />
+        </Suspense>
     );
 }
