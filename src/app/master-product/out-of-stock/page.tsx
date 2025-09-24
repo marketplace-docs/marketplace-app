@@ -164,7 +164,6 @@ export default function OutOfStockManagementPage() {
                                     <TableRow>
                                         <TableHead>Order Reference</TableHead>
                                         <TableHead>SKU</TableHead>
-                                        <TableHead>Customer</TableHead>
                                         <TableHead>Last Location</TableHead>
                                         <TableHead>Qty</TableHead>
                                         {canManage && <TableHead className="text-right">Actions</TableHead>}
@@ -173,7 +172,7 @@ export default function OutOfStockManagementPage() {
                                 <TableBody>
                                     {loading ? (
                                         <TableRow>
-                                            <TableCell colSpan={canManage ? 6 : 5} className="h-24 text-center">
+                                            <TableCell colSpan={canManage ? 5 : 4} className="h-24 text-center">
                                                 <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                                             </TableCell>
                                         </TableRow>
@@ -182,7 +181,6 @@ export default function OutOfStockManagementPage() {
                                             <TableRow key={order.id}>
                                                 <TableCell className="font-medium">{order.reference}</TableCell>
                                                 <TableCell>{order.sku}</TableCell>
-                                                <TableCell>{order.customer}</TableCell>
                                                 <TableCell>{order.location}</TableCell>
                                                 <TableCell>{order.qty}</TableCell>
                                                 {canManage && (
@@ -201,7 +199,7 @@ export default function OutOfStockManagementPage() {
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={canManage ? 6 : 5} className="h-24 text-center">
+                                            <TableCell colSpan={canManage ? 5 : 4} className="h-24 text-center">
                                                 <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
                                                      <PackageSearch className="h-8 w-8" />
                                                      <span>No out-of-stock orders found.</span>
