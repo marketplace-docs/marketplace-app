@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
+import type { BatchProduct } from '@/types/batch-product';
 
 type Wave = {
     id: number;
@@ -30,8 +31,7 @@ type WaveOrder = {
     order_reference: string;
     sku: string;
     qty: number;
-    customer: string;
-    city: string;
+    location: string;
 };
 
 
@@ -107,12 +107,33 @@ export default function MonitoringOrdersPage() {
         setDetailsDialogOpen(true);
         setLoadingDetails(true);
         try {
-            const response = await fetch(`/api/waves/${wave.id}`);
-            if (!response.ok) {
-                throw new Error('Failed to fetch wave details.');
-            }
-            const data = await response.json();
-            setWaveOrders(data.orders);
+            const [waveDetailsRes, allBatchesRes] = await Promise.all([
+                fetch(`/api/waves/${wave.id}`),
+                fetch('/api/master-product/batch-products')
+            ]);
+            
+            if (!waveDetailsRes.ok) throw new Error('Failed to fetch wave details.');
+            if (!allBatchesRes.ok) throw new Error('Failed to fetch product stock data.');
+
+            const waveDetails = await waveDetailsRes.json();
+            const allBatches: BatchProduct[] = await allBatchesRes.json();
+            
+            const ordersWithLocation = waveDetails.orders.map((order: any) => {
+                const availableBatch = allBatches
+                    .filter(b => b.sku === order.sku && b.stock > 0)
+                    .sort((a, b) => new Date(a.exp_date).getTime() - new Date(b.exp_date).getTime())
+                    [0];
+                
+                return {
+                    id: order.id,
+                    order_reference: order.order_reference,
+                    sku: order.sku,
+                    qty: order.qty,
+                    location: availableBatch ? availableBatch.location : 'N/A - OOS?',
+                };
+            });
+
+            setWaveOrders(ordersWithLocation);
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Error', description: error.message });
         } finally {
@@ -255,8 +276,7 @@ export default function MonitoringOrdersPage() {
                                         <TableHead>Order Ref.</TableHead>
                                         <TableHead>SKU</TableHead>
                                         <TableHead>Qty</TableHead>
-                                        <TableHead>Customer</TableHead>
-                                        <TableHead>City</TableHead>
+                                        <TableHead>Location</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -265,11 +285,10 @@ export default function MonitoringOrdersPage() {
                                             <TableCell>{order.order_reference}</TableCell>
                                             <TableCell>{order.sku}</TableCell>
                                             <TableCell>{order.qty}</TableCell>
-                                            <TableCell>{order.customer}</TableCell>
-                                            <TableCell>{order.city}</TableCell>
+                                            <TableCell>{order.location}</TableCell>
                                         </TableRow>
                                     )) : (
-                                         <TableRow><TableCell colSpan={5} className="text-center h-24">No orders found for this wave.</TableCell></TableRow>
+                                         <TableRow><TableCell colSpan={4} className="text-center h-24">No orders found for this wave.</TableCell></TableRow>
                                     )}
                                 </TableBody>
                             </Table>
