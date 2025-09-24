@@ -118,9 +118,6 @@ export async function POST(request: Request) {
         const skuIndex = header.indexOf('sku');
         const qtyIndex = header.indexOf('qty');
         const storeNameIndex = header.indexOf('store_name'); // new essential index
-        const customerIndex = header.indexOf('customer');
-        const cityIndex = header.indexOf('city');
-        const deliveryTypeIndex = header.indexOf('delivery_type');
 
         const ordersToInsert = lines.map((line, index) => {
             const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
@@ -146,11 +143,11 @@ export async function POST(request: Request) {
                 sku,
                 qty,
                 order_date: new Date().toISOString(),
-                customer: customerIndex > -1 ? values[customerIndex] : '',
-                city: cityIndex > -1 ? values[cityIndex] : '',
+                customer: "Edit By Sociolla",
+                city: "Tangerang",
                 type: storePlatform, // Auto-filled from marketplace_stores.platform
                 from: store_name,     // Auto-filled from CSV store_name
-                delivery_type: deliveryTypeIndex > -1 ? values[deliveryTypeIndex] : '',
+                delivery_type: "Regular",
                 status: 'Payment Accepted', // Default status
             };
         }).filter((order): order is NonNullable<typeof order> => order !== null);
