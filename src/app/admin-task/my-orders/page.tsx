@@ -108,7 +108,7 @@ export default function MyOrdersPage() {
             if (!ordersRes.ok) throw new Error("Failed to fetch manual orders.");
             if (!stockRes.ok) throw new Error("Failed to fetch product stock.");
 
-            const ordersData = await ordersRes.json();
+            const ordersData: Order[] = await ordersRes.json();
             const stockData: BatchProduct[] = await stockRes.json();
 
             // Aggregate stock by SKU
@@ -125,11 +125,10 @@ export default function MyOrdersPage() {
                 return acc;
             }, new Map<string, { total: number; location: string }>());
 
-            const ordersWithStatus: Order[] = ordersData.map((order: any) => {
+            const ordersWithStatus: Order[] = ordersData.map((order) => {
                 const stockInfo = stockBySku.get(order.sku) || { total: 0, location: 'N/A' };
                 return {
                     ...order,
-                    id: order.id,
                     status: order.qty > stockInfo.total ? 'Out of Stock' : 'Payment Accepted',
                     total_stock_on_hand: stockInfo.total,
                     location: stockInfo.location,
@@ -287,12 +286,15 @@ export default function MyOrdersPage() {
         }
 
         const selectedOrders = allOrders.filter(order => selection[order.id]);
-
+        
+        // Validation 1: Ensure no 'Out of Stock' orders are included.
         if (selectedOrders.some(order => order.status === 'Out of Stock')) {
             toast({ variant: 'destructive', title: 'Invalid Orders', description: 'Cannot start a wave with "Out of Stock" orders.' });
+            setWaveDialogOpen(false);
             return;
         }
         
+        // Validation 2: Ensure no duplicate order references are included.
         const references = selectedOrders.map(o => o.reference);
         const uniqueReferences = new Set(references);
         if (references.length !== uniqueReferences.size) {
@@ -301,6 +303,7 @@ export default function MyOrdersPage() {
                 title: 'Duplicate References',
                 description: 'Cannot process wave with duplicate order references. Please check your selection.',
             });
+            setWaveDialogOpen(false);
             return;
         }
 
