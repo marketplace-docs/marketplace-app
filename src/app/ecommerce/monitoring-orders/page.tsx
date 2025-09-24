@@ -113,31 +113,8 @@ function MonitoringOrdersContent() {
     }, [toast]);
 
     useEffect(() => {
-        fetchWaves().then((fetchedWaves) => {
-             const waveIdToPrint = searchParams.get('wave_id');
-             const shouldPrint = searchParams.get('print');
-
-             if (waveIdToPrint && shouldPrint === 'true' && fetchedWaves.length > 0) {
-                 const waveToPrint = fetchedWaves.find(w => w.id.toString() === waveIdToPrint);
-                 if (waveToPrint) {
-                     handleViewDetails(waveToPrint);
-                     // Allow time for dialog to render before printing
-                     setTimeout(() => {
-                         const printableContent = document.getElementById('picklist-content');
-                         const originalContent = document.body.innerHTML;
-                         const printContent = printableContent?.innerHTML;
-
-                         if (printContent) {
-                            document.body.innerHTML = printContent;
-                            window.print();
-                            document.body.innerHTML = originalContent;
-                            window.location.reload();
-                         }
-                     }, 1000);
-                 }
-             }
-        });
-    }, [searchParams, fetchWaves, handleViewDetails]);
+        fetchWaves();
+    }, [fetchWaves]);
     
     const handleCancelWave = async () => {
         if (!selectedWave || !user) return;
@@ -165,6 +142,23 @@ function MonitoringOrdersContent() {
             setIsSubmitting(false);
         }
     };
+    
+    const handlePrint = () => {
+        const printableContent = document.getElementById('picklist-content');
+        const printWindow = window.open('', '', 'height=600,width=800');
+
+        if (printWindow && printableContent) {
+            printWindow.document.write('<html><head><title>Print Picklist</title>');
+            // You can add styles here for printing
+            printWindow.document.write('<style> body { font-family: sans-serif; } table { width: 100%; border-collapse: collapse; } th, td { border: 1px solid #ddd; padding: 8px; } .no-print { display: none; } </style>');
+            printWindow.document.write('</head><body>');
+            printWindow.document.write(printableContent.innerHTML);
+            printWindow.document.write('</body></html>');
+            printWindow.document.close();
+            printWindow.print();
+        }
+    }
+
 
     return (
         <MainLayout>
@@ -324,7 +318,7 @@ function MonitoringOrdersContent() {
                                 </Table>
                             </div>
                              <div className="flex justify-end mt-4 no-print">
-                                <Button onClick={() => window.print()}>
+                                <Button onClick={handlePrint}>
                                     <Printer className="mr-2 h-4 w-4" /> Print Picklist
                                 </Button>
                             </div>
@@ -334,30 +328,6 @@ function MonitoringOrdersContent() {
                 </DialogContent>
             </Dialog>
 
-            <style jsx global>{`
-                @media print {
-                  body > * {
-                    visibility: hidden;
-                  }
-                  #picklist-content, #picklist-content * {
-                    visibility: visible;
-                  }
-                   #picklist-content {
-                    position: absolute;
-                    left: 0;
-                    top: 0;
-                    width: 100%;
-                    border: none;
-                  }
-                  .no-print {
-                    display: none !important;
-                  }
-                   @page {
-                    size: auto;
-                    margin: 0.5in;
-                  }
-                }
-            `}</style>
         </MainLayout>
     );
 }

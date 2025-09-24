@@ -331,8 +331,7 @@ export default function MyOrdersPage() {
 
             toast({ title: 'Wave Created', description: `Wave ${wave.wave_document_number} started. Redirecting...` });
             
-            // Redirect to monitoring page with params to trigger print
-            router.push(`/ecommerce/monitoring-orders?wave_id=${wave.id}&print=true`);
+            router.push(`/ecommerce/monitoring-orders`);
 
         } catch (error: any)
  {
@@ -767,4 +766,3 @@ export default function MyOrdersPage() {
         </MainLayout>
     );
 }
-
