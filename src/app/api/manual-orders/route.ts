@@ -85,6 +85,17 @@ export async function POST(request: Request) {
     }
 
     try {
+        // 1. Fetch all marketplace stores to create a lookup map
+        const { data: stores, error: storesError } = await supabaseService
+            .from('marketplace_stores')
+            .select('store_name, platform');
+
+        if (storesError) {
+            throw new Error('Could not fetch marketplace stores to validate orders.');
+        }
+
+        const storeMap = new Map(stores.map(s => [s.store_name.toLowerCase(), s.platform]));
+
         const text = await file.text();
         const lines = text.split('\n').filter(line => line.trim() !== '');
         if (lines.length <= 1) {
@@ -97,7 +108,8 @@ export async function POST(request: Request) {
         }
         const header = headerLine.split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
 
-        const requiredHeaders = ['reference', 'sku', 'qty'];
+        // 'type' and 'from' are no longer required from CSV, but 'store_name' is now essential.
+        const requiredHeaders = ['reference', 'sku', 'qty', 'store_name'];
         if (!requiredHeaders.every(h => header.includes(h))) {
             return NextResponse.json({ error: `Invalid CSV headers. Required headers include: ${requiredHeaders.join(', ')}` }, { status: 400 });
         }
@@ -105,10 +117,9 @@ export async function POST(request: Request) {
         const referenceIndex = header.indexOf('reference');
         const skuIndex = header.indexOf('sku');
         const qtyIndex = header.indexOf('qty');
+        const storeNameIndex = header.indexOf('store_name'); // new essential index
         const customerIndex = header.indexOf('customer');
         const cityIndex = header.indexOf('city');
-        const typeIndex = header.indexOf('type');
-        const fromIndex = header.indexOf('from');
         const deliveryTypeIndex = header.indexOf('delivery_type');
 
         const ordersToInsert = lines.map((line, index) => {
@@ -117,9 +128,16 @@ export async function POST(request: Request) {
             const reference = values[referenceIndex];
             const sku = values[skuIndex];
             const qty = parseInt(values[qtyIndex], 10);
+            const store_name = values[storeNameIndex];
 
-            if (!reference || !sku || isNaN(qty)) {
-                console.warn(`Skipping row ${index + 2}: Missing or invalid required fields (reference, sku, qty).`);
+            if (!reference || !sku || isNaN(qty) || !store_name) {
+                console.warn(`Skipping row ${index + 2}: Missing or invalid required fields (reference, sku, qty, store_name).`);
+                return null;
+            }
+            
+            const storePlatform = storeMap.get(store_name.toLowerCase());
+            if (!storePlatform) {
+                console.warn(`Skipping row ${index + 2}: Store name "${store_name}" not found in marketplace stores.`);
                 return null;
             }
             
@@ -130,8 +148,8 @@ export async function POST(request: Request) {
                 order_date: new Date().toISOString(),
                 customer: customerIndex > -1 ? values[customerIndex] : '',
                 city: cityIndex > -1 ? values[cityIndex] : '',
-                type: typeIndex > -1 ? values[typeIndex] : '',
-                from: fromIndex > -1 ? values[fromIndex] : '',
+                type: storePlatform, // Auto-filled from marketplace_stores.platform
+                from: store_name,     // Auto-filled from CSV store_name
                 delivery_type: deliveryTypeIndex > -1 ? values[deliveryTypeIndex] : '',
                 status: 'Payment Accepted', // Default status
             };
@@ -139,7 +157,7 @@ export async function POST(request: Request) {
 
 
         if (ordersToInsert.length === 0) {
-            return NextResponse.json({ error: 'No valid orders found in the file.' }, { status: 400 });
+            return NextResponse.json({ error: 'No valid orders found in the file. Check for missing fields or invalid store names.' }, { status: 400 });
         }
         
         const { error } = await supabaseService
