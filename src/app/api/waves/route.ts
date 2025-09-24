@@ -7,8 +7,8 @@ import { logActivity } from '@/lib/logger';
 import { format } from 'date-fns';
 
 async function generateWaveDocumentNumber(): Promise<string> {
-    const datePrefix = format(new Date(), 'yyyyMMdd');
-    const prefix = `WAVE-${datePrefix}`;
+    const year = new Date().getFullYear();
+    const prefix = `WV-MP-DOC-${year}`;
 
     const { data, error } = await supabaseService
         .from('waves')
@@ -29,7 +29,7 @@ async function generateWaveDocumentNumber(): Promise<string> {
         newSeq = lastSeq + 1;
     }
 
-    return `${prefix}-${newSeq.toString().padStart(4, '0')}`;
+    return `${prefix}-${newSeq.toString().padStart(6, '0')}`;
 }
 
 export async function POST(request: Request) {
