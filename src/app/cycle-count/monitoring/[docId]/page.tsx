@@ -65,13 +65,15 @@ export default function CycleCountDetailPage({ params }: { params: { docId: stri
                 productsInScope = allProducts.filter(p => itemsToCount.includes(p.sku.toLowerCase()));
             }
 
+            // For completed/cancelled docs, we need to load saved data. This logic is simplified for now.
+            // In a real app, you would fetch the *actual counted items* associated with this docId.
             const initialItems = productsInScope.map(p => ({
                 ...p,
-                counted_stock: null,
-                discrepancy: null,
-                notes: '',
+                counted_stock: currentDoc.status === 'Completed' || currentDoc.status === 'Cancelled' ? p.stock : null, // Simulate counted data for display
+                discrepancy: 0,
+                notes: currentDoc.notes || '',
                 reason: '',
-                qty_adjust: null
+                qty_adjust: 0
             }));
 
             setItems(initialItems);
@@ -219,17 +221,11 @@ export default function CycleCountDetailPage({ params }: { params: { docId: stri
                                     <TableHead>Notes</TableHead>
                                     <TableHead>Reason</TableHead>
                                     <TableHead>Qty Adjust</TableHead>
-                                    <TableHead></TableHead>
+                                    {!isFinished && <TableHead></TableHead>}
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {isFinished ? (
-                                     <TableRow>
-                                        <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
-                                            This document is already {doc.status} and cannot be edited.
-                                        </TableCell>
-                                    </TableRow>
-                                ) : items.length > 0 ? items.map(item => (
+                                {items.length > 0 ? items.map(item => (
                                     <TableRow key={item.id}>
                                         <TableCell>{doc.counter_name}</TableCell>
                                         <TableCell>
@@ -242,24 +238,26 @@ export default function CycleCountDetailPage({ params }: { params: { docId: stri
                                         <TableCell>{format(new Date(item.exp_date), 'yyyy-MM-dd')}</TableCell>
                                         <TableCell>{item.stock}</TableCell>
                                         <TableCell>
-                                            <Input type="number" value={item.counted_stock ?? ''} onChange={e => handleCountChange(item.id, e.target.value)} className="w-20" />
+                                            <Input type="number" value={item.counted_stock ?? ''} onChange={e => handleCountChange(item.id, e.target.value)} className="w-20" disabled={isFinished} />
                                         </TableCell>
                                         <TableCell className={`font-bold ${item.discrepancy === null ? '' : (item.discrepancy === 0 ? 'text-green-600' : 'text-red-600')}`}>
                                             {item.discrepancy}
                                         </TableCell>
-                                         <TableCell><Input value={item.notes} onChange={e => handleFieldChange(item.id, 'notes', e.target.value)} className="w-24" /></TableCell>
-                                        <TableCell><Input value={item.reason} onChange={e => handleFieldChange(item.id, 'reason', e.target.value)} className="w-24" /></TableCell>
-                                        <TableCell><Input type="number" value={item.qty_adjust ?? ''} onChange={e => handleFieldChange(item.id, 'qty_adjust', e.target.value)} className="w-20" /></TableCell>
-                                        <TableCell>
-                                            <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)}>
-                                                <X className="h-4 w-4 text-red-500" />
-                                            </Button>
-                                        </TableCell>
+                                         <TableCell><Input value={item.notes} onChange={e => handleFieldChange(item.id, 'notes', e.target.value)} className="w-24" disabled={isFinished} /></TableCell>
+                                        <TableCell><Input value={item.reason} onChange={e => handleFieldChange(item.id, 'reason', e.target.value)} className="w-24" disabled={isFinished} /></TableCell>
+                                        <TableCell><Input type="number" value={item.qty_adjust ?? ''} onChange={e => handleFieldChange(item.id, 'qty_adjust', e.target.value)} className="w-20" disabled={isFinished} /></TableCell>
+                                        {!isFinished && (
+                                            <TableCell>
+                                                <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)}>
+                                                    <X className="h-4 w-4 text-red-500" />
+                                                </Button>
+                                            </TableCell>
+                                        )}
                                     </TableRow>
                                 )) : (
                                     <TableRow>
-                                        <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
-                                            No items to count for this document.
+                                        <TableCell colSpan={isFinished ? 9 : 10} className="h-24 text-center text-muted-foreground">
+                                            {isFinished ? 'No count data was recorded for this document.' : 'No items to count for this document.'}
                                         </TableCell>
                                     </TableRow>
                                 )}
@@ -269,7 +267,7 @@ export default function CycleCountDetailPage({ params }: { params: { docId: stri
                 </CardContent>
                 {!isFinished && (
                     <CardFooter className="flex justify-between items-center border-t pt-6">
-                        <Button variant="destructive" outline onClick={handleInvalidate} disabled={isSubmitting}>
+                        <Button variant="destructive" onClick={handleInvalidate} disabled={isSubmitting}>
                              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                             <X className="mr-2 h-4 w-4" /> INVALID
                         </Button>
@@ -290,3 +288,4 @@ export default function CycleCountDetailPage({ params }: { params: { docId: stri
         </MainLayout>
     );
 }
+
