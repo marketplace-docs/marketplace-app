@@ -63,7 +63,7 @@ export async function POST(request: Request) {
             throw new Error(waveError.message);
         }
 
-        // 2. Create the wave_orders entries
+        // 2. Create the wave_orders entries, now including all necessary data for rollback
         const waveOrdersToInsert = orders.map(order => ({
             wave_id: waveData.id,
             order_id: order.id,
@@ -72,6 +72,10 @@ export async function POST(request: Request) {
             qty: order.qty,
             customer: order.customer,
             city: order.city,
+            order_date: order.order_date,
+            type: order.type,
+            from: order.from,
+            delivery_type: order.delivery_type,
         }));
 
         const { error: waveOrdersError } = await supabaseService

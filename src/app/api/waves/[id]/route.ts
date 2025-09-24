@@ -73,7 +73,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     }
 
     try {
-        // 1. Get all orders in the wave
+        // 1. Get all orders in the wave, including the extra data
         const { data: waveOrders, error: waveOrdersError } = await supabaseService
             .from('wave_orders')
             .select('*')
@@ -85,7 +85,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
         }
 
         if (waveOrders.length > 0) {
-            // 2. Re-insert orders back into manual_orders
+            // 2. Re-insert orders back into manual_orders with complete data
             const ordersToReinsert = waveOrders.map(wo => ({
                 id: wo.order_id,
                 reference: wo.order_reference,
@@ -94,11 +94,10 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
                 status: 'Payment Accepted', // Reset status
                 customer: wo.customer,
                 city: wo.city,
-                // Add sensible defaults for other columns
-                order_date: new Date().toISOString(),
-                type: 'N/A',
-                from: 'N/A',
-                delivery_type: 'N/A',
+                order_date: wo.order_date, // Use original order date
+                type: wo.type, // Restore original type
+                from: wo.from, // Restore original from
+                delivery_type: wo.delivery_type, // Restore original delivery_type
             }));
 
             const { error: reinsertError } = await supabaseService
@@ -110,7 +109,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
                 throw new Error('Failed to return orders to the manual queue.');
             }
 
-            // 3. Create reversal stock transactions
+            // 3. Create reversal stock transactions (if any stock was issued)
             const orderReferences = waveOrders.map(wo => wo.order_reference);
             const { data: issueDocs, error: issueDocsError } = await supabaseService
                 .from('product_out_documents')
@@ -216,11 +215,10 @@ export async function PATCH(request: Request, { params }: { params: { id: string
             qty: waveOrder.qty,
             customer: waveOrder.customer,
             city: waveOrder.city,
-            // Add defaults for other fields
-            order_date: new Date().toISOString(),
-            type: 'N/A',
-            from: 'N/A',
-            delivery_type: 'N/A',
+            order_date: waveOrder.order_date,
+            type: waveOrder.type,
+            from: waveOrder.from,
+            delivery_type: waveOrder.delivery_type,
             status: 'Out of Stock' // The important part
         });
 
@@ -276,4 +274,3 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
   return NextResponse.json({ error: 'Invalid action specified.' }, { status: 400 });
 }
-
