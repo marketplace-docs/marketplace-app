@@ -149,6 +149,11 @@ export default function MyOrdersPage() {
         fetchOrders();
     }, [fetchOrders]);
     
+    const uniqueFromOptions = useMemo(() => {
+        const fromSet = new Set(allOrders.map(order => order.from));
+        return Array.from(fromSet);
+    }, [allOrders]);
+
     const handleFilterChange = (name: keyof Filters, value: any) => {
         setFilters(prev => ({ ...prev, [name]: value }));
     };
@@ -448,11 +453,12 @@ export default function MyOrdersPage() {
                                         <SelectItem value="normal">Normal</SelectItem>
                                     </SelectContent>
                                 </Select>
-                                <Select value={filters.from} onValueChange={(value) => handleFilterChange('from', value)}>
+                                 <Select value={filters.from} onValueChange={(value) => handleFilterChange('from', value)}>
                                     <SelectTrigger><SelectValue placeholder="From" /></SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="ios">iOS</SelectItem>
-                                        <SelectItem value="android">Android</SelectItem>
+                                        {uniqueFromOptions.map(option => (
+                                            <SelectItem key={option} value={option}>{option}</SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
                                 <Input placeholder="SKU" value={filters.sku} onChange={(e) => handleFilterChange('sku', e.target.value)} />
