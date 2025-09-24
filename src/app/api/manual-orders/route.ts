@@ -10,7 +10,7 @@ export async function GET(request: Request) {
 
   let query = supabaseService
     .from('manual_orders')
-    .select('id, reference, sku, order_date, customer, city, type, from, delivery_type, qty, status, location, total_stock_on_hand');
+    .select('id, reference, sku, order_date, customer, city, type, from, delivery_type, qty, status');
 
   if (status) {
       query = query.eq('status', status);
