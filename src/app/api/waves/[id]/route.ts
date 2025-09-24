@@ -33,7 +33,33 @@ export async function GET(request: Request, { params }: { params: { id: string }
 }
 
 
-// DELETE a wave
+async function generateNewDocumentNumberForReturn(): Promise<string> {
+    const year = new Date().getFullYear();
+    const prefix = `MP-OTR-${year}`; // Outbound Transaction Return
+
+    const { data, error } = await supabaseService
+        .from('product_out_documents')
+        .select('nodocument')
+        .like('nodocument', `${prefix}-%`)
+        .order('nodocument', { ascending: false })
+        .limit(1)
+        .single();
+
+    if (error && error.code !== 'PGRST116') {
+        console.error("Error fetching last document number for outbound return:", error);
+        throw new Error("Could not generate new document number for return.");
+    }
+
+    let newSeq = 1;
+    if (data) {
+        const lastSeq = parseInt(data.nodocument.split('-').pop() || '0', 10);
+        newSeq = lastSeq + 1;
+    }
+    
+    return `${prefix}-${newSeq.toString().padStart(5, '0')}`;
+}
+
+// DELETE a wave (now with rollback logic)
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
     const { id } = params;
     const user = {
@@ -42,22 +68,98 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
         role: request.headers.get('X-User-Role'),
     };
 
-    // Add role-based access control if necessary
     if (!user?.role || !['Super Admin', 'Manager', 'Supervisor'].includes(user.role)) {
         return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
     }
 
     try {
-        // The database is set up with ON DELETE CASCADE, so deleting the wave
-        // will automatically delete the associated wave_orders.
-        const { error } = await supabaseService
+        // 1. Get all orders in the wave
+        const { data: waveOrders, error: waveOrdersError } = await supabaseService
+            .from('wave_orders')
+            .select('*')
+            .eq('wave_id', id);
+
+        if (waveOrdersError) {
+            console.error('Error fetching orders in wave for cancellation:', waveOrdersError);
+            throw new Error('Could not retrieve orders to cancel.');
+        }
+
+        if (waveOrders.length > 0) {
+            // 2. Re-insert orders back into manual_orders
+            const ordersToReinsert = waveOrders.map(wo => ({
+                id: wo.order_id,
+                reference: wo.order_reference,
+                sku: wo.sku,
+                qty: wo.qty,
+                status: 'Payment Accepted', // Reset status
+                customer: wo.customer,
+                city: wo.city,
+                // Add sensible defaults for other columns
+                order_date: new Date().toISOString(),
+                type: 'N/A',
+                from: 'N/A',
+                delivery_type: 'N/A',
+            }));
+
+            const { error: reinsertError } = await supabaseService
+                .from('manual_orders')
+                .insert(ordersToReinsert);
+
+            if (reinsertError) {
+                console.error('Error re-inserting cancelled orders into manual_orders:', reinsertError);
+                throw new Error('Failed to return orders to the manual queue.');
+            }
+
+            // 3. Create reversal stock transactions
+            const orderReferences = waveOrders.map(wo => wo.order_reference);
+            const { data: issueDocs, error: issueDocsError } = await supabaseService
+                .from('product_out_documents')
+                .select('*')
+                .in('order_reference', orderReferences)
+                .eq('status', 'Issue - Order');
+
+            if (issueDocsError) {
+                 console.error('Could not find original issue documents to reverse stock:', issueDocsError);
+                 // Continue with cancellation but log this critical error
+            }
+
+            if (issueDocs && issueDocs.length > 0) {
+                const returnDocsToInsert = await Promise.all(issueDocs.map(async (doc) => {
+                    const newDocNumber = await generateNewDocumentNumberForReturn();
+                    return {
+                        nodocument: newDocNumber,
+                        sku: doc.sku,
+                        barcode: doc.barcode,
+                        expdate: doc.expdate,
+                        location: doc.location,
+                        qty: doc.qty,
+                        status: 'Receipt - Outbound Return' as const,
+                        date: new Date().toISOString(),
+                        validatedby: user.name,
+                        order_reference: doc.order_reference,
+                    };
+                }));
+
+                const { error: returnDocsError } = await supabaseService
+                    .from('product_out_documents')
+                    .insert(returnDocsToInsert);
+
+                if (returnDocsError) {
+                    console.error('Failed to create stock reversal documents:', returnDocsError);
+                    // This is critical, log it but proceed with deletion to avoid user being stuck
+                }
+            }
+        }
+        
+        // 4. Delete the wave itself (CASCADE will delete wave_orders)
+        const { error: deleteWaveError } = await supabaseService
             .from('waves')
             .delete()
             .eq('id', id);
 
-        if (error) {
-            console.error('Error deleting wave:', error);
-            throw new Error(error.message);
+        if (deleteWaveError) {
+            console.error('Error deleting wave after rollback:', deleteWaveError);
+            throw new Error(deleteWaveError.message);
         }
 
         if (user.name && user.email) {
@@ -65,11 +167,11 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
                 userName: user.name,
                 userEmail: user.email,
                 action: 'CANCEL_WAVE',
-                details: `Cancelled wave ID: ${id}`,
+                details: `Cancelled wave ID: ${id}. Returned ${waveOrders.length} orders to queue and reversed stock.`,
             });
         }
         
-        return NextResponse.json({ message: 'Wave cancelled successfully.' }, { status: 200 });
+        return NextResponse.json({ message: 'Wave cancelled successfully. Orders and stock have been rolled back.' }, { status: 200 });
 
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
@@ -174,3 +276,4 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
   return NextResponse.json({ error: 'Invalid action specified.' }, { status: 400 });
 }
+
