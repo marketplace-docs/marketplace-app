@@ -13,7 +13,7 @@ async function generateNewDocumentNumber(status: ProductOutStatus): Promise<stri
   
   if (status.startsWith('Issue - Order')) {
       prefix = `MP-ORD-${year}`;
-  } else if (status.startsWith('Adjustment') || status.startsWith('Adjusment')) { // Handle typo and correct version
+  } else if (status.startsWith('Adjustment') || status === 'Adjusment - Loc') { // Handle typo and correct version
       prefix = `MP-ADJ-${year}`;
   } else if (status.startsWith('Issue - Internal Transfer')) {
       prefix = `MP-TRSF-${year}`;

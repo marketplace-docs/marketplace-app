@@ -36,8 +36,7 @@ type ProductOutStatus =
     | 'Issue - Update Expired'
     | 'Receipt - Update Expired'
     | 'Receipt - Outbound Return'
-    | 'Receipt'
-    | 'Adjusment - Loc';
+    | 'Receipt';
 
 type StockLogEntry = {
     id: string;

@@ -61,6 +61,7 @@ const REAL_STOCK_OUT_STATUSES = [
     'Issue - Order',
     'Issue - Internal Transfer',
     'Issue - Adjustment Manual',
+    'Adjustment - Loc',
     'Issue - Putaway', // Moving stock out of a location
     'Issue - Return', // Returning goods to a supplier
     'Issue - Return Putaway',
