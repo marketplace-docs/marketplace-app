@@ -119,37 +119,37 @@ export const NAV_LINKS: NavLink[] = [
         ]
     },
      {
-        href: '#',
+        href: '/ecommerce',
         label: 'e-Commerce',
         icon: ShoppingCart,
         children: [
             {
-                href: '/admin-task/my-orders',
+                href: '/ecommerce/my-orders',
                 label: 'My Orders',
                 icon: ClipboardList,
             },
             {
-                href: '/admin-task/monitoring-orders',
+                href: '/ecommerce/monitoring-orders',
                 label: 'Monitoring Orders',
                 icon: Monitor,
             },
             {
-                href: '/admin-task/go-picker',
+                href: '/ecommerce/go-picker',
                 label: 'Go-Picker',
                 icon: ScanLine,
             },
             {
-                href: '/master-product/outbound',
+                href: '/ecommerce/outbound',
                 label: 'Outbound',
                 icon: PackageMinus,
             },
              {
-                href: '/master-product/outbound-monitoring',
+                href: '/ecommerce/outbound-monitoring',
                 label: 'Outbound Monitoring',
                 icon: PackageCheck,
             },
             {
-                href: '/master-product/out-of-stock',
+                href: '/ecommerce/out-of-stock',
                 label: 'Out of Stock',
                 icon: PackageX,
             },
