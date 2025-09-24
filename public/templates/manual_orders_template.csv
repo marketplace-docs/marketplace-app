@@ -1,1 +1,3 @@
-reference,sku,order_date,customer,city,type,from,delivery_type,qty
+reference,sku,customer,city,type,from,delivery_type,qty
+ORD-001,SKU-A,John Doe,Jakarta,Normal,iOS,Regular,1
+ORD-002,SKU-B,Jane Smith,Bandung,On Sale,Android,Express,2

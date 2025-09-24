@@ -1,4 +1,5 @@
 
+
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 import { logActivity } from '@/lib/logger';
@@ -49,7 +50,7 @@ export async function POST(request: Request) {
         const { data, error } = await supabaseService
             .from('manual_orders')
             .insert(ordersToInsert)
-            .select();
+            .select('*, id');
 
         if (error) {
             return NextResponse.json({ error: error.message }, { status: 500 });
@@ -62,7 +63,13 @@ export async function POST(request: Request) {
             details: `Created manual order: ${ordersToInsert[0].reference}`,
         });
 
-        return NextResponse.json({ message: 'Order created', data }, { status: 201 });
+        // Ensure returned ID is a string before sending
+        const dataWithStrId = data.map(order => ({
+            ...order,
+            id: order.id.toString(),
+        }));
+
+        return NextResponse.json({ message: 'Order created', data: dataWithStrId }, { status: 201 });
     }
     
     // Handle FormData for bulk upload from CSV
@@ -91,7 +98,7 @@ export async function POST(request: Request) {
         }
 
         const header = lines.shift()!.split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
-        const requiredHeaders = ['reference', 'sku', 'order_date', 'customer', 'city', 'type', 'from', 'delivery_type', 'qty'];
+        const requiredHeaders = ['reference', 'sku', 'customer', 'city', 'type', 'from', 'delivery_type', 'qty'];
         if (!requiredHeaders.every(h => header.includes(h))) {
             return NextResponse.json({ error: `Invalid CSV headers. Required: ${requiredHeaders.join(', ')}` }, { status: 400 });
         }
@@ -101,8 +108,6 @@ export async function POST(request: Request) {
             const orderData: { [key: string]: string } = {};
             header.forEach((h, i) => orderData[h] = values[i]?.trim().replace(/"/g, '') || '');
 
-            const parsedDate = parse(orderData.order_date, 'yyyy-MM-dd HH:mm:ss', new Date());
-
             if (!orderData.reference || !orderData.qty || !orderData.sku) {
                  console.warn(`Skipping row ${index + 2}: Missing reference, sku, or qty.`);
                 return null;
@@ -111,7 +116,7 @@ export async function POST(request: Request) {
             return {
                 reference: orderData.reference,
                 sku: orderData.sku,
-                order_date: parsedDate.toISOString(),
+                order_date: new Date().toISOString(), // Automatically set order date
                 customer: orderData.customer,
                 city: orderData.city,
                 type: orderData.type,
@@ -129,7 +134,7 @@ export async function POST(request: Request) {
         const { data, error } = await supabaseService
             .from('manual_orders')
             .insert(ordersToInsert)
-            .select();
+            .select('*, id');
 
         if (error) {
             throw new Error(error.message);
