@@ -35,36 +35,39 @@ async function generateWaveDocumentNumber(): Promise<string> {
 
 export async function POST(request: Request) {
     try {
-        const { orders, user, waveType } = await request.json();
+        const { orderReferences, user, waveType } = await request.json();
 
         if (!user || !user.role) {
             return NextResponse.json({ error: 'Forbidden: You must be logged in.' }, { status: 403 });
         }
-        if (!Array.isArray(orders) || orders.length === 0) {
+        if (!Array.isArray(orderReferences) || orderReferences.length === 0) {
             return NextResponse.json({ error: 'No orders selected for the wave.' }, { status: 400 });
         }
 
-        // 1. Get all order references from the payload
-        const orderIds = orders.map((order: any) => order.id);
-
-        // 2. Fetch the full, valid order data from the database using the IDs
+        // 1. Fetch the full, valid order data from the database using the references
         const { data: dbOrders, error: fetchError } = await supabaseService
             .from('manual_orders')
             .select('*')
-            .in('id', orderIds);
+            .in('reference', orderReferences);
 
         if (fetchError) {
             console.error('Error fetching orders from database:', fetchError);
             throw new Error('Could not validate selected orders against the database.');
         }
 
-        if (dbOrders.length !== orders.length) {
-            console.warn('Mismatch between selected orders and database orders. Some orders may have been processed already.');
+        if (dbOrders.length !== orderReferences.length) {
+            console.warn('Mismatch between selected orders and database orders. Some orders may have been processed already or do not exist.');
+             // Find which references were not found
+            const foundRefs = new Set(dbOrders.map(o => o.reference));
+            const notFoundRefs = orderReferences.filter(ref => !foundRefs.has(ref));
+            if (notFoundRefs.length > 0) {
+                 throw new Error(`The following orders could not be found or processed: ${notFoundRefs.join(', ')}`);
+            }
         }
         
         const waveDocumentNumber = await generateWaveDocumentNumber();
 
-        // 3. Create the wave entry
+        // 2. Create the wave entry
         const { data: waveData, error: waveError } = await supabaseService
             .from('waves')
             .insert({
@@ -82,10 +85,10 @@ export async function POST(request: Request) {
             throw new Error(waveError.message);
         }
 
-        // 4. Create the wave_orders entries using the valid data from the database
+        // 3. Create the wave_orders entries using the valid data from the database
         const waveOrdersToInsert = dbOrders.map((order: any) => ({
             wave_id: waveData.id,
-            order_id: order.id.toString(), // Convert number to string for the text column
+            order_id: order.id.toString(),
             order_reference: order.reference,
             sku: order.sku,
             qty: order.qty,
@@ -105,10 +108,10 @@ export async function POST(request: Request) {
             console.error('Error inserting wave orders:', waveOrdersError);
             // Rollback wave creation
             await supabaseService.from('waves').delete().eq('id', waveData.id);
-            throw new Error('Failed to associate orders with the wave.');
+            throw new Error('Failed to associate orders with the wave. This could be due to a database constraint.');
         }
 
-        // 5. Delete the orders from manual_orders
+        // 4. Delete the orders from manual_orders
         const orderIdsToDelete = dbOrders.map((order: any) => order.id);
         const { error: deleteError } = await supabaseService
             .from('manual_orders')

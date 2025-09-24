@@ -15,4 +15,3 @@ export type Order = {
   total_stock_on_hand: number;
   location: string;
 };
-

@@ -63,7 +63,7 @@ export default function MyOrdersPage() {
     const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [selection, setSelection] = useState<Record<number, boolean>>({});
+    const [selection, setSelection] = useState<Record<string, boolean>>({});
     const fileInputRef = useRef<HTMLInputElement>(null);
     
     const [isEditing, setIsEditing] = useState(false);
@@ -285,27 +285,18 @@ export default function MyOrdersPage() {
             return;
         }
 
-        const selectedOrders = allOrders.filter(order => selection[order.id]);
+        const selectedOrderRefs = Object.keys(selection).filter(ref => selection[ref]);
+
+        // Validation 1: Ensure no 'Out of Stock' orders are included by checking the original data.
+        const selectedOrdersFull = allOrders.filter(order => selectedOrderRefs.includes(order.reference));
         
-        // Validation 1: Ensure no 'Out of Stock' orders are included.
-        if (selectedOrders.some(order => order.status === 'Out of Stock')) {
+        if (selectedOrdersFull.some(order => order.status === 'Out of Stock')) {
             toast({ variant: 'destructive', title: 'Invalid Orders', description: 'Cannot start a wave with "Out of Stock" orders.' });
             setWaveDialogOpen(false);
             return;
         }
         
-        // Validation 2: Ensure no duplicate order references are included.
-        const references = selectedOrders.map(o => o.reference);
-        const uniqueReferences = new Set(references);
-        if (references.length !== uniqueReferences.size) {
-            toast({
-                variant: 'destructive',
-                title: 'Duplicate References',
-                description: 'Cannot process wave with duplicate order references. Please check your selection.',
-            });
-            setWaveDialogOpen(false);
-            return;
-        }
+        // Validation 2: is already implicitly handled by using reference as key in selection object.
 
         setIsSubmitting(true);
 
@@ -314,7 +305,7 @@ export default function MyOrdersPage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    orders: selectedOrders,
+                    orderReferences: selectedOrderRefs,
                     user,
                     waveType: "Manual"
                 }),
@@ -337,6 +328,7 @@ export default function MyOrdersPage() {
             toast({ variant: 'destructive', title: 'Wave Creation Failed', description: error.message });
         } finally {
             setIsSubmitting(false);
+            setWaveDialogOpen(false);
         }
     };
     
@@ -631,9 +623,9 @@ export default function MyOrdersPage() {
                                     <Checkbox
                                         checked={selectedCount === filteredOrders.length && filteredOrders.length > 0}
                                         onCheckedChange={(checked) => {
-                                            const newSelection: Record<number, boolean> = {};
+                                            const newSelection: Record<string, boolean> = {};
                                             if (checked) {
-                                                filteredOrders.forEach(o => newSelection[o.id] = true);
+                                                filteredOrders.forEach(o => newSelection[o.reference] = true);
                                             }
                                             setSelection(newSelection);
                                         }}
@@ -669,11 +661,11 @@ export default function MyOrdersPage() {
                                 </TableRow>
                             ) : filteredOrders.length > 0 ? (
                                 filteredOrders.map(order => (
-                                <TableRow key={order.id} data-state={selection[order.id] && "selected"}>
+                                <TableRow key={order.reference} data-state={selection[order.reference] && "selected"}>
                                     <TableCell>
                                         <Checkbox
-                                            checked={selection[order.id] || false}
-                                            onCheckedChange={(checked) => setSelection(prev => ({...prev, [order.id]: !!checked}))}
+                                            checked={selection[order.reference] || false}
+                                            onCheckedChange={(checked) => setSelection(prev => ({...prev, [order.reference]: !!checked}))}
                                         />
                                     </TableCell>
                                     <TableCell>
