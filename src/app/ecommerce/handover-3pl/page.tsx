@@ -1,18 +1,17 @@
-
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Search, Handshake, CheckCheck } from 'lucide-react';
+import { Loader2, Search, Handshake, CheckCheck, Package, ListVideo } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import type { ProductOutDocument } from '@/types/product-out-document';
 import { Badge } from '@/components/ui/badge';
-import { useRouter } from 'next/navigation';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 type OrderToHandover = {
     docIds: string[];
@@ -26,21 +25,30 @@ type OrderToHandover = {
 export default function Handover3PLPage() {
     const { user } = useAuth();
     const { toast } = useToast();
-    const router = useRouter();
     
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [orderRef, setOrderRef] = useState('');
-    const [foundOrder, setFoundOrder] = useState<OrderToHandover | null>(null);
+    const [scannedOrders, setScannedOrders] = useState<OrderToHandover[]>([]);
+    const orderInputRef = useRef<HTMLInputElement>(null);
 
-    const handleSearchOrder = async () => {
+    useEffect(() => {
+        orderInputRef.current?.focus();
+    }, []);
+
+    const handleAddOrderToList = async () => {
         if (!orderRef) {
             toast({ variant: 'destructive', title: 'Error', description: 'Please scan an order reference.' });
             return;
         }
+
+        if (scannedOrders.some(o => o.order_reference === orderRef)) {
+            toast({ variant: 'destructive', title: 'Duplicate', description: `Order ${orderRef} is already in the list.` });
+            setOrderRef('');
+            return;
+        }
         
         setIsLoading(true);
-        setFoundOrder(null);
 
         try {
             const productOutRes = await fetch('/api/product-out-documents');
@@ -52,8 +60,7 @@ export default function Handover3PLPage() {
             );
             
             if (relatedDocs.length === 0) {
-                toast({ variant: 'destructive', title: 'Not Found', description: `No shipped order found for ref: ${orderRef}. It might be delivered or not yet shipped.` });
-                setIsLoading(false);
+                toast({ variant: 'destructive', title: 'Not Found', description: `No shipped order found for ref: ${orderRef}.` });
                 return;
             }
             
@@ -73,61 +80,73 @@ export default function Handover3PLPage() {
                 weight: null
             });
 
-            setFoundOrder(aggregatedOrder);
-            toast({ title: "Order Ready", description: `Order ${aggregatedOrder.order_reference} ready for handover.` });
+            setScannedOrders(prev => [aggregatedOrder, ...prev]);
+            toast({ title: "Added to List", description: `Order ${aggregatedOrder.order_reference} is ready for handover.` });
 
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Error', description: error.message });
         } finally {
             setIsLoading(false);
+            setOrderRef('');
+            orderInputRef.current?.focus();
         }
     };
     
-    const handleConfirmHandover = async () => {
-        if (!foundOrder || !user) return;
+    const handleConfirmAllHandovers = async () => {
+        if (scannedOrders.length === 0 || !user) return;
         
         setIsSubmitting(true);
-        try {
-            const updatePromises = foundOrder.docIds.map(docId =>
-                fetch(`/api/product-out-documents/${docId}`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ shipping_status: 'Delivered', user }),
-                })
-            );
-            
-            const results = await Promise.all(updatePromises);
-            
-            for(const res of results) {
-                 if (!res.ok) {
-                    const errorData = await res.json();
-                    throw new Error(errorData.error || `Failed to update status for one or more document parts.`);
+        let successCount = 0;
+        let failCount = 0;
+        
+        for (const order of scannedOrders) {
+            try {
+                const updatePromises = order.docIds.map(docId =>
+                    fetch(`/api/product-out-documents/${docId}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ shipping_status: 'Delivered', user }),
+                    })
+                );
+                
+                const results = await Promise.all(updatePromises);
+                if (results.some(res => !res.ok)) {
+                    throw new Error(`Failed to update status for order ${order.order_reference}`);
                 }
+                successCount++;
+            } catch (error) {
+                console.error(`Failed to process order ${order.order_reference}:`, error);
+                failCount++;
             }
-
-            toast({ title: 'Success', description: `Order ${foundOrder.order_reference} status updated to Delivered.` });
-            setOrderRef('');
-            setFoundOrder(null);
-
-        } catch (error: any) {
-            toast({ variant: 'destructive', title: 'Update Failed', description: error.message });
-        } finally {
-            setIsSubmitting(false);
         }
+        
+        if (failCount > 0) {
+             toast({ variant: 'destructive', title: 'Partial Success', description: `${successCount} orders confirmed. ${failCount} orders failed.` });
+        } else {
+             toast({ title: 'All Handovers Confirmed', description: `${successCount} orders have been successfully marked as Delivered.` });
+        }
+
+        setIsSubmitting(false);
+        setScannedOrders([]);
     }
+    
+    const handleRemoveOrder = (orderReference: string) => {
+        setScannedOrders(prev => prev.filter(o => o.order_reference !== orderReference));
+    };
+
 
     return (
         <MainLayout>
             <div className="w-full space-y-6">
                 <h1 className="text-2xl font-bold">Handover to 3PL</h1>
-                <Card className="max-w-2xl mx-auto">
+                <Card>
                     <CardHeader>
                         <div className="flex items-center justify-center mb-4">
                             <Handshake className="h-16 w-16 text-primary" />
                         </div>
-                        <CardTitle className="text-center">Confirm Handover</CardTitle>
+                        <CardTitle className="text-center">Confirm Bulk Handover</CardTitle>
                         <CardDescription className="text-center">
-                            Scan a shipped order to confirm its handover to the third-party logistics (3PL) provider. This will mark the order as "Delivered".
+                            Scan all shipped orders to add them to the list, then confirm all at once.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -135,38 +154,62 @@ export default function Handover3PLPage() {
                              <div className="flex items-end gap-2">
                                 <div className="space-y-2 flex-1">
                                     <Label htmlFor="orderRef">Scan Order Reference</Label>
-                                    <Input id="orderRef" name="orderRef" placeholder="Scan reference of shipped order..." value={orderRef} onChange={e => setOrderRef(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearchOrder()} disabled={isLoading || isSubmitting}/>
+                                    <Input ref={orderInputRef} id="orderRef" name="orderRef" placeholder="Scan reference to add to list..." value={orderRef} onChange={e => setOrderRef(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddOrderToList()} disabled={isLoading || isSubmitting}/>
                                 </div>
-                                <Button onClick={handleSearchOrder} disabled={isLoading || isSubmitting || !orderRef}>
+                                <Button onClick={handleAddOrderToList} disabled={isLoading || isSubmitting || !orderRef}>
                                     {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
-                                    Find Order
+                                    Add to List
                                 </Button>
                             </div>
-                            
-                            {foundOrder && (
-                                <div className="space-y-4 pt-4 border-t">
-                                    <Card>
-                                        <CardHeader>
-                                            <CardTitle>Order: {foundOrder.order_reference}</CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="grid grid-cols-2 gap-4 text-sm">
-                                            <div><p className="font-medium text-muted-foreground">SKU</p><p className="font-semibold">{foundOrder.sku}</p></div>
-                                            <div><p className="font-medium text-muted-foreground">QTY</p><p className="font-semibold">{foundOrder.qty.toLocaleString()}</p></div>
-                                            <div><p className="font-medium text-muted-foreground">Packed By</p><p className="font-semibold">{foundOrder.packer_name}</p></div>
-                                            <div><p className="font-medium text-muted-foreground">Weight</p><p className="font-semibold">{foundOrder.weight ? `${foundOrder.weight} kg` : 'N/A'}</p></div>
-                                            <div><p className="font-medium text-muted-foreground">Current Status</p><p><Badge variant="secondary">Shipped</Badge></p></div>
-                                        </CardContent>
-                                    </Card>
-
-                                    <Button onClick={handleConfirmHandover} disabled={isSubmitting} className="w-full h-12 bg-green-600 hover:bg-green-700">
-                                        {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCheck className="mr-2 h-4 w-4" />}
-                                        Confirm Handover (Set to Delivered)
-                                    </Button>
-                                </div>
-                            )}
                         </div>
                     </CardContent>
                 </Card>
+
+                 {scannedOrders.length > 0 && (
+                     <Card>
+                        <CardHeader>
+                            <div className="flex justify-between items-center">
+                                <CardTitle className="flex items-center gap-2">
+                                    <ListVideo /> Ready for Handover ({scannedOrders.length})
+                                </CardTitle>
+                                 <Button onClick={handleConfirmAllHandovers} disabled={isSubmitting} className="h-10 bg-green-600 hover:bg-green-700">
+                                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCheck className="mr-2 h-4 w-4" />}
+                                    Confirm All ({scannedOrders.length}) Handovers
+                                </Button>
+                            </div>
+                        </CardHeader>
+                         <CardContent>
+                            <div className="border rounded-lg max-h-[50vh] overflow-y-auto">
+                                <Table>
+                                    <TableHeader className="sticky top-0 bg-muted">
+                                        <TableRow>
+                                            <TableHead>Order Ref</TableHead>
+                                            <TableHead>SKU</TableHead>
+                                            <TableHead>Qty</TableHead>
+                                            <TableHead>Packed By</TableHead>
+                                            <TableHead>Weight</TableHead>
+                                            <TableHead className="text-right">Action</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {scannedOrders.map(order => (
+                                            <TableRow key={order.order_reference}>
+                                                <TableCell className="font-medium">{order.order_reference}</TableCell>
+                                                <TableCell>{order.sku}</TableCell>
+                                                <TableCell><Badge variant="outline">{order.qty}</Badge></TableCell>
+                                                <TableCell>{order.packer_name}</TableCell>
+                                                <TableCell>{order.weight ? `${order.weight} kg` : 'N/A'}</TableCell>
+                                                <TableCell className="text-right">
+                                                    <Button variant="ghost" size="sm" onClick={() => handleRemoveOrder(order.order_reference)}>Remove</Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                         </CardContent>
+                     </Card>
+                 )}
             </div>
         </MainLayout>
     );
