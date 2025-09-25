@@ -118,6 +118,9 @@ export async function POST(request: Request) {
         const skuIndex = header.indexOf('sku');
         const qtyIndex = header.indexOf('qty');
         const storeNameIndex = header.indexOf('store_name'); // new essential index
+        const addressIndex = header.indexOf('address');
+        const phoneIndex = header.indexOf('phone');
+
 
         const ordersToInsert = lines.map((line, index) => {
             const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
@@ -145,6 +148,8 @@ export async function POST(request: Request) {
                 order_date: new Date().toISOString(),
                 customer: "Edit By Sociolla",
                 city: "Tangerang",
+                address: addressIndex > -1 ? values[addressIndex] : 'N/A',
+                phone: phoneIndex > -1 ? values[phoneIndex] : 'N/A',
                 type: storePlatform, // Auto-filled from marketplace_stores.platform
                 from: store_name,     // Auto-filled from CSV store_name
                 delivery_type: "Regular",

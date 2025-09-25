@@ -14,14 +14,11 @@ import type { ProductOutDocument } from '@/types/product-out-document';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { ShippingLabel } from '@/components/shipping-label';
+import type { Order } from '@/types/order';
 
-type OrderToProcess = {
+type OrderToProcess = Order & {
     docIds: number[];
-    sku: string;
-    barcode: string;
-    qty: number;
-    locations: string[];
-    order_reference: string;
 }
 
 type PackingStep = 'scanOrder' | 'scanProduct' | 'scanBox' | 'completed';
@@ -66,9 +63,16 @@ export default function OutboundPage() {
         setFoundOrder(null);
 
         try {
-            const productOutRes = await fetch('/api/product-out-documents');
+            const [productOutRes, wavesRes] = await Promise.all([
+                 fetch('/api/product-out-documents'),
+                 fetch('/api/waves')
+            ]);
+           
             if (!productOutRes.ok) throw new Error('Could not fetch outbound documents.');
+             if (!wavesRes.ok) throw new Error('Could not fetch wave data.');
+
             const allProductOutDocs: ProductOutDocument[] = await productOutRes.json();
+            const allWaves = await wavesRes.json();
             
             const issueDocs = allProductOutDocs.filter(
                 doc => doc.status === 'Issue - Order' && 
@@ -81,6 +85,22 @@ export default function OutboundPage() {
                 setIsLoading(false);
                 return;
             }
+
+            // Find the original order details from the waves
+            let originalOrderData: any = null;
+            for (const wave of allWaves) {
+                 const waveDetailsRes = await fetch(`/api/waves/${wave.id}`);
+                 if (!waveDetailsRes.ok) continue;
+                 const waveDetails = await waveDetailsRes.json();
+                 const found = waveDetails.orders.find((o: any) => o.order_reference === orderRef);
+                 if(found) {
+                     originalOrderData = found;
+                     break;
+                 }
+            }
+             if (!originalOrderData) {
+                throw new Error("Could not find original order details to print address.");
+            }
             
             const aggregatedOrder: OrderToProcess = issueDocs.reduce((acc, doc) => {
                 acc.docIds.push(doc.id);
@@ -91,11 +111,24 @@ export default function OutboundPage() {
                 return acc;
             }, {
                 docIds: [] as number[],
-                order_reference: issueDocs[0].order_reference || orderRef,
+                reference: issueDocs[0].order_reference || orderRef,
                 sku: issueDocs[0].sku,
                 barcode: issueDocs[0].barcode,
                 qty: 0,
                 locations: [] as string[],
+                // From original order data
+                id: originalOrderData.order_id,
+                customer: originalOrderData.customer,
+                address: originalOrderData.address || 'N/A',
+                phone: originalOrderData.phone || 'N/A',
+                city: originalOrderData.city,
+                order_date: originalOrderData.order_date,
+                type: originalOrderData.type,
+                from: originalOrderData.from,
+                delivery_type: originalOrderData.delivery_type,
+                status: 'Payment Accepted',
+                total_stock_on_hand: 0,
+                location: ''
             });
 
             setFoundOrder(aggregatedOrder);
@@ -166,6 +199,26 @@ export default function OutboundPage() {
         }
     };
     
+    const handlePrint = () => {
+        const printableContent = document.getElementById('shipping-label-content');
+        if (printableContent) {
+            const printWindow = window.open('', '_blank', 'height=600,width=800');
+            if (printWindow) {
+                printWindow.document.write('<html><head><title>Print Shipping Label</title>');
+                printWindow.document.write('<style>@media print { @page { size: A6; margin: 0; } body { margin: 0; } } </style>');
+                printWindow.document.write('</head><body>');
+                printWindow.document.write(printableContent.innerHTML);
+                printWindow.document.write('</body></html>');
+                printWindow.document.close();
+                printWindow.focus();
+                printWindow.print();
+            } else {
+                toast({ variant: "destructive", title: "Print Failed", description: "Could not open print window. Please check your browser settings." });
+            }
+        }
+        toast({ title: "Printing...", description: "Shipping label sent to printer." });
+    };
+
     const resetProcess = () => {
         setOrderRef('');
         setFoundOrder(null);
@@ -213,7 +266,7 @@ export default function OutboundPage() {
                                     <div><p className="font-medium text-muted-foreground">SKU</p><p className="font-semibold">{foundOrder?.sku}</p></div>
                                     <div><p className="font-medium text-muted-foreground">Quantity</p><p className="font-semibold">{foundOrder?.qty.toLocaleString()}</p></div>
                                     <div><p className="font-medium text-muted-foreground">Barcode</p><p className="font-semibold font-mono text-base">{maskedBarcode}</p></div>
-                                    <div><p className="font-medium text-muted-foreground">From</p><p className="font-semibold">{foundOrder?.locations.join(', ')}</p></div>
+                                    <div><p className="font-medium text-muted-foreground">From</p><p className="font-semibold">{foundOrder?.locations?.join(', ')}</p></div>
                                 </div>
                             </Card>
                             <Label htmlFor="productScan" className="text-lg">2. Scan Product Barcode</Label>
@@ -250,11 +303,16 @@ export default function OutboundPage() {
                            <CheckCircle className="h-8 w-8" /> Validation Successful
                         </DialogTitle>
                         <DialogDescription className="pt-4 text-base">
-                            Order <span className="font-bold text-foreground">{foundOrder?.order_reference}</span> has been successfully packed and validated.
+                            Order <span className="font-bold text-foreground">{foundOrder?.reference}</span> has been successfully packed and validated.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="py-4 space-y-4">
-                        <Button className="w-full h-12" onClick={() => toast({ title: "Printing...", description: "Shipping label sent to printer." })}>
+                        {foundOrder && (
+                            <div id="shipping-label-content" className="hidden print:block">
+                                <ShippingLabel order={foundOrder} />
+                            </div>
+                        )}
+                        <Button className="w-full h-12" onClick={handlePrint}>
                             <Printer className="mr-2 h-5 w-5" /> Print Shipping Label
                         </Button>
                     </div>
@@ -269,5 +327,3 @@ export default function OutboundPage() {
         </MainLayout>
     );
 }
-
-    

@@ -95,6 +95,8 @@ export async function POST(request: Request) {
             type: order.type,
             from: order.from,
             delivery_type: order.delivery_type,
+            address: order.address, // Add address
+            phone: order.phone,     // Add phone
         }));
 
         const { error: waveOrdersError } = await supabaseService
