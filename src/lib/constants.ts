@@ -139,6 +139,11 @@ export const NAV_LINKS: NavLink[] = [
                 icon: ScanLine,
             },
             {
+                href: '/ecommerce/out-of-stock',
+                label: 'Out of Stock',
+                icon: PackageX,
+            },
+            {
                 href: '/ecommerce/outbound',
                 label: 'Outbound',
                 icon: PackageMinus,
@@ -157,11 +162,6 @@ export const NAV_LINKS: NavLink[] = [
                 href: '/ecommerce/shipment-monitoring',
                 label: 'Shipment Monitoring',
                 icon: Eye,
-            },
-            {
-                href: '/ecommerce/out-of-stock',
-                label: 'Out of Stock',
-                icon: PackageX,
             },
         ]
     },
