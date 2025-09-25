@@ -153,6 +153,11 @@ export const NAV_LINKS: NavLink[] = [
                 label: 'Dispatcher',
                 icon: Send,
             },
+             {
+                href: '/ecommerce/shipment-monitoring',
+                label: 'Shipment Monitoring',
+                icon: Eye,
+            },
             {
                 href: '/ecommerce/out-of-stock',
                 label: 'Out of Stock',
@@ -274,3 +279,5 @@ export const NAV_LINKS: NavLink[] = [
         icon: Settings,
     }
 ];
+
+    
