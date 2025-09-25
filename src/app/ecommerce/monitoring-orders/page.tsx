@@ -7,7 +7,7 @@ import { useSearchParams } from 'next/navigation';
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, AlertCircle, PackageSearch, RefreshCw, Printer, List, X, Check, UserCheck } from "lucide-react";
+import { Loader2, AlertCircle, PackageSearch, RefreshCw, Printer, List, X, Check, UserCheck, PackageCheck as PackageCheckIcon } from "lucide-react";
 import { format } from "date-fns";
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import type { BatchProduct } from '@/types/batch-product';
+import type { ProductOutDocument } from '@/types/product-out-document';
 
 type Wave = {
     id: number;
@@ -34,7 +35,7 @@ type WaveOrder = {
     sku: string;
     qty: number;
     location: string;
-    status: 'Assigned' | 'Picked';
+    status: 'Assigned' | 'Picked' | 'Packed';
 };
 
 function MonitoringOrdersContent() {
@@ -77,34 +78,46 @@ function MonitoringOrdersContent() {
         setDetailsDialogOpen(true);
         setLoadingDetails(true);
         try {
-            const [waveDetailsRes, allBatchesRes] = await Promise.all([
+            const [waveDetailsRes, allBatchesRes, productOutRes] = await Promise.all([
                 fetch(`/api/waves/${wave.id}`),
-                fetch('/api/master-product/batch-products')
+                fetch('/api/master-product/batch-products'),
+                fetch('/api/product-out-documents')
             ]);
             
             if (!waveDetailsRes.ok) throw new Error('Failed to fetch wave details.');
             if (!allBatchesRes.ok) throw new Error('Failed to fetch product stock data.');
+            if (!productOutRes.ok) throw new Error('Failed to fetch product out documents.');
 
             const waveDetails = await waveDetailsRes.json();
             const allBatches: BatchProduct[] = await allBatchesRes.json();
+            const allProductOutDocs: ProductOutDocument[] = await productOutRes.json();
             
-            const ordersWithLocation = waveDetails.orders.map((order: any) => {
+            const ordersWithLocationAndStatus = waveDetails.orders.map((order: any) => {
                 const availableBatch = allBatches
                     .filter(b => b.sku === order.sku && b.stock > 0)
                     .sort((a, b) => new Date(a.exp_date).getTime() - new Date(b.exp_date).getTime())
                     [0];
                 
+                const productOutDoc = allProductOutDocs.find(
+                    doc => doc.order_reference === order.order_reference && doc.status === 'Issue - Order'
+                );
+
+                let status: WaveOrder['status'] = 'Assigned';
+                if (productOutDoc) {
+                    status = productOutDoc.packer_name ? 'Packed' : 'Picked';
+                }
+
                 return {
                     id: order.id,
                     order_reference: order.order_reference,
                     sku: order.sku,
                     qty: order.qty,
                     location: availableBatch ? availableBatch.location : 'N/A - OOS?',
-                    status: wave.status === 'Wave Progress' ? 'Assigned' : 'Picked',
+                    status: status,
                 };
             });
 
-            setWaveOrders(ordersWithLocation);
+            setWaveOrders(ordersWithLocationAndStatus);
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Error', description: error.message });
         } finally {
@@ -305,8 +318,14 @@ function MonitoringOrdersContent() {
                                                 <TableCell>{order.qty}</TableCell>
                                                 <TableCell>{order.location}</TableCell>
                                                 <TableCell>
-                                                    <Badge className={cn('gap-1', order.status === 'Assigned' ? 'bg-orange-400' : 'bg-green-500')}>
-                                                        {order.status === 'Assigned' ? <UserCheck className="h-3 w-3" /> : <Check className="h-3 w-3" />}
+                                                    <Badge className={cn('gap-1', 
+                                                        order.status === 'Assigned' ? 'bg-orange-400' : 
+                                                        order.status === 'Picked' ? 'bg-green-500' :
+                                                        'bg-blue-500'
+                                                    )}>
+                                                        {order.status === 'Assigned' ? <UserCheck className="h-3 w-3" /> : 
+                                                         order.status === 'Picked' ? <Check className="h-3 w-3" /> :
+                                                         <PackageCheckIcon className="h-3 w-3" />}
                                                         {order.status}
                                                     </Badge>
                                                 </TableCell>
