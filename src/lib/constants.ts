@@ -1,6 +1,6 @@
 
 
-import { LayoutDashboard, ListTodo, Store, FileText, Settings, type LucideIcon, Briefcase, Users, Archive, BarChart3, AppWindow, BookText, Database, History, FilePlus, Eye, File, PieChart, Users2, Shield, Menu, Monitor, Undo2, Route, Package, PackagePlus, PackageMinus, Boxes, CalendarClock, Warehouse, Calculator, PackageX, ClipboardList, ScanLine, PackageCheck, ShoppingCart, Send } from 'lucide-react';
+import { LayoutDashboard, ListTodo, Store, FileText, Settings, type LucideIcon, Briefcase, Users, Archive, BarChart3, AppWindow, BookText, Database, History, FilePlus, Eye, File, PieChart, Users2, Shield, Menu, Monitor, Undo2, Route, Package, PackagePlus, PackageMinus, Boxes, CalendarClock, Warehouse, Calculator, PackageX, ClipboardList, ScanLine, PackageCheck, ShoppingCart, Send, Handshake } from 'lucide-react';
 
 export type NavLink = {
     href: string;
@@ -162,6 +162,11 @@ export const NAV_LINKS: NavLink[] = [
                 href: '/ecommerce/shipment-monitoring',
                 label: 'Shipment Monitoring',
                 icon: Eye,
+            },
+             {
+                href: '/ecommerce/handover-3pl',
+                label: 'Handover 3PL',
+                icon: Handshake,
             },
         ]
     },
