@@ -1,6 +1,6 @@
 
 export type ProductOutDocument = {
-  id: number;
+  id: string;
   nodocument: string;
   sku: string;
   barcode: string;
