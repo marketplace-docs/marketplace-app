@@ -18,13 +18,16 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import type { BatchProduct } from '@/types/batch-product';
 import type { ProductOutDocument } from '@/types/product-out-document';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+type WaveStatus = 'Wave Progress' | 'Wave Done';
 
 type Wave = {
     id: number;
     created_at: string;
     wave_document_number: string;
     wave_type: string;
-    status: 'Wave Progress' | 'Wave Done';
+    status: WaveStatus;
     total_orders: number;
     created_by: string;
 }
@@ -43,7 +46,9 @@ function MonitoringOrdersContent() {
     const { toast } = useToast();
     const searchParams = useSearchParams();
 
-    const [waves, setWaves] = useState<Wave[]>([]);
+    const [allWaves, setAllWaves] = useState<Wave[]>([]);
+    const [filteredWaves, setFilteredWaves] = useState<Wave[]>([]);
+    const [statusFilter, setStatusFilter] = useState<WaveStatus | 'All'>('Wave Progress');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -63,16 +68,21 @@ function MonitoringOrdersContent() {
                 throw new Error("Failed to fetch waves.");
             }
             const data: Wave[] = await response.json();
-            // Filter out "Wave Done"
-            setWaves(data.filter(w => w.status === 'Wave Progress'));
-            return data; // Return original data for chaining if needed
+            setAllWaves(data);
         } catch (err: any) {
             setError(err.message);
         } finally {
             setLoading(false);
         }
-        return [];
     }, []);
+
+    useEffect(() => {
+        if (statusFilter === 'All') {
+            setFilteredWaves(allWaves);
+        } else {
+            setFilteredWaves(allWaves.filter(w => w.status === statusFilter));
+        }
+    }, [statusFilter, allWaves]);
 
     const handleViewDetails = useCallback(async (wave: Wave) => {
         setSelectedWave(wave);
@@ -198,9 +208,19 @@ function MonitoringOrdersContent() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <CardTitle>Wave Monitoring</CardTitle>
-                                <CardDescription>A list of all active order waves.</CardDescription>
+                                <CardDescription>A list of all order waves.</CardDescription>
                             </div>
                             <div className="flex items-center gap-2 no-print">
+                                 <Select value={statusFilter} onValueChange={(value: WaveStatus | 'All') => setStatusFilter(value)}>
+                                    <SelectTrigger className="w-[180px]">
+                                        <SelectValue placeholder="Filter by status..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="All">All Statuses</SelectItem>
+                                        <SelectItem value="Wave Progress">Wave Progress</SelectItem>
+                                        <SelectItem value="Wave Done">Wave Done</SelectItem>
+                                    </SelectContent>
+                                </Select>
                                 <Button variant="outline" size="icon" onClick={() => fetchWaves()}>
                                     <RefreshCw className="h-4 w-4" />
                                 </Button>
@@ -228,8 +248,8 @@ function MonitoringOrdersContent() {
                                                 <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                                             </TableCell>
                                         </TableRow>
-                                    ) : waves.length > 0 ? (
-                                        waves.map(wave => (
+                                    ) : filteredWaves.length > 0 ? (
+                                        filteredWaves.map(wave => (
                                             <TableRow key={wave.id}>
                                                 <TableCell className="font-medium">{wave.wave_document_number}</TableCell>
                                                 <TableCell>{wave.wave_type}</TableCell>
@@ -265,7 +285,7 @@ function MonitoringOrdersContent() {
                                             <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                                                 <div className="flex flex-col items-center justify-center gap-2">
                                                     <PackageSearch className="h-8 w-8" />
-                                                    <span>No active waves found.</span>
+                                                    <span>No waves found for the selected status.</span>
                                                 </div>
                                             </TableCell>
                                         </TableRow>
