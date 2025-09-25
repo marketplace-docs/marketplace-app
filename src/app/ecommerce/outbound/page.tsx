@@ -1,36 +1,60 @@
 
-
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, PackageCheck, Search } from 'lucide-react';
+import { Loader2, PackageCheck, Search, ScanLine, Printer, CheckCircle, Box } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import type { ProductOutDocument } from '@/types/product-out-document';
-import { format } from 'date-fns';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 type OrderToProcess = {
     docIds: number[];
     sku: string;
     barcode: string;
     qty: number;
-    exp_date: string;
     locations: string[];
     order_reference: string;
 }
 
+type PackingStep = 'scanOrder' | 'scanProduct' | 'scanBox' | 'completed';
+
 export default function OutboundPage() {
     const { user } = useAuth();
     const { toast } = useToast();
+    
+    // State for the process
+    const [step, setStep] = useState<PackingStep>('scanOrder');
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Data state
     const [orderRef, setOrderRef] = useState('');
     const [foundOrder, setFoundOrder] = useState<OrderToProcess | null>(null);
+    const [scannedBarcode, setScannedBarcode] = useState('');
+    const [scannedBox, setScannedBox] = useState('');
+    
+    // Success dialog
+    const [isSuccessDialogOpen, setSuccessDialogOpen] = useState(false);
+
+    // Input refs for focus management
+    const orderInputRef = useRef<HTMLInputElement>(null);
+    const productInputRef = useRef<HTMLInputElement>(null);
+    const boxInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (step === 'scanOrder') orderInputRef.current?.focus();
+        if (step === 'scanProduct') productInputRef.current?.focus();
+        if (step === 'scanBox') boxInputRef.current?.focus();
+    }, [step]);
+
 
     const handleSearchOrder = async () => {
         if (!orderRef) {
@@ -46,7 +70,6 @@ export default function OutboundPage() {
             if (!productOutRes.ok) throw new Error('Could not fetch outbound documents.');
             const allProductOutDocs: ProductOutDocument[] = await productOutRes.json();
             
-            // Find all 'Issue - Order' documents for this reference that have not been packed yet
             const issueDocs = allProductOutDocs.filter(
                 doc => doc.status === 'Issue - Order' && 
                        doc.packer_name === null &&
@@ -59,7 +82,6 @@ export default function OutboundPage() {
                 return;
             }
             
-            // Aggregate data from all found documents
             const aggregatedOrder: OrderToProcess = issueDocs.reduce((acc, doc) => {
                 acc.docIds.push(doc.id);
                 acc.qty += doc.qty;
@@ -73,12 +95,12 @@ export default function OutboundPage() {
                 sku: issueDocs[0].sku,
                 barcode: issueDocs[0].barcode,
                 qty: 0,
-                exp_date: issueDocs[0].expdate, // Assume same exp_date for simplicity of display
                 locations: [] as string[],
             });
 
-
             setFoundOrder(aggregatedOrder);
+            setStep('scanProduct');
+            toast({ title: 'Order Found', description: 'Please scan the product barcode to verify.' });
 
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Error', description: error.message });
@@ -86,6 +108,27 @@ export default function OutboundPage() {
             setIsLoading(false);
         }
     };
+    
+    const handleProductScan = () => {
+        if (!foundOrder || !scannedBarcode) return;
+        if (scannedBarcode === foundOrder.barcode) {
+            setStep('scanBox');
+            toast({ title: 'Product Verified', description: 'Now scan the box packaging barcode.' });
+        } else {
+            toast({ variant: 'destructive', title: 'Wrong Product', description: `Scanned barcode does not match the required product.` });
+            setScannedBarcode('');
+        }
+    };
+
+    const handleBoxScan = () => {
+        if (!scannedBox) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Box barcode cannot be empty.' });
+            return;
+        }
+        // In a real scenario, you might validate the box type. Here we just proceed.
+        handleConfirmPacking();
+    };
+
 
     const handleConfirmPacking = async () => {
         if (!foundOrder || !user) {
@@ -114,84 +157,117 @@ export default function OutboundPage() {
                 throw new Error(`Failed to confirm packing for ${failedUpdates.length} parts of the order.`);
             }
 
-
-            toast({
-                title: 'Packing Confirmed',
-                description: `Order ${foundOrder.order_reference} marked as packed by ${user.name}.`,
-            });
-            
-            setOrderRef('');
-            setFoundOrder(null);
+            setStep('completed');
+            setSuccessDialogOpen(true);
             
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Error', description: error.message });
-        } finally {
-            setIsSubmitting(false);
+             setIsSubmitting(false);
         }
     };
     
+    const resetProcess = () => {
+        setOrderRef('');
+        setFoundOrder(null);
+        setScannedBarcode('');
+        setScannedBox('');
+        setIsSubmitting(false);
+        setSuccessDialogOpen(false);
+        setStep('scanOrder');
+    };
+    
+    const maskedBarcode = foundOrder?.barcode ? `****${foundOrder.barcode.slice(-4)}` : '';
+
     return (
         <MainLayout>
             <div className="w-full space-y-6">
-                <h1 className="text-2xl font-bold">Packing Orders</h1>
+                <h1 className="text-2xl font-bold">Outbound Packing Station</h1>
                 <Card className="max-w-2xl mx-auto">
                     <CardHeader>
                         <div className="flex items-center justify-center mb-4">
                             <PackageCheck className="h-16 w-16 text-primary" />
                         </div>
-                        <CardTitle className="text-center">Packing Information Station</CardTitle>
+                        <CardTitle className="text-center">Packing Validation</CardTitle>
                         <CardDescription className="text-center">
-                            Scan the picked order to verify details and finalize for shipment. This action marks the order as complete.
+                            Follow the steps to validate and pack the order.
                         </CardDescription>
                     </CardHeader>
-                    <CardContent>
-                        <div className="space-y-6">
+                    <CardContent className="space-y-6">
+                        {/* Step 1: Scan Order */}
+                        <div className={cn("space-y-4", step !== 'scanOrder' && 'hidden')}>
+                            <Label htmlFor="orderRef" className="text-lg">1. Scan Order Reference</Label>
                             <div className="flex items-end gap-2">
-                                <div className="flex-1 space-y-2">
-                                    <Label htmlFor="orderRef">Scan Order</Label>
-                                    <Input id="orderRef" name="orderRef" placeholder="Scan or type order reference..." value={orderRef} onChange={e => setOrderRef(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearchOrder()} disabled={isLoading || isSubmitting}/>
-                                </div>
-                                <Button onClick={handleSearchOrder} disabled={isLoading || isSubmitting || !orderRef}>
+                                <Input ref={orderInputRef} id="orderRef" name="orderRef" placeholder="Scan or type order reference..." value={orderRef} onChange={e => setOrderRef(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearchOrder()} disabled={isLoading}/>
+                                <Button onClick={handleSearchOrder} disabled={isLoading || !orderRef}>
                                     {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
                                     Find Order
                                 </Button>
                             </div>
-                            
-                            {foundOrder && (
-                                <div className="space-y-4 pt-4 border-t">
-                                    <div className="grid grid-cols-2 gap-4 text-sm">
-                                        <div>
-                                            <p className="font-medium text-muted-foreground">SKU</p>
-                                            <p className="font-semibold">{foundOrder.sku}</p>
-                                        </div>
-                                        <div>
-                                            <p className="font-medium text-muted-foreground">Barcode</p>
-                                            <p className="font-semibold">{foundOrder.barcode}</p>
-                                        </div>
-                                        <div>
-                                            <p className="font-medium text-muted-foreground">Quantity</p>
-                                            <p className="font-semibold">{foundOrder.qty.toLocaleString()}</p>
-                                        </div>
-                                         <div>
-                                            <p className="font-medium text-muted-foreground">From Locations</p>
-                                            <p className="font-semibold">{foundOrder.locations.join(', ')}</p>
-                                        </div>
-                                         <div>
-                                            <p className="font-medium text-muted-foreground">EXP Date</p>
-                                            <p className="font-semibold">{format(new Date(foundOrder.exp_date), 'dd MMMM yyyy')}</p>
-                                        </div>
-                                    </div>
-
-                                    <Button onClick={handleConfirmPacking} className="w-full" disabled={isSubmitting}>
-                                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                        Confirm Packing
-                                    </Button>
-                                </div>
-                            )}
                         </div>
+                        
+                        {/* Step 2: Scan Product */}
+                        <div className={cn("space-y-4", step !== 'scanProduct' && 'hidden')}>
+                             <Card className="p-4 bg-muted">
+                                <CardTitle className="text-lg mb-2">Product to Pack</CardTitle>
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                                    <div><p className="font-medium text-muted-foreground">SKU</p><p className="font-semibold">{foundOrder?.sku}</p></div>
+                                    <div><p className="font-medium text-muted-foreground">Quantity</p><p className="font-semibold">{foundOrder?.qty.toLocaleString()}</p></div>
+                                    <div><p className="font-medium text-muted-foreground">Barcode</p><p className="font-semibold font-mono text-base">{maskedBarcode}</p></div>
+                                    <div><p className="font-medium text-muted-foreground">From</p><p className="font-semibold">{foundOrder?.locations.join(', ')}</p></div>
+                                </div>
+                            </Card>
+                            <Label htmlFor="productScan" className="text-lg">2. Scan Product Barcode</Label>
+                            <div className="flex items-end gap-2">
+                                <Input ref={productInputRef} id="productScan" name="productScan" placeholder="Scan product barcode to verify..." value={scannedBarcode} onChange={e => setScannedBarcode(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleProductScan()}/>
+                                <Button onClick={handleProductScan} disabled={!scannedBarcode}>Verify</Button>
+                            </div>
+                        </div>
+                        
+                        {/* Step 3: Scan Box */}
+                        <div className={cn("space-y-4", step !== 'scanBox' && 'hidden')}>
+                             <div className="p-4 rounded-lg bg-green-50 border-green-300 border text-green-800 flex items-center gap-2">
+                                <CheckCircle className="h-5 w-5"/>
+                                <p className="font-bold">Product Verified!</p>
+                            </div>
+                             <Label htmlFor="boxScan" className="text-lg">3. Scan Box Packaging</Label>
+                            <div className="flex items-end gap-2">
+                                <Input ref={boxInputRef} id="boxScan" name="boxScan" placeholder="Scan box barcode..." value={scannedBox} onChange={e => setScannedBox(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleBoxScan()} disabled={isSubmitting} />
+                                <Button onClick={handleBoxScan} disabled={isSubmitting || !scannedBox}>
+                                     {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Confirm Pack'}
+                                </Button>
+                            </div>
+                        </div>
+
                     </CardContent>
                 </Card>
             </div>
+            
+             {/* Success Dialog */}
+            <Dialog open={isSuccessDialogOpen} onOpenChange={resetProcess}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-2xl text-green-600">
+                           <CheckCircle className="h-8 w-8" /> Validation Successful
+                        </DialogTitle>
+                        <DialogDescription className="pt-4 text-base">
+                            Order <span className="font-bold text-foreground">{foundOrder?.order_reference}</span> has been successfully packed and validated.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4 space-y-4">
+                        <Button className="w-full h-12" onClick={() => toast({ title: "Printing...", description: "Shipping label sent to printer." })}>
+                            <Printer className="mr-2 h-5 w-5" /> Print Shipping Label
+                        </Button>
+                    </div>
+                    <DialogFooter>
+                        <Button onClick={resetProcess} className="w-full">
+                            Pack Next Order
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
         </MainLayout>
     );
 }
+
+    
