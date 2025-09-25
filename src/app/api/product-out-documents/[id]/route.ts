@@ -21,19 +21,21 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   let logAction = 'UPDATE';
   let logDetails = `Updated document ID: ${id}.`;
 
+  // Logic for Packing Confirmation from Outbound page
   if (packer_name) {
     updateData.packer_name = packer_name;
     logAction = 'CONFIRM_PACKING';
     logDetails = `Order packed by: ${packer_name}. Doc ID: ${id}`;
   }
   
+  // Logic for Shipment/Delivery Confirmation from Dispatcher page
   if (shipping_status) {
     updateData.shipping_status = shipping_status;
     logAction = `CONFIRM_${shipping_status.toUpperCase()}`;
     logDetails = `Order status updated to ${shipping_status}. Doc ID: ${id}`;
   }
 
-  if (weight !== undefined && weight !== null) {
+  if (weight !== undefined && weight !== null && !isNaN(weight)) {
     updateData.weight = weight;
     logDetails += ` Weight: ${weight}kg.`
   }

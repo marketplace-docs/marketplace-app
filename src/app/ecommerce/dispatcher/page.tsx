@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -11,6 +12,7 @@ import { Loader2, PackageCheck, Search, Send, CheckCheck, Weight } from 'lucide-
 import { useAuth } from '@/hooks/use-auth';
 import type { ProductOutDocument } from '@/types/product-out-document';
 import { Badge } from '@/components/ui/badge';
+import { useRouter } from 'next/navigation';
 
 type OrderToDispatch = {
     docIds: number[];
@@ -25,6 +27,7 @@ type OrderToDispatch = {
 export default function DispatcherPage() {
     const { user } = useAuth();
     const { toast } = useToast();
+    const router = useRouter();
     
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -52,11 +55,11 @@ export default function DispatcherPage() {
             );
             
             if (relatedDocs.length === 0) {
-                toast({ variant: 'destructive', title: 'Not Found', description: `No order found for ref: ${orderRef}.` });
+                toast({ variant: 'destructive', title: 'Not Found', description: `No order found for ref: ${orderRef}. It might not be picked yet.` });
                 setIsLoading(false);
                 return;
             }
-
+            
             const isFullyPacked = relatedDocs.every(doc => doc.packer_name !== null);
             
             if (!isFullyPacked) {
@@ -64,15 +67,13 @@ export default function DispatcherPage() {
                 setIsLoading(false);
                 return;
             }
-
+            
             const aggregatedOrder: OrderToDispatch = relatedDocs.reduce((acc, doc) => {
                 acc.docIds.push(doc.id);
                 acc.qty += doc.qty;
-                // Use the latest weight if available from any part of the order
                 if (doc.weight !== null && doc.weight !== undefined) {
                     acc.weight = doc.weight;
                 }
-                // Use the most advanced shipping status
                 if (doc.shipping_status === 'Delivered') {
                     acc.current_status = 'Delivered';
                 } else if (doc.shipping_status === 'Shipped' && acc.current_status !== 'Delivered') {
@@ -85,7 +86,7 @@ export default function DispatcherPage() {
                 sku: relatedDocs[0].sku,
                 qty: 0,
                 packer_name: relatedDocs[0].packer_name || 'Unknown',
-                current_status: 'Packed', // Default status if no shipping status is set
+                current_status: 'Packed',
                 weight: null
             });
 
@@ -121,16 +122,16 @@ export default function DispatcherPage() {
             );
             
             const results = await Promise.all(updatePromises);
-            const failedUpdates = results.filter(res => !res.ok);
-
-            if (failedUpdates.length > 0) {
-                throw new Error(`Failed to update status for ${failedUpdates.length} document parts.`);
+            
+            for(const res of results) {
+                 if (!res.ok) {
+                    const errorData = await res.json();
+                    throw new Error(errorData.error || `Failed to update status for one or more document parts.`);
+                }
             }
 
             toast({ title: 'Success', description: `Order ${foundOrder.order_reference} status updated to ${newStatus}.` });
-            setOrderRef('');
-            setWeight('');
-            setFoundOrder(null);
+            router.push('/ecommerce/shipment-monitoring');
 
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Update Failed', description: error.message });
