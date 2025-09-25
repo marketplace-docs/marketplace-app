@@ -1,26 +1,17 @@
-
-'use client';
-
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { useAuth } from '@/hooks/use-auth';
-import { useEffect } from 'react';
 
 export default function Home() {
-    const { user, loading } = useAuth();
+  const cookieStore = cookies();
+  const userCookie = cookieStore.get('user');
 
-    useEffect(() => {
-        if (!loading) {
-            if(user) {
-                redirect('/dashboard');
-            } else {
-                redirect('/login');
-            }
-        }
-    }, [user, loading]);
+  if (userCookie) {
+    redirect('/dashboard');
+  } else {
+    redirect('/login');
+  }
 
-    return (
-        <div className="flex h-screen w-full items-center justify-center">
-            <div className="text-2xl font-semibold">Market Place..</div>
-        </div>
-    );
+  // This part will not be rendered due to the redirects above,
+  // but it's good practice to have a fallback return.
+  return null;
 }
