@@ -2,18 +2,21 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ScanLine, Search, Package, Waypoints, ShoppingBasket } from 'lucide-react';
+import { Loader2, ScanLine, Search, Package, Waypoints, ShoppingBasket, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
-import { useRouter } from 'next/navigation';
 import type { BatchProduct } from '@/types/batch-product';
 import type { Order } from '@/types/order';
+import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+
+type PickingStep = 'scanOrder' | 'scanLocation' | 'scanProduct' | 'enterQuantity';
 
 type FoundOrder = Order & {
     waveId: number;
@@ -23,13 +26,33 @@ type FoundOrder = Order & {
 export default function GoPickerPage() {
     const { user } = useAuth();
     const { toast } = useToast();
-    const router = useRouter();
     
-    const [orderRef, setOrderRef] = useState('');
+    // State for the process
+    const [step, setStep] = useState<PickingStep>('scanOrder');
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Data state
+    const [orderRef, setOrderRef] = useState('');
     const [foundOrder, setFoundOrder] = useState<FoundOrder | null>(null);
-    const [actualQty, setActualQty] = useState<string>('');
+    const [scannedLocation, setScannedLocation] = useState('');
+    const [scannedBarcode, setScannedBarcode] = useState('');
+    const [pickedQty, setPickedQty] = useState('');
+
+    // Refs for inputs
+    const orderInputRef = useRef<HTMLInputElement>(null);
+    const locationInputRef = useRef<HTMLInputElement>(null);
+    const productInputRef = useRef<HTMLInputElement>(null);
+    const qtyInputRef = useRef<HTMLInputElement>(null);
+
+    // Focus management
+    useEffect(() => {
+        if (step === 'scanOrder') orderInputRef.current?.focus();
+        if (step === 'scanLocation') locationInputRef.current?.focus();
+        if (step === 'scanProduct') productInputRef.current?.focus();
+        if (step === 'enterQuantity') qtyInputRef.current?.focus();
+    }, [step]);
+    
 
     const handleSearchOrder = async () => {
         if (!orderRef) {
@@ -39,7 +62,6 @@ export default function GoPickerPage() {
         
         setIsLoading(true);
         setFoundOrder(null);
-        setActualQty('');
         try {
             const wavesResponse = await fetch('/api/waves');
             if (!wavesResponse.ok) throw new Error('Could not fetch waves to find the order.');
@@ -103,7 +125,7 @@ export default function GoPickerPage() {
             };
             
             setFoundOrder(orderDetails);
-            setActualQty(orderDetails.qty.toString());
+            setStep('scanLocation');
 
         } catch (error: any) {
              toast({ variant: 'destructive', title: 'Error', description: error.message });
@@ -111,7 +133,29 @@ export default function GoPickerPage() {
             setIsLoading(false);
         }
     };
-
+    
+    const handleLocationScan = () => {
+        if (!foundOrder || !scannedLocation) return;
+        if (scannedLocation.toLowerCase() === foundOrder.location.toLowerCase()) {
+            toast({ title: "Location Verified", description: "Please scan the product barcode."});
+            setStep('scanProduct');
+        } else {
+            toast({ variant: 'destructive', title: 'Wrong Location', description: `Expected ${foundOrder.location}, but scanned ${scannedLocation}.` });
+            setScannedLocation('');
+        }
+    };
+    
+    const handleProductScan = () => {
+        if (!foundOrder || !scannedBarcode) return;
+        if (scannedBarcode === foundOrder.barcode) {
+            toast({ title: "Product Verified", description: "Please enter the quantity."});
+            setPickedQty(foundOrder.qty.toString());
+            setStep('enterQuantity');
+        } else {
+            toast({ variant: 'destructive', title: 'Wrong Product', description: `Scanned barcode does not match the required product.` });
+            setScannedBarcode('');
+        }
+    };
 
     const handleConfirmPick = async () => {
         if (!foundOrder || !user) {
@@ -119,13 +163,13 @@ export default function GoPickerPage() {
             return;
         }
 
-        const pickedQty = parseInt(actualQty, 10);
-        if (isNaN(pickedQty) || pickedQty < 0) {
+        const quantity = parseInt(pickedQty, 10);
+        if (isNaN(quantity) || quantity < 0) {
             toast({ variant: 'destructive', title: 'Invalid Quantity', description: 'Please enter a valid number for the actual quantity.' });
             return;
         }
         
-        if (pickedQty > foundOrder.qty) {
+        if (quantity > foundOrder.qty) {
             toast({ variant: 'destructive', title: 'Invalid Quantity', description: 'Actual quantity cannot be greater than the required quantity.' });
             return;
         }
@@ -133,41 +177,35 @@ export default function GoPickerPage() {
         setIsSubmitting(true);
 
         try {
-            if (pickedQty < foundOrder.qty) {
-                // If qty is less than required (including 0), mark as OOS and move back to manual_orders
+            if (quantity < foundOrder.qty) {
                 const response = await fetch(`/api/waves/${foundOrder.waveId}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        action: 'mark_oos', 
-                        orderId: foundOrder.reference,
-                        user 
-                    }),
+                    body: JSON.stringify({ action: 'mark_oos', orderId: foundOrder.reference, user }),
                 });
                 if (!response.ok) {
                     const errorData = await response.json();
                     throw new Error(errorData.error || 'Failed to mark order as Out of Stock.');
                 }
                 
-                const toastMessage = pickedQty === 0 
+                const toastMessage = quantity === 0 
                     ? `Order ${foundOrder.reference} moved to Out of Stock management.`
                     : `Partial pick recorded. Order ${foundOrder.reference} moved to Out of Stock for review.`;
 
                 toast({ title: 'Marked as OOS', description: toastMessage });
 
-            } else { // This is the case where pickedQty === foundOrder.qty
-                 // 1. Create product_out_document to log the pick
+            } else {
                 const issueDocPayload = {
                     documents: [{
                         sku: foundOrder.sku,
                         barcode: foundOrder.barcode,
-                        expdate: new Date().toISOString(), // Assuming FEFO, so we just need a valid date.
+                        expdate: new Date().toISOString(),
                         location: foundOrder.location,
-                        qty: pickedQty,
+                        qty: quantity,
                         status: 'Issue - Order' as const,
                         date: new Date().toISOString(),
                         validatedby: user.name,
-                        order_reference: foundOrder.reference, // CRUCIAL for linking
+                        order_reference: foundOrder.reference,
                     }],
                     user,
                 };
@@ -181,28 +219,24 @@ export default function GoPickerPage() {
                     throw new Error(errorData.error || 'Failed to create picking log document.');
                 }
 
-                // 2. Update the wave status to "Wave Done"
                 const response = await fetch(`/api/waves/${foundOrder.waveId}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        action: 'update_status', 
-                        status: 'Wave Done', 
-                        user 
-                    }),
+                    body: JSON.stringify({ action: 'update_status', status: 'Wave Done', user }),
                 });
 
                 if (!response.ok) throw new Error('Failed to update wave status.');
                 
-                toast({
-                    title: 'Pick Confirmed',
-                    description: `Order ${foundOrder.reference} picked and logged. Ready for packing.`,
-                });
+                toast({ title: 'Pick Confirmed', description: `Order ${foundOrder.reference} picked and logged. Ready for packing.`});
             }
             
-            setFoundOrder(null);
+            // Reset for next order
             setOrderRef('');
-            setActualQty('');
+            setFoundOrder(null);
+            setScannedLocation('');
+            setScannedBarcode('');
+            setPickedQty('');
+            setStep('scanOrder');
 
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Error', description: error.message });
@@ -210,95 +244,152 @@ export default function GoPickerPage() {
             setIsSubmitting(false);
         }
     };
+    
+    const StepIndicator = ({ currentStep, stepName, label }: { currentStep: PickingStep; stepName: PickingStep; label: string }) => {
+        const isActive = currentStep === stepName;
+        const isDone = Object.keys(stepStates).indexOf(currentStep) > Object.keys(stepStates).indexOf(stepName);
+
+        return (
+            <div className={cn("flex items-center gap-2 p-3 rounded-lg transition-all", isActive ? "bg-primary/10 border-primary" : "bg-muted/50", isDone ? "border-green-500" : "border-transparent", "border-l-4")}>
+                {isDone ? <CheckCircle2 className="h-5 w-5 text-green-500"/> : <div className={cn("h-5 w-5 rounded-full flex items-center justify-center text-xs text-white", isActive ? "bg-primary" : "bg-muted-foreground")}>{Object.keys(stepStates).indexOf(stepName) + 1}</div>}
+                <span className={cn("font-medium", isActive ? "text-primary" : isDone ? "text-muted-foreground line-through" : "text-muted-foreground")}>{label}</span>
+            </div>
+        )
+    };
+    
+    const stepStates = {
+        scanOrder: 'Scan Order',
+        scanLocation: 'Scan Location',
+        scanProduct: 'Scan Product',
+        enterQuantity: 'Enter Quantity',
+    };
 
     return (
         <MainLayout>
             <div className="w-full space-y-6">
                 <h1 className="text-2xl font-bold">Go-Picker</h1>
-                <Card className="max-w-2xl mx-auto">
-                    <CardHeader>
-                        <div className="flex items-center justify-center mb-4">
-                            <ScanLine className="h-16 w-16 text-primary" />
-                        </div>
-                        <CardTitle className="text-center">Scan Picking Order</CardTitle>
-                        <CardDescription className="text-center">
-                            Scan the order reference to see the item, quantity, and location to pick.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                         <div className="flex items-end gap-2">
-                            <div className="flex-1 space-y-2">
-                                <Label htmlFor="orderRef" className="text-lg">#</Label>
-                                <Input 
-                                    id="orderRef" 
-                                    name="orderRef" 
-                                    placeholder="Scan or type order reference..." 
-                                    value={orderRef} 
-                                    onChange={(e) => setOrderRef(e.target.value)} 
-                                    onKeyDown={(e) => e.key === 'Enter' && handleSearchOrder()}
-                                    className="text-center text-xl h-12"
-                                    disabled={isLoading || isSubmitting}
-                                />
-                            </div>
-                            <Button onClick={handleSearchOrder} disabled={isLoading || isSubmitting || !orderRef} className="h-12">
-                                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
-                                Search
-                            </Button>
-                        </div>
-                        
-                        {foundOrder && (
-                             <div className="space-y-4 pt-6 border-t-2 border-dashed">
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle>Pick Details for Order: {foundOrder.reference}</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="space-y-4 text-lg">
-                                        <div className="flex items-center gap-4">
-                                            <Package className="h-6 w-6 text-primary" />
-                                            <div className="flex-1">
-                                                <p className="text-sm font-medium text-muted-foreground">SKU / Barcode</p>
-                                                <p className="font-semibold">{foundOrder.sku} / {foundOrder.barcode}</p>
-                                            </div>
-                                        </div>
-                                         <div className="flex items-center gap-4">
-                                            <ShoppingBasket className="h-6 w-6 text-primary" />
-                                            <div>
-                                                <p className="text-sm font-medium text-muted-foreground">Quantity to Pick</p>
-                                                <p className="font-semibold">{foundOrder.qty.toLocaleString()}</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-4">
-                                            <Waypoints className="h-6 w-6 text-primary" />
-                                            <div>
-                                                <p className="text-sm font-medium text-muted-foreground">Pick From Location</p>
-                                                <p className="font-semibold">{foundOrder.location}</p>
-                                            </div>
-                                        </div>
-                                        <div className="pt-4 border-t">
-                                            <Label htmlFor="actualQty">Actual Picked Quantity</Label>
-                                            <Input
-                                                id="actualQty"
-                                                type="number"
-                                                value={actualQty}
-                                                onChange={(e) => setActualQty(e.target.value)}
-                                                className="text-center text-xl h-12 mt-2"
-                                                placeholder="Enter quantity"
-                                            />
-                                            <p className="text-xs text-muted-foreground mt-1">Enter quantity less than required to report as partial/OOS.</p>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                                <Button onClick={handleConfirmPick} className="w-full h-12 text-lg" disabled={isSubmitting}>
-                                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Confirm Pick
-                                </Button>
-                             </div>
-                        )}
-                    </CardContent>
-                </Card>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="md:col-span-1 space-y-3">
+                         <Card>
+                            <CardHeader>
+                                <CardTitle>Picking Steps</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-2">
+                                {Object.entries(stepStates).map(([key, label]) => (
+                                    <StepIndicator key={key} currentStep={step} stepName={key as PickingStep} label={label} />
+                                ))}
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    <div className="md:col-span-2">
+                        <Card>
+                            <CardHeader>
+                                <div className="flex items-center justify-center mb-2">
+                                    <ScanLine className="h-10 w-10 text-primary" />
+                                </div>
+                                <CardTitle className="text-center">Scan Picking Order</CardTitle>
+                                <CardDescription className="text-center">Follow the steps to pick the order correctly.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                               {/* Step 1: Scan Order */}
+                                <div className={cn("space-y-4", step !== 'scanOrder' && 'hidden')}>
+                                    <Label htmlFor="orderRef" className="text-lg">1. Scan Order Reference</Label>
+                                    <div className="flex items-end gap-2">
+                                        <Input 
+                                            ref={orderInputRef}
+                                            id="orderRef" 
+                                            placeholder="Scan or type order reference..." 
+                                            value={orderRef} 
+                                            onChange={(e) => setOrderRef(e.target.value)} 
+                                            onKeyDown={(e) => e.key === 'Enter' && handleSearchOrder()}
+                                            className="text-center text-xl h-12"
+                                            disabled={isLoading}
+                                        />
+                                        <Button onClick={handleSearchOrder} disabled={isLoading || !orderRef} className="h-12">
+                                            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                                        </Button>
+                                    </div>
+                                </div>
+                                
+                                {/* Step 2: Scan Location */}
+                                <div className={cn("space-y-4", step !== 'scanLocation' && 'hidden')}>
+                                     <div className="p-4 rounded-lg bg-yellow-50 border-yellow-300 border text-yellow-800">
+                                        <p className="font-bold">Go to Location:</p>
+                                        <p className="text-2xl font-mono">{foundOrder?.location}</p>
+                                     </div>
+                                    <Label htmlFor="locationScan" className="text-lg">2. Scan Location Barcode</Label>
+                                    <div className="flex items-end gap-2">
+                                        <Input 
+                                            ref={locationInputRef}
+                                            id="locationScan" 
+                                            placeholder="Scan location barcode..." 
+                                            value={scannedLocation} 
+                                            onChange={(e) => setScannedLocation(e.target.value)} 
+                                            onKeyDown={(e) => e.key === 'Enter' && handleLocationScan()}
+                                            className="text-center text-xl h-12"
+                                            disabled={isSubmitting}
+                                        />
+                                         <Button onClick={handleLocationScan} disabled={isSubmitting || !scannedLocation} className="h-12">
+                                            Verify
+                                        </Button>
+                                    </div>
+                                </div>
+                                
+                                 {/* Step 3: Scan Product */}
+                                <div className={cn("space-y-4", step !== 'scanProduct' && 'hidden')}>
+                                     <div className="p-4 rounded-lg bg-blue-50 border-blue-300 border text-blue-800 space-y-2">
+                                        <p className="font-bold">Pick Product:</p>
+                                        <p>SKU: <Badge variant="secondary">{foundOrder?.sku}</Badge></p>
+                                        <p>Barcode: <Badge variant="secondary">{foundOrder?.barcode}</Badge></p>
+                                        <p>Qty: <Badge>{foundOrder?.qty.toLocaleString()}</Badge></p>
+                                     </div>
+                                    <Label htmlFor="productScan" className="text-lg">3. Scan Product Barcode</Label>
+                                     <div className="flex items-end gap-2">
+                                        <Input 
+                                            ref={productInputRef}
+                                            id="productScan" 
+                                            placeholder="Scan product barcode..." 
+                                            value={scannedBarcode} 
+                                            onChange={(e) => setScannedBarcode(e.target.value)} 
+                                            onKeyDown={(e) => e.key === 'Enter' && handleProductScan()}
+                                            className="text-center text-xl h-12"
+                                            disabled={isSubmitting}
+                                        />
+                                         <Button onClick={handleProductScan} disabled={isSubmitting || !scannedBarcode} className="h-12">
+                                            Verify
+                                        </Button>
+                                    </div>
+                                </div>
+                                
+                                {/* Step 4: Enter Quantity */}
+                                <div className={cn("space-y-4", step !== 'enterQuantity' && 'hidden')}>
+                                    <div className="p-4 rounded-lg bg-green-50 border-green-300 border text-green-800 flex items-center gap-2">
+                                        <CheckCircle2 className="h-5 w-5"/>
+                                        <p className="font-bold">Product and Location Verified!</p>
+                                    </div>
+                                    <Label htmlFor="actualQty" className="text-lg">4. Enter Picked Quantity</Label>
+                                     <Input
+                                        ref={qtyInputRef}
+                                        id="actualQty"
+                                        type="number"
+                                        value={pickedQty}
+                                        onChange={(e) => setPickedQty(e.target.value)}
+                                        className="text-center text-xl h-12 mt-2"
+                                        placeholder="Enter quantity"
+                                        onKeyDown={(e) => e.key === 'Enter' && handleConfirmPick()}
+                                    />
+                                    <p className="text-xs text-muted-foreground mt-1">Enter a quantity less than required to report as partial or Out of Stock.</p>
+                                    <Button onClick={handleConfirmPick} className="w-full h-12 text-lg" disabled={isSubmitting || !pickedQty}>
+                                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                        Done Pick
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
             </div>
         </MainLayout>
     );
 }
-
-    
