@@ -260,7 +260,7 @@ export default function GoPickerPage() {
                     <CardContent className="space-y-6">
                        {/* Step 1: Scan Order */}
                         <div className={cn("space-y-4", step !== 'scanOrder' && 'hidden')}>
-                            <Label htmlFor="orderRef" className="text-lg">1. Scan Order Reference</Label>
+                            <Label htmlFor="orderRef" className="text-lg">Scan Order Reference</Label>
                             <div className="flex items-end gap-2">
                                 <Input 
                                     ref={orderInputRef}
@@ -284,7 +284,7 @@ export default function GoPickerPage() {
                                 <p className="font-bold">Go to Location:</p>
                                 <p className="text-2xl font-mono">{foundOrder?.location}</p>
                              </div>
-                            <Label htmlFor="locationScan" className="text-lg">2. Scan Location Barcode</Label>
+                            <Label htmlFor="locationScan" className="text-lg">Scan Location Barcode</Label>
                             <div className="flex items-end gap-2">
                                 <Input 
                                     ref={locationInputRef}
@@ -310,7 +310,7 @@ export default function GoPickerPage() {
                                 <p>Barcode: <Badge variant="secondary">{foundOrder?.barcode}</Badge></p>
                                 <p>Qty: <Badge>{foundOrder?.qty.toLocaleString()}</Badge></p>
                              </div>
-                            <Label htmlFor="productScan" className="text-lg">3. Scan Product Barcode</Label>
+                            <Label htmlFor="productScan" className="text-lg">Scan Product Barcode</Label>
                              <div className="flex items-end gap-2">
                                 <Input 
                                     ref={productInputRef}
@@ -334,7 +334,7 @@ export default function GoPickerPage() {
                                 <CheckCircle2 className="h-5 w-5"/>
                                 <p className="font-bold">Product and Location Verified!</p>
                             </div>
-                            <Label htmlFor="actualQty" className="text-lg">4. Enter Picked Quantity</Label>
+                            <Label htmlFor="actualQty" className="text-lg">Enter Picked Quantity</Label>
                              <Input
                                 ref={qtyInputRef}
                                 id="actualQty"
