@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -19,7 +18,7 @@ type OrderToDispatch = {
     sku: string;
     qty: number;
     packer_name: string;
-    current_status: string | null;
+    current_status: string;
     weight: number | null;
 }
 
@@ -48,33 +47,45 @@ export default function DispatcherPage() {
             if (!productOutRes.ok) throw new Error('Could not fetch outbound documents.');
             const allProductOutDocs: ProductOutDocument[] = await productOutRes.json();
             
-            const packedDocs = allProductOutDocs.filter(
-                doc => doc.status === 'Issue - Order' && 
-                       doc.packer_name !== null &&
-                       doc.order_reference === orderRef
+            const relatedDocs = allProductOutDocs.filter(
+                doc => doc.order_reference === orderRef && doc.status === 'Issue - Order'
             );
             
-            if (packedDocs.length === 0) {
-                toast({ variant: 'destructive', title: 'Not Found or Not Ready', description: `No packed order found for ref: ${orderRef}. It might be already shipped or not packed yet.` });
+            if (relatedDocs.length === 0) {
+                toast({ variant: 'destructive', title: 'Not Found', description: `No order found for ref: ${orderRef}.` });
                 setIsLoading(false);
                 return;
             }
+
+            const isFullyPacked = relatedDocs.every(doc => doc.packer_name !== null);
             
-            const aggregatedOrder: OrderToDispatch = packedDocs.reduce((acc, doc) => {
+            if (!isFullyPacked) {
+                toast({ variant: 'destructive', title: 'Not Ready', description: `Order ${orderRef} has not been fully packed yet.` });
+                setIsLoading(false);
+                return;
+            }
+
+            const aggregatedOrder: OrderToDispatch = relatedDocs.reduce((acc, doc) => {
                 acc.docIds.push(doc.id);
                 acc.qty += doc.qty;
-                // Use the latest weight if available
+                // Use the latest weight if available from any part of the order
                 if (doc.weight !== null && doc.weight !== undefined) {
                     acc.weight = doc.weight;
+                }
+                // Use the most advanced shipping status
+                if (doc.shipping_status === 'Delivered') {
+                    acc.current_status = 'Delivered';
+                } else if (doc.shipping_status === 'Shipped' && acc.current_status !== 'Delivered') {
+                    acc.current_status = 'Shipped';
                 }
                 return acc;
             }, {
                 docIds: [] as number[],
-                order_reference: packedDocs[0].order_reference || orderRef,
-                sku: packedDocs[0].sku,
+                order_reference: relatedDocs[0].order_reference || orderRef,
+                sku: relatedDocs[0].sku,
                 qty: 0,
-                packer_name: packedDocs[0].packer_name || 'Unknown',
-                current_status: packedDocs[0].shipping_status || 'Packed',
+                packer_name: relatedDocs[0].packer_name || 'Unknown',
+                current_status: 'Packed', // Default status if no shipping status is set
                 weight: null
             });
 
@@ -82,6 +93,7 @@ export default function DispatcherPage() {
             if (aggregatedOrder.weight) {
                 setWeight(aggregatedOrder.weight.toString());
             }
+
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Error', description: error.message });
         } finally {
@@ -110,6 +122,7 @@ export default function DispatcherPage() {
             
             const results = await Promise.all(updatePromises);
             const failedUpdates = results.filter(res => !res.ok);
+
             if (failedUpdates.length > 0) {
                 throw new Error(`Failed to update status for ${failedUpdates.length} document parts.`);
             }
