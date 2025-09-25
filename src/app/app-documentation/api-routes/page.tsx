@@ -90,7 +90,7 @@ const apiRoutes = [
         endpoints: [
             { method: "GET", path: "/api/product-out-documents", description: "Mengambil semua dokumen product out." },
             { method: "POST", path: "/api/product-out-documents", description: "Membuat dokumen product out baru (misal: untuk memotong stok saat picking)." },
-            { method: "PATCH", path: "/api/product-out-documents/[id]", description: "Memperbarui dokumen (misal: menambahkan nama packer saat konfirmasi packing)." },
+            { method: "PATCH", path: "/api/product-out-documents/[id]", description: "Memperbarui dokumen (misal: menambah `packer_name`, `shipping_status`, atau `weight`)." },
             { method: "POST", path: "/api/product-out-documents/batch-upload", description: "Upload massal dokumen product out via CSV dengan logika FEFO." },
         ]
     },
@@ -193,3 +193,5 @@ export default function ApiRoutesPage() {
         </MainLayout>
     );
 }
+
+    
