@@ -11,13 +11,13 @@ const ALLOWED_ROLES = ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const { id } = params;
   const body = await request.json();
-  const { packer_name, shipping_status, user } = body;
+  const { packer_name, shipping_status, weight, user } = body;
 
   if (!user?.role || !ALLOWED_ROLES.includes(user.role)) {
     return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
   }
 
-  const updateData: { packer_name?: string; shipping_status?: string } = {};
+  const updateData: { packer_name?: string; shipping_status?: string; weight?: number } = {};
   let logAction = 'UPDATE';
   let logDetails = `Updated document ID: ${id}.`;
 
@@ -31,6 +31,11 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     updateData.shipping_status = shipping_status;
     logAction = `CONFIRM_${shipping_status.toUpperCase()}`;
     logDetails = `Order status updated to ${shipping_status}. Doc ID: ${id}`;
+  }
+
+  if (weight !== undefined) {
+    updateData.weight = weight;
+    logDetails += ` Weight: ${weight}kg.`
   }
   
   if (Object.keys(updateData).length === 0) {

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, PackageCheck, Search, Send, CheckCheck } from 'lucide-react';
+import { Loader2, PackageCheck, Search, Send, CheckCheck, Weight } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import type { ProductOutDocument } from '@/types/product-out-document';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +20,7 @@ type OrderToDispatch = {
     qty: number;
     packer_name: string;
     current_status: string | null;
+    weight: number | null;
 }
 
 export default function DispatcherPage() {
@@ -29,6 +30,7 @@ export default function DispatcherPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [orderRef, setOrderRef] = useState('');
+    const [weight, setWeight] = useState('');
     const [foundOrder, setFoundOrder] = useState<OrderToDispatch | null>(null);
 
     const handleSearchOrder = async () => {
@@ -39,6 +41,7 @@ export default function DispatcherPage() {
         
         setIsLoading(true);
         setFoundOrder(null);
+        setWeight('');
 
         try {
             const productOutRes = await fetch('/api/product-out-documents');
@@ -60,6 +63,10 @@ export default function DispatcherPage() {
             const aggregatedOrder: OrderToDispatch = packedDocs.reduce((acc, doc) => {
                 acc.docIds.push(doc.id);
                 acc.qty += doc.qty;
+                // Use the latest weight if available
+                if (doc.weight !== null && doc.weight !== undefined) {
+                    acc.weight = doc.weight;
+                }
                 return acc;
             }, {
                 docIds: [] as number[],
@@ -67,10 +74,14 @@ export default function DispatcherPage() {
                 sku: packedDocs[0].sku,
                 qty: 0,
                 packer_name: packedDocs[0].packer_name || 'Unknown',
-                current_status: packedDocs[0].shipping_status || 'Packed'
+                current_status: packedDocs[0].shipping_status || 'Packed',
+                weight: null
             });
 
             setFoundOrder(aggregatedOrder);
+            if (aggregatedOrder.weight) {
+                setWeight(aggregatedOrder.weight.toString());
+            }
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Error', description: error.message });
         } finally {
@@ -80,6 +91,12 @@ export default function DispatcherPage() {
     
     const handleUpdateStatus = async (newStatus: 'Shipped' | 'Delivered') => {
         if (!foundOrder || !user) return;
+
+        const packageWeight = parseFloat(weight);
+        if (newStatus === 'Shipped' && (isNaN(packageWeight) || packageWeight <= 0)) {
+            toast({ variant: 'destructive', title: 'Invalid Weight', description: 'Please enter a valid package weight before shipping.' });
+            return;
+        }
         
         setIsSubmitting(true);
         try {
@@ -87,7 +104,7 @@ export default function DispatcherPage() {
                 fetch(`/api/product-out-documents/${docId}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ shipping_status: newStatus, user }),
+                    body: JSON.stringify({ shipping_status: newStatus, weight: packageWeight, user }),
                 })
             );
             
@@ -99,6 +116,7 @@ export default function DispatcherPage() {
 
             toast({ title: 'Success', description: `Order ${foundOrder.order_reference} status updated to ${newStatus}.` });
             setOrderRef('');
+            setWeight('');
             setFoundOrder(null);
 
         } catch (error: any) {
@@ -124,8 +142,8 @@ export default function DispatcherPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-6">
-                            <div className="flex items-end gap-2">
-                                <div className="flex-1 space-y-2">
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                                <div className="space-y-2">
                                     <Label htmlFor="orderRef">Scan Order Reference</Label>
                                     <Input id="orderRef" name="orderRef" placeholder="Scan reference to find packed order..." value={orderRef} onChange={e => setOrderRef(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearchOrder()} disabled={isLoading || isSubmitting}/>
                                 </div>
@@ -137,6 +155,20 @@ export default function DispatcherPage() {
                             
                             {foundOrder && (
                                 <div className="space-y-4 pt-4 border-t">
+                                     <div className="space-y-2">
+                                        <Label htmlFor="weight" className="flex items-center gap-2">
+                                            <Weight className="h-4 w-4" /> Package Weight (kg)
+                                        </Label>
+                                        <Input
+                                            id="weight"
+                                            name="weight"
+                                            type="number"
+                                            placeholder="Enter package weight in kg"
+                                            value={weight}
+                                            onChange={e => setWeight(e.target.value)}
+                                            disabled={isSubmitting}
+                                        />
+                                    </div>
                                     <Card>
                                         <CardHeader>
                                             <CardTitle>Order: {foundOrder.order_reference}</CardTitle>
