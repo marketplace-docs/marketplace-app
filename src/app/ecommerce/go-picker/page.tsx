@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ScanLine, Search, Package, Waypoints, ShoppingBasket, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Loader2, ScanLine, Search, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import type { BatchProduct } from '@/types/batch-product';
 import type { Order } from '@/types/order';
@@ -245,150 +245,114 @@ export default function GoPickerPage() {
         }
     };
     
-    const StepIndicator = ({ currentStep, stepName, label }: { currentStep: PickingStep; stepName: PickingStep; label: string }) => {
-        const isActive = currentStep === stepName;
-        const isDone = Object.keys(stepStates).indexOf(currentStep) > Object.keys(stepStates).indexOf(stepName);
-
-        return (
-            <div className={cn("flex items-center gap-2 p-3 rounded-lg transition-all", isActive ? "bg-primary/10 border-primary" : "bg-muted/50", isDone ? "border-green-500" : "border-transparent", "border-l-4")}>
-                {isDone ? <CheckCircle2 className="h-5 w-5 text-green-500"/> : <div className={cn("h-5 w-5 rounded-full flex items-center justify-center text-xs text-white", isActive ? "bg-primary" : "bg-muted-foreground")}>{Object.keys(stepStates).indexOf(stepName) + 1}</div>}
-                <span className={cn("font-medium", isActive ? "text-primary" : isDone ? "text-muted-foreground line-through" : "text-muted-foreground")}>{label}</span>
-            </div>
-        )
-    };
-    
-    const stepStates = {
-        scanOrder: 'Scan Order',
-        scanLocation: 'Scan Location',
-        scanProduct: 'Scan Product',
-        enterQuantity: 'Enter Quantity',
-    };
-
     return (
         <MainLayout>
             <div className="w-full space-y-6">
                 <h1 className="text-2xl font-bold">Go-Picker</h1>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="md:col-span-1 space-y-3">
-                         <Card>
-                            <CardHeader>
-                                <CardTitle>Picking Steps</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-2">
-                                {Object.entries(stepStates).map(([key, label]) => (
-                                    <StepIndicator key={key} currentStep={step} stepName={key as PickingStep} label={label} />
-                                ))}
-                            </CardContent>
-                        </Card>
-                    </div>
-
-                    <div className="md:col-span-2">
-                        <Card>
-                            <CardHeader>
-                                <div className="flex items-center justify-center mb-2">
-                                    <ScanLine className="h-10 w-10 text-primary" />
-                                </div>
-                                <CardTitle className="text-center">Scan Picking Order</CardTitle>
-                                <CardDescription className="text-center">Follow the steps to pick the order correctly.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-6">
-                               {/* Step 1: Scan Order */}
-                                <div className={cn("space-y-4", step !== 'scanOrder' && 'hidden')}>
-                                    <Label htmlFor="orderRef" className="text-lg">1. Scan Order Reference</Label>
-                                    <div className="flex items-end gap-2">
-                                        <Input 
-                                            ref={orderInputRef}
-                                            id="orderRef" 
-                                            placeholder="Scan or type order reference..." 
-                                            value={orderRef} 
-                                            onChange={(e) => setOrderRef(e.target.value)} 
-                                            onKeyDown={(e) => e.key === 'Enter' && handleSearchOrder()}
-                                            className="text-center text-xl h-12"
-                                            disabled={isLoading}
-                                        />
-                                        <Button onClick={handleSearchOrder} disabled={isLoading || !orderRef} className="h-12">
-                                            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                                        </Button>
-                                    </div>
-                                </div>
-                                
-                                {/* Step 2: Scan Location */}
-                                <div className={cn("space-y-4", step !== 'scanLocation' && 'hidden')}>
-                                     <div className="p-4 rounded-lg bg-yellow-50 border-yellow-300 border text-yellow-800">
-                                        <p className="font-bold">Go to Location:</p>
-                                        <p className="text-2xl font-mono">{foundOrder?.location}</p>
-                                     </div>
-                                    <Label htmlFor="locationScan" className="text-lg">2. Scan Location Barcode</Label>
-                                    <div className="flex items-end gap-2">
-                                        <Input 
-                                            ref={locationInputRef}
-                                            id="locationScan" 
-                                            placeholder="Scan location barcode..." 
-                                            value={scannedLocation} 
-                                            onChange={(e) => setScannedLocation(e.target.value)} 
-                                            onKeyDown={(e) => e.key === 'Enter' && handleLocationScan()}
-                                            className="text-center text-xl h-12"
-                                            disabled={isSubmitting}
-                                        />
-                                         <Button onClick={handleLocationScan} disabled={isSubmitting || !scannedLocation} className="h-12">
-                                            Verify
-                                        </Button>
-                                    </div>
-                                </div>
-                                
-                                 {/* Step 3: Scan Product */}
-                                <div className={cn("space-y-4", step !== 'scanProduct' && 'hidden')}>
-                                     <div className="p-4 rounded-lg bg-blue-50 border-blue-300 border text-blue-800 space-y-2">
-                                        <p className="font-bold">Pick Product:</p>
-                                        <p>SKU: <Badge variant="secondary">{foundOrder?.sku}</Badge></p>
-                                        <p>Barcode: <Badge variant="secondary">{foundOrder?.barcode}</Badge></p>
-                                        <p>Qty: <Badge>{foundOrder?.qty.toLocaleString()}</Badge></p>
-                                     </div>
-                                    <Label htmlFor="productScan" className="text-lg">3. Scan Product Barcode</Label>
-                                     <div className="flex items-end gap-2">
-                                        <Input 
-                                            ref={productInputRef}
-                                            id="productScan" 
-                                            placeholder="Scan product barcode..." 
-                                            value={scannedBarcode} 
-                                            onChange={(e) => setScannedBarcode(e.target.value)} 
-                                            onKeyDown={(e) => e.key === 'Enter' && handleProductScan()}
-                                            className="text-center text-xl h-12"
-                                            disabled={isSubmitting}
-                                        />
-                                         <Button onClick={handleProductScan} disabled={isSubmitting || !scannedBarcode} className="h-12">
-                                            Verify
-                                        </Button>
-                                    </div>
-                                </div>
-                                
-                                {/* Step 4: Enter Quantity */}
-                                <div className={cn("space-y-4", step !== 'enterQuantity' && 'hidden')}>
-                                    <div className="p-4 rounded-lg bg-green-50 border-green-300 border text-green-800 flex items-center gap-2">
-                                        <CheckCircle2 className="h-5 w-5"/>
-                                        <p className="font-bold">Product and Location Verified!</p>
-                                    </div>
-                                    <Label htmlFor="actualQty" className="text-lg">4. Enter Picked Quantity</Label>
-                                     <Input
-                                        ref={qtyInputRef}
-                                        id="actualQty"
-                                        type="number"
-                                        value={pickedQty}
-                                        onChange={(e) => setPickedQty(e.target.value)}
-                                        className="text-center text-xl h-12 mt-2"
-                                        placeholder="Enter quantity"
-                                        onKeyDown={(e) => e.key === 'Enter' && handleConfirmPick()}
-                                    />
-                                    <p className="text-xs text-muted-foreground mt-1">Enter a quantity less than required to report as partial or Out of Stock.</p>
-                                    <Button onClick={handleConfirmPick} className="w-full h-12 text-lg" disabled={isSubmitting || !pickedQty}>
-                                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                        Done Pick
-                                    </Button>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
-                </div>
+                <Card className="max-w-2xl mx-auto">
+                    <CardHeader>
+                        <div className="flex items-center justify-center mb-2">
+                            <ScanLine className="h-10 w-10 text-primary" />
+                        </div>
+                        <CardTitle className="text-center">Scan Picking Order</CardTitle>
+                        <CardDescription className="text-center">Follow the steps to pick the order correctly.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                       {/* Step 1: Scan Order */}
+                        <div className={cn("space-y-4", step !== 'scanOrder' && 'hidden')}>
+                            <Label htmlFor="orderRef" className="text-lg">1. Scan Order Reference</Label>
+                            <div className="flex items-end gap-2">
+                                <Input 
+                                    ref={orderInputRef}
+                                    id="orderRef" 
+                                    placeholder="Scan or type order reference..." 
+                                    value={orderRef} 
+                                    onChange={(e) => setOrderRef(e.target.value)} 
+                                    onKeyDown={(e) => e.key === 'Enter' && handleSearchOrder()}
+                                    className="text-center text-xl h-12"
+                                    disabled={isLoading}
+                                />
+                                <Button onClick={handleSearchOrder} disabled={isLoading || !orderRef} className="h-12">
+                                    {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                                </Button>
+                            </div>
+                        </div>
+                        
+                        {/* Step 2: Scan Location */}
+                        <div className={cn("space-y-4", step !== 'scanLocation' && 'hidden')}>
+                             <div className="p-4 rounded-lg bg-yellow-50 border-yellow-300 border text-yellow-800">
+                                <p className="font-bold">Go to Location:</p>
+                                <p className="text-2xl font-mono">{foundOrder?.location}</p>
+                             </div>
+                            <Label htmlFor="locationScan" className="text-lg">2. Scan Location Barcode</Label>
+                            <div className="flex items-end gap-2">
+                                <Input 
+                                    ref={locationInputRef}
+                                    id="locationScan" 
+                                    placeholder="Scan location barcode..." 
+                                    value={scannedLocation} 
+                                    onChange={(e) => setScannedLocation(e.target.value)} 
+                                    onKeyDown={(e) => e.key === 'Enter' && handleLocationScan()}
+                                    className="text-center text-xl h-12"
+                                    disabled={isSubmitting}
+                                />
+                                 <Button onClick={handleLocationScan} disabled={isSubmitting || !scannedLocation} className="h-12">
+                                    Verify
+                                </Button>
+                            </div>
+                        </div>
+                        
+                         {/* Step 3: Scan Product */}
+                        <div className={cn("space-y-4", step !== 'scanProduct' && 'hidden')}>
+                             <div className="p-4 rounded-lg bg-blue-50 border-blue-300 border text-blue-800 space-y-2">
+                                <p className="font-bold">Pick Product:</p>
+                                <p>SKU: <Badge variant="secondary">{foundOrder?.sku}</Badge></p>
+                                <p>Barcode: <Badge variant="secondary">{foundOrder?.barcode}</Badge></p>
+                                <p>Qty: <Badge>{foundOrder?.qty.toLocaleString()}</Badge></p>
+                             </div>
+                            <Label htmlFor="productScan" className="text-lg">3. Scan Product Barcode</Label>
+                             <div className="flex items-end gap-2">
+                                <Input 
+                                    ref={productInputRef}
+                                    id="productScan" 
+                                    placeholder="Scan product barcode..." 
+                                    value={scannedBarcode} 
+                                    onChange={(e) => setScannedBarcode(e.target.value)} 
+                                    onKeyDown={(e) => e.key === 'Enter' && handleProductScan()}
+                                    className="text-center text-xl h-12"
+                                    disabled={isSubmitting}
+                                />
+                                 <Button onClick={handleProductScan} disabled={isSubmitting || !scannedBarcode} className="h-12">
+                                    Verify
+                                </Button>
+                            </div>
+                        </div>
+                        
+                        {/* Step 4: Enter Quantity */}
+                        <div className={cn("space-y-4", step !== 'enterQuantity' && 'hidden')}>
+                            <div className="p-4 rounded-lg bg-green-50 border-green-300 border text-green-800 flex items-center gap-2">
+                                <CheckCircle2 className="h-5 w-5"/>
+                                <p className="font-bold">Product and Location Verified!</p>
+                            </div>
+                            <Label htmlFor="actualQty" className="text-lg">4. Enter Picked Quantity</Label>
+                             <Input
+                                ref={qtyInputRef}
+                                id="actualQty"
+                                type="number"
+                                value={pickedQty}
+                                onChange={(e) => setPickedQty(e.target.value)}
+                                className="text-center text-xl h-12 mt-2"
+                                placeholder="Enter quantity"
+                                onKeyDown={(e) => e.key === 'Enter' && handleConfirmPick()}
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">Enter a quantity less than required to report as partial or Out of Stock.</p>
+                            <Button onClick={handleConfirmPick} className="w-full h-12 text-lg" disabled={isSubmitting || !pickedQty}>
+                                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Done Pick
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
         </MainLayout>
     );
