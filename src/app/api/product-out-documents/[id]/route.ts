@@ -33,7 +33,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     logDetails = `Order status updated to ${shipping_status}. Doc ID: ${id}`;
   }
 
-  if (weight !== undefined) {
+  if (weight !== undefined && weight !== null) {
     updateData.weight = weight;
     logDetails += ` Weight: ${weight}kg.`
   }
