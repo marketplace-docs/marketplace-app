@@ -7,7 +7,7 @@ import { useSearchParams } from 'next/navigation';
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, AlertCircle, PackageSearch, RefreshCw, Printer, List, X, Check, UserCheck, PackageCheck as PackageCheckIcon } from "lucide-react";
+import { Loader2, AlertCircle, PackageSearch, RefreshCw, Printer, List, X, Check, UserCheck, PackageCheck as PackageCheckIcon, Send, CheckCheck } from "lucide-react";
 import { format } from "date-fns";
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -35,7 +35,7 @@ type WaveOrder = {
     sku: string;
     qty: number;
     location: string;
-    status: 'Assigned' | 'Picked' | 'Packed';
+    status: 'Assigned' | 'Picked' | 'Packed' | 'Shipped' | 'Delivered';
 };
 
 function MonitoringOrdersContent() {
@@ -63,8 +63,9 @@ function MonitoringOrdersContent() {
                 throw new Error("Failed to fetch waves.");
             }
             const data: Wave[] = await response.json();
-            setWaves(data);
-            return data; // Return data for chaining
+            // Filter out "Wave Done"
+            setWaves(data.filter(w => w.status === 'Wave Progress'));
+            return data; // Return original data for chaining if needed
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -104,7 +105,15 @@ function MonitoringOrdersContent() {
 
                 let status: WaveOrder['status'] = 'Assigned';
                 if (productOutDoc) {
-                    status = productOutDoc.packer_name ? 'Packed' : 'Picked';
+                    if (productOutDoc.shipping_status === 'Delivered') {
+                        status = 'Delivered';
+                    } else if (productOutDoc.shipping_status === 'Shipped') {
+                        status = 'Shipped';
+                    } else if (productOutDoc.packer_name) {
+                        status = 'Packed';
+                    } else {
+                        status = 'Picked';
+                    }
                 }
 
                 return {
@@ -189,7 +198,7 @@ function MonitoringOrdersContent() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <CardTitle>Wave Monitoring</CardTitle>
-                                <CardDescription>A list of all order waves created.</CardDescription>
+                                <CardDescription>A list of all active order waves.</CardDescription>
                             </div>
                             <div className="flex items-center gap-2 no-print">
                                 <Button variant="outline" size="icon" onClick={() => fetchWaves()}>
@@ -256,7 +265,7 @@ function MonitoringOrdersContent() {
                                             <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                                                 <div className="flex flex-col items-center justify-center gap-2">
                                                     <PackageSearch className="h-8 w-8" />
-                                                    <span>No waves have been created yet.</span>
+                                                    <span>No active waves found.</span>
                                                 </div>
                                             </TableCell>
                                         </TableRow>
@@ -320,12 +329,16 @@ function MonitoringOrdersContent() {
                                                 <TableCell>
                                                     <Badge className={cn('gap-1', 
                                                         order.status === 'Assigned' ? 'bg-orange-400' : 
-                                                        order.status === 'Picked' ? 'bg-green-500' :
-                                                        'bg-blue-500'
+                                                        order.status === 'Picked' ? 'bg-yellow-500' :
+                                                        order.status === 'Packed' ? 'bg-blue-500' :
+                                                        order.status === 'Shipped' ? 'bg-purple-500' :
+                                                        'bg-green-600'
                                                     )}>
-                                                        {order.status === 'Assigned' ? <UserCheck className="h-3 w-3" /> : 
-                                                         order.status === 'Picked' ? <Check className="h-3 w-3" /> :
-                                                         <PackageCheckIcon className="h-3 w-3" />}
+                                                        {order.status === 'Assigned' && <UserCheck className="h-3 w-3" />}
+                                                        {order.status === 'Picked' && <Check className="h-3 w-3" />}
+                                                        {order.status === 'Packed' && <PackageCheckIcon className="h-3 w-3" />}
+                                                        {order.status === 'Shipped' && <Send className="h-3 w-3" />}
+                                                        {order.status === 'Delivered' && <CheckCheck className="h-3 w-3" />}
                                                         {order.status}
                                                     </Badge>
                                                 </TableCell>

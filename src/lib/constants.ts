@@ -1,6 +1,6 @@
 
 
-import { LayoutDashboard, ListTodo, Store, FileText, Settings, type LucideIcon, Briefcase, Users, Archive, BarChart3, AppWindow, BookText, Database, History, FilePlus, Eye, File, PieChart, Users2, Shield, Menu, Monitor, Undo2, Route, Package, PackagePlus, PackageMinus, Boxes, CalendarClock, Warehouse, Calculator, PackageX, ClipboardList, ScanLine, PackageCheck, ShoppingCart } from 'lucide-react';
+import { LayoutDashboard, ListTodo, Store, FileText, Settings, type LucideIcon, Briefcase, Users, Archive, BarChart3, AppWindow, BookText, Database, History, FilePlus, Eye, File, PieChart, Users2, Shield, Menu, Monitor, Undo2, Route, Package, PackagePlus, PackageMinus, Boxes, CalendarClock, Warehouse, Calculator, PackageX, ClipboardList, ScanLine, PackageCheck, ShoppingCart, Send } from 'lucide-react';
 
 export type NavLink = {
     href: string;
@@ -147,6 +147,11 @@ export const NAV_LINKS: NavLink[] = [
                 href: '/ecommerce/outbound-monitoring',
                 label: 'Outbound Monitoring',
                 icon: PackageCheck,
+            },
+            {
+                href: '/ecommerce/dispatcher',
+                label: 'Dispatcher',
+                icon: Send,
             },
             {
                 href: '/ecommerce/out-of-stock',

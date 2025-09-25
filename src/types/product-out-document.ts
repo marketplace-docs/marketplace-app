@@ -12,6 +12,5 @@ export type ProductOutDocument = {
   validatedby: string;
   packer_name: string | null;
   order_reference?: string;
+  shipping_status?: 'Shipped' | 'Delivered' | null;
 };
-
-    
