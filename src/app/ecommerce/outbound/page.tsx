@@ -248,7 +248,7 @@ export default function OutboundPage() {
                     <CardContent className="space-y-6">
                         {/* Step 1: Scan Order */}
                         <div className={cn("space-y-4", step !== 'scanOrder' && 'hidden')}>
-                            <Label htmlFor="orderRef" className="text-lg">1. Scan Order Reference</Label>
+                            <Label htmlFor="orderRef" className="text-lg">Scan Order Reference</Label>
                             <div className="flex items-end gap-2">
                                 <Input ref={orderInputRef} id="orderRef" name="orderRef" placeholder="Scan or type order reference..." value={orderRef} onChange={e => setOrderRef(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearchOrder()} disabled={isLoading}/>
                                 <Button onClick={handleSearchOrder} disabled={isLoading || !orderRef}>
@@ -269,7 +269,7 @@ export default function OutboundPage() {
                                     <div><p className="font-medium text-muted-foreground">From</p><p className="font-semibold">{foundOrder?.locations?.join(', ')}</p></div>
                                 </div>
                             </Card>
-                            <Label htmlFor="productScan" className="text-lg">2. Scan Product Barcode</Label>
+                            <Label htmlFor="productScan" className="text-lg">Scan Product Barcode</Label>
                             <div className="flex items-end gap-2">
                                 <Input ref={productInputRef} id="productScan" name="productScan" placeholder="Scan product barcode to verify..." value={scannedBarcode} onChange={e => setScannedBarcode(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleProductScan()}/>
                                 <Button onClick={handleProductScan} disabled={!scannedBarcode}>Verify</Button>
@@ -282,7 +282,7 @@ export default function OutboundPage() {
                                 <CheckCircle className="h-5 w-5"/>
                                 <p className="font-bold">Product Verified!</p>
                             </div>
-                             <Label htmlFor="boxScan" className="text-lg">3. Scan Box Packaging</Label>
+                             <Label htmlFor="boxScan" className="text-lg">Scan Box Packaging</Label>
                             <div className="flex items-end gap-2">
                                 <Input ref={boxInputRef} id="boxScan" name="boxScan" placeholder="Scan box barcode..." value={scannedBox} onChange={e => setScannedBox(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleBoxScan()} disabled={isSubmitting} />
                                 <Button onClick={handleBoxScan} disabled={isSubmitting || !scannedBox}>
