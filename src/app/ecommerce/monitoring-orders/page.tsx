@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
@@ -7,7 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, AlertCircle, PackageSearch, RefreshCw, Printer, List, X, Check, UserCheck, PackageCheck as PackageCheckIcon, Send, CheckCheck } from "lucide-react";
+import { Loader2, AlertCircle, PackageSearch, RefreshCw, Printer, List, X, Check, UserCheck, PackageCheck as PackageCheckIcon, Send, CheckCheck, Search } from "lucide-react";
 import { format } from "date-fns";
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -21,6 +20,7 @@ import type { ProductOutDocument } from '@/types/product-out-document';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PickLabel } from '@/components/pick-label';
 import { createRoot } from 'react-dom/client';
+import { Input } from '@/components/ui/input';
 
 type WaveStatus = 'Wave Progress' | 'Wave Done';
 
@@ -61,6 +61,7 @@ function MonitoringOrdersContent() {
     const [selectedWave, setSelectedWave] = useState<Wave | null>(null);
     const [waveOrders, setWaveOrders] = useState<WaveOrder[]>([]);
     const [loadingDetails, setLoadingDetails] = useState(false);
+    const [detailsSearchTerm, setDetailsSearchTerm] = useState('');
 
     const fetchWaves = useCallback(async () => {
         setLoading(true);
@@ -187,9 +188,14 @@ function MonitoringOrdersContent() {
             setTimeout(() => {
                 window.print();
                 root.unmount();
-            }, 500); // Give it a bit more time to render
+            }, 500); 
         }
     };
+
+    const filteredDialogOrders = waveOrders.filter(order =>
+        order.order_reference.toLowerCase().includes(detailsSearchTerm.toLowerCase()) ||
+        order.sku.toLowerCase().includes(detailsSearchTerm.toLowerCase())
+    );
 
 
     return (
@@ -319,9 +325,17 @@ function MonitoringOrdersContent() {
             <Dialog open={isDetailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
                 <DialogContent className="max-w-7xl">
                     <DialogHeader>
-                        <DialogTitle>Wave of {selectedWave?.wave_document_number}</DialogTitle>
+                        <div className="flex justify-between items-center">
+                            <DialogTitle>Wave of {selectedWave?.wave_document_number}</DialogTitle>
+                            <Input 
+                                placeholder="Search Order Code or SKU..."
+                                className="w-72"
+                                value={detailsSearchTerm}
+                                onChange={(e) => setDetailsSearchTerm(e.target.value)}
+                            />
+                        </div>
                         <DialogDescription>
-                            Click the print icon on any order to generate its picklist label.
+                             Total: {filteredDialogOrders.length} orders
                         </DialogDescription>
                     </DialogHeader>
                     <div>
@@ -337,16 +351,19 @@ function MonitoringOrdersContent() {
                                             <TableRow>
                                                 <TableHead>ORDER CODE</TableHead>
                                                 <TableHead>ORDER TYPE</TableHead>
+                                                <TableHead>ASSIGN TO</TableHead>
                                                 <TableHead>STATUS</TableHead>
                                                 <TableHead>PRODUCTS</TableHead>
+                                                <TableHead>BOX CODE</TableHead>
                                                 <TableHead className="text-right no-print">ACTION</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {waveOrders.length > 0 ? waveOrders.map(order => (
+                                            {filteredDialogOrders.length > 0 ? filteredDialogOrders.map(order => (
                                                 <TableRow key={order.id}>
                                                     <TableCell className="font-mono">{order.order_reference}</TableCell>
                                                     <TableCell>{order.from}</TableCell>
+                                                    <TableCell>{selectedWave?.created_by}</TableCell>
                                                     <TableCell><Badge variant="secondary">{order.status}</Badge></TableCell>
                                                     <TableCell>
                                                         <div className="border rounded-md p-2 bg-slate-50">
@@ -368,6 +385,7 @@ function MonitoringOrdersContent() {
                                                             </Table>
                                                         </div>
                                                     </TableCell>
+                                                    <TableCell></TableCell>
                                                     <TableCell className="text-right no-print">
                                                         <div className="flex items-center justify-end gap-1">
                                                             <Button variant="ghost" size="icon" onClick={() => handlePrintOrder(order)}>
@@ -380,7 +398,7 @@ function MonitoringOrdersContent() {
                                                     </TableCell>
                                                 </TableRow>
                                             )) : (
-                                                <TableRow><TableCell colSpan={5} className="h-24 text-center">No orders in this wave.</TableCell></TableRow>
+                                                <TableRow><TableCell colSpan={7} className="h-24 text-center">No orders found.</TableCell></TableRow>
                                             )}
                                         </TableBody>
                                     </Table>
@@ -425,4 +443,3 @@ export default function MonitoringOrdersPage() {
         </Suspense>
     );
 }
-
