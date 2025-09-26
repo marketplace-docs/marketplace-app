@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,7 +21,7 @@ import type { ProductOutDocument } from '@/types/product-out-document';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PickLabel } from '@/components/pick-label';
 import { Input } from '@/components/ui/input';
-import { renderToString } from 'react-dom/server';
+import { useReactToPrint } from 'react-to-print';
 
 
 type WaveStatus = 'Wave Progress' | 'Wave Done';
@@ -65,6 +65,15 @@ function MonitoringOrdersContent() {
     const [waveOrders, setWaveOrders] = useState<WaveOrder[]>([]);
     const [loadingDetails, setLoadingDetails] = useState(false);
     const [detailsSearchTerm, setDetailsSearchTerm] = useState('');
+    
+    // For printing
+    const printComponentRef = useRef<HTMLDivElement>(null);
+    const [ordersToPrint, setOrdersToPrint] = useState<WaveOrder[]>([]);
+    
+    const handlePrint = useReactToPrint({
+        content: () => printComponentRef.current,
+        onAfterPrint: () => setOrdersToPrint([]) // Clear after printing
+    });
 
     const fetchWaves = useCallback(async () => {
         setLoading(true);
@@ -191,59 +200,10 @@ function MonitoringOrdersContent() {
         setIsPrinting(wave.id);
         try {
             const orders = await fetchWaveOrders(wave.id);
-            const labelsHtml = orders.map(order => renderToString(
-                <div className="page-break">
-                    <PickLabel order={order} />
-                </div>
-            )).join('');
-
-            const printWindow = window.open('', '_blank');
-            if (printWindow) {
-                printWindow.document.write(`
-                    <html>
-                        <head>
-                            <title>Print Picklist</title>
-                            <style>
-                                @import url('https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&display=swap');
-                                @page { size: 80mm 100mm; margin: 0; }
-                                body { margin: 0; font-family: 'PT Sans', sans-serif; }
-                                .page-break { page-break-after: always; }
-                                /* Include component styles directly */
-                                .label-container {
-                                    width: 80mm;
-                                    height: 100mm;
-                                    background-color: white;
-                                    padding: 8px;
-                                    display: flex;
-                                    flex-direction: column;
-                                    justify-content: space-between;
-                                    font-family: 'PT Sans', sans-serif;
-                                    color: black;
-                                    box-sizing: border-box;
-                                }
-                                .label-header { text-align: center; }
-                                .label-header p:first-child { font-weight: bold; font-size: 1.125rem; line-height: 1; }
-                                .label-header .sociolla { font-size: 0.75rem; }
-                                .label-header .order-date-label { font-size: 0.75rem; margin-top: 0.5rem; font-weight: 600; }
-                                .label-header .order-date { font-size: 0.75rem; }
-                                .label-title { text-align: center; margin: 4px 0; }
-                                .label-title p { font-weight: bold; font-size: 0.875rem; }
-                                .label-qr-code { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4px;}
-                                .label-qr-code .ref-number { font-family: monospace; font-weight: bold; font-size: 1.125rem; letter-spacing: 0.1em; margin-top: 4px;}
-                                .label-footer { border-bottom: 2px dashed black; width: 100%;}
-                            </style>
-                        </head>
-                        <body>
-                            ${labelsHtml}
-                        </body>
-                    </html>
-                `);
-                printWindow.document.close();
-                setTimeout(() => {
-                    printWindow.print();
-                    printWindow.close();
-                }, 500); // Give time for QR codes to render
-            }
+            setOrdersToPrint(orders);
+            setTimeout(() => {
+                handlePrint();
+            }, 100);
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Print Error', description: `Could not prepare picklist for printing: ${error.message}` });
         } finally {
@@ -252,51 +212,10 @@ function MonitoringOrdersContent() {
     };
 
     const handlePrintOrder = (order: WaveOrder) => {
-        const labelHtml = renderToString(<PickLabel order={order} />);
-        const printWindow = window.open('', '_blank');
-        if (printWindow) {
-             printWindow.document.write(`
-                <html>
-                    <head>
-                        <title>Print Picklist</title>
-                        <style>
-                            @import url('https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&display=swap');
-                            @page { size: 80mm 100mm; margin: 0; }
-                            body { margin: 0; font-family: 'PT Sans', sans-serif; }
-                            /* Include component styles directly */
-                             .label-container {
-                                width: 80mm;
-                                height: 100mm;
-                                background-color: white;
-                                padding: 8px;
-                                display: flex;
-                                flex-direction: column;
-                                justify-content: space-between;
-                                font-family: 'PT Sans', sans-serif;
-                                color: black;
-                                box-sizing: border-box;
-                            }
-                            .label-header { text-align: center; }
-                            .label-header p:first-child { font-weight: bold; font-size: 1.125rem; line-height: 1; }
-                            .label-header .sociolla { font-size: 0.75rem; }
-                            .label-header .order-date-label { font-size: 0.75rem; margin-top: 0.5rem; font-weight: 600; }
-                            .label-header .order-date { font-size: 0.75rem; }
-                            .label-title { text-align: center; margin: 4px 0; }
-                            .label-title p { font-weight: bold; font-size: 0.875rem; }
-                            .label-qr-code { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4px;}
-                            .label-qr-code .ref-number { font-family: monospace; font-weight: bold; font-size: 1.125rem; letter-spacing: 0.1em; margin-top: 4px;}
-                            .label-footer { border-bottom: 2px dashed black; width: 100%;}
-                        </style>
-                    </head>
-                    <body>${labelHtml}</body>
-                </html>
-            `);
-            printWindow.document.close();
-            setTimeout(() => {
-                printWindow.print();
-                printWindow.close();
-            }, 500);
-        }
+        setOrdersToPrint([order]);
+        setTimeout(() => {
+            handlePrint();
+        }, 100);
     };
 
     const filteredDialogOrders = waveOrders.filter(order =>
@@ -518,6 +437,35 @@ function MonitoringOrdersContent() {
                     </div>
                 </DialogContent>
             </Dialog>
+
+             {/* Hidden component for printing */}
+            <div className="hidden">
+                <div ref={printComponentRef}>
+                    <style type="text/css">
+                        {`
+                            @media print {
+                                @page {
+                                    size: 80mm 100mm;
+                                    margin: 0;
+                                }
+                                body {
+                                    margin: 0;
+                                    -webkit-print-color-adjust: exact;
+                                }
+                                .label-container {
+                                    width: 80mm;
+                                    height: 100mm;
+                                    box-sizing: border-box;
+                                    page-break-after: always;
+                                }
+                            }
+                        `}
+                    </style>
+                    {ordersToPrint.map(order => (
+                        <PickLabel key={order.id} order={order} />
+                    ))}
+                </div>
+            </div>
         </MainLayout>
     );
 }
