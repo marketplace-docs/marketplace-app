@@ -19,7 +19,7 @@ export const PickLabel: React.FC<{ order: OrderInfo }> = ({ order }) => {
             style={{ boxSizing: 'border-box' }}
         >
             <div className="text-center">
-                <p className="font-bold text-lg leading-tight">Shopee</p>
+                <p className="font-bold text-lg leading-tight">{order.from}</p>
                 <p className="text-xs">by sociolla</p>
                 <p className="text-xs mt-2 font-semibold">Order At</p>
                 <p className="text-xs">{format(new Date(), 'yyyy-MM-dd HH:mm')}</p>
