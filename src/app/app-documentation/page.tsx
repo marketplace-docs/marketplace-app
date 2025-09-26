@@ -69,15 +69,15 @@ const featureDescriptions: FeatureDescription[] = [
         icon: NAV_LINKS.find(l => l.label === "e-Commerce")!.icon,
         description: "Mengelola seluruh alur kerja pesanan dari marketplace, mulai dari pesanan masuk hingga barang keluar dari gudang.",
         children: [
-            { label: "My Orders", description: "Mengelola pesanan manual, mengunggah pesanan via CSV, dan membuat 'wave' untuk diproses oleh tim picker." },
-            { label: "Monitoring Orders", description: "Memantau status semua 'wave' yang telah dibuat, melihat detail pesanan di dalamnya, dan membatalkan wave jika perlu." },
-            { label: "Go-Picker", description: "Fitur untuk tim picker. Memindai pesanan, lokasi, dan produk untuk memastikan pengambilan yang akurat dan efisien." },
-            { label: "Out of Stock", description: "Pusat manajemen untuk pesanan yang tidak dapat dipenuhi (OOS). Memungkinkan admin mengirim kembali pesanan ke antrian packing atau menghapusnya." },
-            { label: "Outbound", description: "Stasiun kerja untuk tim packer. Memindai pesanan yang sudah di-pick untuk validasi akhir sebelum dikemas." },
+            { label: "My Orders", description: "Mengelola pesanan manual, mengunggah pesanan via CSV, dan membuat 'wave' (maks. 150 order) untuk diproses tim picker." },
+            { label: "Monitoring Orders", description: "Memantau status semua 'wave', melihat detail pesanan di dalamnya, membatalkan wave, dan mencetak picklist per-wave." },
+            { label: "Go-Picker", description: "Fitur untuk tim picker dengan alur scan: scan order, scan lokasi, scan produk, dan input kuantitas untuk akurasi maksimal." },
+            { label: "Out of Stock", description: "Pusat manajemen untuk pesanan yang tidak dapat dipenuhi (OOS). Memungkinkan admin mengirim kembali pesanan ke antrian atau menghapusnya." },
+            { label: "Outbound", description: "Stasiun kerja untuk tim packer. Memindai pesanan dan produk untuk validasi akhir sebelum dikemas dan mencetak label pengiriman." },
             { label: "Outbound Monitoring", description: "Melihat riwayat lengkap semua pesanan yang telah di-pick dan di-pack, termasuk siapa yang mengerjakan dan kapan." },
-            { label: "Dispatcher", description: "Stasiun kerja untuk tim logistik. Memindai paket yang sudah dikemas, menimbang berat, dan mengubah status menjadi 'Shipped'." },
+            { label: "Dispatcher", description: "Stasiun kerja tim logistik. Memindai paket, menimbang berat, dan mengubah status menjadi 'Shipped' atau 'Delivered'." },
             { label: "Shipment Monitoring", description: "Melihat riwayat semua paket yang telah dikirim (Shipped) atau telah sampai (Delivered)." },
-            { label: "Handover 3PL", description: "Fitur untuk serah terima massal ke kurir (3PL). Scan banyak paket sekaligus untuk mengubah statusnya menjadi 'Delivered'." },
+            { label: "Handover 3PL", description: "Fitur serah terima massal ke kurir (3PL). Scan banyak paket sekaligus untuk mengubah statusnya menjadi 'Delivered'." },
         ]
     },
     {
@@ -229,5 +229,3 @@ export default function AppDocumentationPage() {
         </MainLayout>
     );
 }
-
-    
