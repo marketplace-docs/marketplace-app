@@ -148,8 +148,8 @@ export async function POST(request: Request) {
                 order_date: new Date().toISOString(),
                 customer: "Edit By Sociolla",
                 city: "Tangerang",
-                address: addressIndex > -1 ? values[addressIndex] : 'N/A',
-                phone: phoneIndex > -1 ? values[phoneIndex] : 'N/A',
+                address: values[addressIndex] || 'Jln. Testing Order, No.Blok A 92, 28, Tangerang Selatan, 15677',
+                phone: values[phoneIndex] || '08956103267566',
                 type: storePlatform, // Auto-filled from marketplace_stores.platform
                 from: store_name,     // Auto-filled from CSV store_name
                 delivery_type: "Regular",

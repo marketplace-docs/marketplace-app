@@ -74,10 +74,14 @@ export default function MyOrdersPage() {
     const [isUploadDialogOpen, setUploadDialogOpen] = useState(false);
     const [isAddDialogOpen, setAddDialogOpen] = useState(false);
 
-    const [newOrder, setNewOrder] = useState<Partial<NewOrder>>({
+    const defaultNewOrderState: Partial<NewOrder> = {
       qty: 1,
       sku: '',
-    });
+      address: 'Jln. Testing Order, No.Blok A 92, 28, Tangerang Selatan, 15677',
+      phone: '08956103267566',
+    };
+    
+    const [newOrder, setNewOrder] = useState<Partial<NewOrder>>(defaultNewOrderState);
 
     const [filters, setFilters] = useState<Filters>({
         reference: '',
@@ -267,7 +271,7 @@ export default function MyOrdersPage() {
 
         await fetchOrders();
         setAddDialogOpen(false);
-        setNewOrder({ qty: 1, sku: '' });
+        setNewOrder(defaultNewOrderState);
 
         toast({
             title: 'Success',
@@ -555,14 +559,6 @@ export default function MyOrdersPage() {
                                                     <Input id="delivery_type" value={newOrder.delivery_type || ''} onChange={(e) => setNewOrder({...newOrder, delivery_type: e.target.value})} className="col-span-3" />
                                                 </div>
                                                 <div className="grid grid-cols-4 items-center gap-4">
-                                                    <Label htmlFor="address" className="text-right">Address</Label>
-                                                    <Input id="address" value={newOrder.address || ''} onChange={(e) => setNewOrder({...newOrder, address: e.target.value})} className="col-span-3" />
-                                                </div>
-                                                 <div className="grid grid-cols-4 items-center gap-4">
-                                                    <Label htmlFor="phone" className="text-right">Phone</Label>
-                                                    <Input id="phone" value={newOrder.phone || ''} onChange={(e) => setNewOrder({...newOrder, phone: e.target.value})} className="col-span-3" />
-                                                </div>
-                                                <div className="grid grid-cols-4 items-center gap-4">
                                                     <Label htmlFor="qty" className="text-right">Qty</Label>
                                                     <Input id="qty" type="number" value={newOrder.qty || 1} onChange={(e) => setNewOrder({...newOrder, qty: parseInt(e.target.value) || 1})} className="col-span-3" />
                                                 </div>
@@ -804,3 +800,4 @@ export default function MyOrdersPage() {
         </MainLayout>
     );
 }
+
