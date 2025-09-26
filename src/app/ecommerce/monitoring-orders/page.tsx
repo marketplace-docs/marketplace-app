@@ -7,7 +7,7 @@ import { useSearchParams } from 'next/navigation';
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, AlertCircle, PackageSearch, RefreshCw, Printer, List, X, Check, UserCheck, PackageCheck as PackageCheckIcon, Send, CheckCheck, Search } from "lucide-react";
+import { Loader2, AlertCircle, PackageSearch, RefreshCw, Printer, List, X, Check, UserCheck, PackageCheck as PackageCheckIcon, Send, CheckCheck, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -21,6 +21,8 @@ import type { ProductOutDocument } from '@/types/product-out-document';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { useRouter } from 'next/navigation';
+import { PickLabel } from '@/components/pick-label';
+import { createRoot } from 'react-dom/client';
 
 type WaveStatus = 'Wave Progress' | 'Wave Done';
 
@@ -65,6 +67,11 @@ function MonitoringOrdersContent() {
     const [loadingDetails, setLoadingDetails] = useState(false);
     const [detailsSearchTerm, setDetailsSearchTerm] = useState('');
 
+    const [currentPage, setCurrentPage] = useState(1);
+    const [rowsPerPage, setRowsPerPage] = useState(25);
+    const [printData, setPrintData] = useState<WaveOrder[]>([]);
+    const printContainerRef = useRef<HTMLDivElement>(null);
+
 
     const fetchWaves = useCallback(async () => {
         setLoading(true);
@@ -90,6 +97,25 @@ function MonitoringOrdersContent() {
             setFilteredWaves(allWaves.filter(w => w.status === statusFilter));
         }
     }, [statusFilter, allWaves]);
+
+    const totalPages = Math.ceil(filteredWaves.length / rowsPerPage);
+    const paginatedWaves = filteredWaves.slice(
+        (currentPage - 1) * rowsPerPage,
+        currentPage * rowsPerPage
+    );
+
+    const handleNextPage = () => {
+        setCurrentPage((prev) => (prev < totalPages ? prev + 1 : prev));
+    };
+
+    const handlePrevPage = () => {
+        setCurrentPage((prev) => (prev > 1 ? prev - 1 : prev));
+    };
+    
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [rowsPerPage, statusFilter]);
+
 
     const fetchWaveOrders = useCallback(async (waveId: number): Promise<WaveOrder[]> => {
         const [waveDetailsRes, allBatchesRes, productOutRes] = await Promise.all([
@@ -191,9 +217,49 @@ function MonitoringOrdersContent() {
         setIsPrinting(wave.id);
         try {
             const orders = await fetchWaveOrders(wave.id);
-            const orderIds = orders.map(o => o.id);
-            const url = `/ecommerce/monitoring-orders/print?orderIds=${orderIds.join(',')}`;
-            window.open(url, '_blank');
+            if (orders.length === 0) {
+                toast({ variant: 'destructive', title: 'Print Error', description: 'No orders found in this wave to print.' });
+                setIsPrinting(null);
+                return;
+            }
+
+            const printContainer = document.createElement('div');
+            document.body.appendChild(printContainer);
+            const root = createRoot(printContainer);
+
+            const renderPromise = new Promise<void>((resolve) => {
+                root.render(
+                    <>
+                        {orders.map(order => <PickLabel key={order.id} order={order} />)}
+                        <style>{`
+                            @media print {
+                                body { margin: 0; padding: 0; }
+                                .label-container { page-break-after: always; }
+                            }
+                            @page { size: A6; margin: 0; }
+                        `}</style>
+                    </>
+                );
+                // Give React a moment to render
+                setTimeout(resolve, 500); 
+            });
+
+            await renderPromise;
+            
+            const printWindow = window.open('', '_blank');
+            if (printWindow) {
+                printWindow.document.write(printContainer.innerHTML);
+                printWindow.document.close();
+                printWindow.focus();
+                printWindow.print();
+                printWindow.close();
+            } else {
+                throw new Error('Could not open print window. Please check your browser settings.');
+            }
+
+            root.unmount();
+            document.body.removeChild(printContainer);
+
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Print Error', description: `Could not prepare picklist for printing: ${error.message}` });
         } finally {
@@ -269,8 +335,8 @@ function MonitoringOrdersContent() {
                                                 <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                                             </TableCell>
                                         </TableRow>
-                                    ) : filteredWaves.length > 0 ? (
-                                        filteredWaves.map(wave => (
+                                    ) : paginatedWaves.length > 0 ? (
+                                        paginatedWaves.map(wave => (
                                             <TableRow key={wave.id}>
                                                 <TableCell className="font-medium">{wave.wave_document_number}</TableCell>
                                                 <TableCell>{wave.wave_type}</TableCell>
@@ -316,6 +382,47 @@ function MonitoringOrdersContent() {
                                     )}
                                 </TableBody>
                             </Table>
+                        </div>
+                        <div className="flex items-center justify-end space-x-2 py-4">
+                            <div className="flex-1 text-sm text-muted-foreground">
+                                Page {filteredWaves.length > 0 ? currentPage : 0} of {totalPages}
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <span className="text-sm text-muted-foreground">Rows per page:</span>
+                                <Select
+                                    value={`${rowsPerPage}`}
+                                    onValueChange={(value) => {
+                                        setRowsPerPage(Number(value));
+                                    }}
+                                >
+                                    <SelectTrigger className="h-8 w-[70px]">
+                                        <SelectValue placeholder={rowsPerPage} />
+                                    </SelectTrigger>
+                                    <SelectContent side="top">
+                                        {[25, 50, 100].map((pageSize) => (
+                                        <SelectItem key={pageSize} value={`${pageSize}`}>
+                                            {pageSize}
+                                        </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handlePrevPage}
+                                disabled={currentPage === 1}
+                            >
+                                <ChevronLeft className="h-4 w-4" />
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleNextPage}
+                                disabled={currentPage === totalPages || totalPages === 0}
+                            >
+                                <ChevronRight className="h-4 w-4" />
+                            </Button>
                         </div>
                     </CardContent>
                 </Card>
@@ -437,5 +544,3 @@ export default function MonitoringOrdersPage() {
         </Suspense>
     );
 }
-
-    

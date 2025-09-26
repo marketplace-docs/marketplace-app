@@ -127,7 +127,7 @@ export default function MonitoringCycleCountPage() {
 
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
-    const [rowsPerPage, setRowsPerPage] = useState(10);
+    const [rowsPerPage, setRowsPerPage] = useState(25);
     
     const canUpdate = user?.role && ['Super Admin', 'Manager', 'Supervisor'].includes(user.role);
     const canDelete = user?.role === 'Super Admin';
@@ -332,7 +332,7 @@ export default function MonitoringCycleCountPage() {
                                         <SelectValue placeholder={rowsPerPage} />
                                     </SelectTrigger>
                                     <SelectContent side="top">
-                                        {[10, 25, 50].map((pageSize) => (
+                                        {[10, 25, 50, 100].map((pageSize) => (
                                         <SelectItem key={pageSize} value={`${pageSize}`}>
                                             {pageSize}
                                         </SelectItem>
