@@ -20,7 +20,7 @@ import type { BatchProduct } from '@/types/batch-product';
 import type { ProductOutDocument } from '@/types/product-out-document';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PickLabel } from '@/components/pick-label';
-import ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
 
 type WaveStatus = 'Wave Progress' | 'Wave Done';
 
@@ -182,11 +182,12 @@ function MonitoringOrdersContent() {
     const handlePrintOrder = (order: WaveOrder) => {
         const printContainer = document.getElementById('print-container');
         if (printContainer) {
-            ReactDOM.render(<PickLabel order={order} />, printContainer);
+            const root = createRoot(printContainer);
+            root.render(<PickLabel order={order} />);
             setTimeout(() => {
                 window.print();
-                 ReactDOM.unmountComponentAtNode(printContainer);
-            }, 100); // Small delay to ensure rendering before printing
+                root.unmount();
+            }, 500); // Give it a bit more time to render
         }
     };
 
@@ -319,6 +320,9 @@ function MonitoringOrdersContent() {
                 <DialogContent className="max-w-7xl">
                     <DialogHeader>
                         <DialogTitle>Wave of {selectedWave?.wave_document_number}</DialogTitle>
+                        <DialogDescription>
+                            Click the print icon on any order to generate its picklist label.
+                        </DialogDescription>
                     </DialogHeader>
                     <div>
                         {loadingDetails ? (
@@ -335,7 +339,7 @@ function MonitoringOrdersContent() {
                                                 <TableHead>ORDER TYPE</TableHead>
                                                 <TableHead>STATUS</TableHead>
                                                 <TableHead>PRODUCTS</TableHead>
-                                                <TableHead className="text-right">ACTION</TableHead>
+                                                <TableHead className="text-right no-print">ACTION</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -364,7 +368,7 @@ function MonitoringOrdersContent() {
                                                             </Table>
                                                         </div>
                                                     </TableCell>
-                                                    <TableCell className="text-right">
+                                                    <TableCell className="text-right no-print">
                                                         <div className="flex items-center justify-end gap-1">
                                                             <Button variant="ghost" size="icon" onClick={() => handlePrintOrder(order)}>
                                                                 <Printer className="h-4 w-4" />
@@ -392,7 +396,11 @@ function MonitoringOrdersContent() {
              <style jsx global>{`
                 @media print {
                   body > *:not(#print-container) {
+                    visibility: hidden;
                     display: none;
+                  }
+                  #print-container, #print-container * {
+                    visibility: visible;
                   }
                   #print-container {
                     display: block;
@@ -401,7 +409,7 @@ function MonitoringOrdersContent() {
                     top: 0;
                   }
                    @page {
-                    size: 80mm 50mm;
+                    size: 80mm 100mm;
                     margin: 0;
                   }
                 }

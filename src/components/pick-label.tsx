@@ -16,7 +16,7 @@ type OrderInfo = {
 export const PickLabel: React.FC<{ order: OrderInfo }> = ({ order }) => {
     return (
         <div 
-            className="w-[288px] h-[180px] bg-white p-2 flex flex-col justify-between font-sans text-black"
+            className="w-[80mm] h-[100mm] bg-white p-2 flex flex-col justify-between font-sans text-black"
             style={{ boxSizing: 'border-box' }}
         >
             <div className="text-center">
@@ -32,7 +32,7 @@ export const PickLabel: React.FC<{ order: OrderInfo }> = ({ order }) => {
             </div>
 
             <div className="flex-grow flex flex-col items-center justify-center p-1">
-                <QRCode value={order.order_reference} size={100} level="M" />
+                <QRCode value={order.order_reference} size={120} level="M" />
                 <Barcode 
                     value={order.order_reference} 
                     format="CODE128"
@@ -48,4 +48,3 @@ export const PickLabel: React.FC<{ order: OrderInfo }> = ({ order }) => {
         </div>
     );
 };
-
