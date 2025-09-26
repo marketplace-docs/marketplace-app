@@ -75,6 +75,14 @@ function MonitoringOrdersContent() {
         onAfterPrint: () => setOrdersToPrint([]) // Clear after printing
     });
 
+    // Effect to trigger print when ordersToPrint is populated
+    useEffect(() => {
+        if (ordersToPrint.length > 0 && handlePrint) {
+            handlePrint();
+        }
+    }, [ordersToPrint, handlePrint]);
+
+
     const fetchWaves = useCallback(async () => {
         setLoading(true);
         setError(null);
@@ -200,10 +208,7 @@ function MonitoringOrdersContent() {
         setIsPrinting(wave.id);
         try {
             const orders = await fetchWaveOrders(wave.id);
-            setOrdersToPrint(orders);
-            setTimeout(() => {
-                handlePrint();
-            }, 100);
+            setOrdersToPrint(orders); // This will trigger the useEffect to print
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Print Error', description: `Could not prepare picklist for printing: ${error.message}` });
         } finally {
@@ -212,11 +217,9 @@ function MonitoringOrdersContent() {
     };
 
     const handlePrintOrder = (order: WaveOrder) => {
-        setOrdersToPrint([order]);
-        setTimeout(() => {
-            handlePrint();
-        }, 100);
+        setOrdersToPrint([order]); // This will trigger the useEffect to print
     };
+
 
     const filteredDialogOrders = waveOrders.filter(order =>
         order.order_reference.toLowerCase().includes(detailsSearchTerm.toLowerCase()) ||
@@ -441,26 +444,6 @@ function MonitoringOrdersContent() {
              {/* Hidden component for printing */}
             <div className="hidden">
                 <div ref={printComponentRef}>
-                    <style type="text/css">
-                        {`
-                            @media print {
-                                @page {
-                                    size: 80mm 100mm;
-                                    margin: 0;
-                                }
-                                body {
-                                    margin: 0;
-                                    -webkit-print-color-adjust: exact;
-                                }
-                                .label-container {
-                                    width: 80mm;
-                                    height: 100mm;
-                                    box-sizing: border-box;
-                                    page-break-after: always;
-                                }
-                            }
-                        `}
-                    </style>
                     {ordersToPrint.map(order => (
                         <PickLabel key={order.id} order={order} />
                     ))}
@@ -477,3 +460,4 @@ export default function MonitoringOrdersPage() {
         </Suspense>
     );
 }
+
