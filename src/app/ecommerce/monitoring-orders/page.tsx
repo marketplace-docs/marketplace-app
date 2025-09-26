@@ -20,8 +20,9 @@ import type { BatchProduct } from '@/types/batch-product';
 import type { ProductOutDocument } from '@/types/product-out-document';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PickLabel } from '@/components/pick-label';
-import { createRoot } from 'react-dom/client';
 import { Input } from '@/components/ui/input';
+import { renderToString } from 'react-dom/server';
+
 
 type WaveStatus = 'Wave Progress' | 'Wave Done';
 
@@ -190,22 +191,58 @@ function MonitoringOrdersContent() {
         setIsPrinting(wave.id);
         try {
             const orders = await fetchWaveOrders(wave.id);
-            const printContainer = document.getElementById('print-container');
-            if (printContainer) {
-                const root = createRoot(printContainer);
-                root.render(
-                    <>
-                        {orders.map(order => (
-                            <div key={order.id} className="page-break">
-                                <PickLabel order={order} />
-                            </div>
-                        ))}
-                    </>
-                );
+            const labelsHtml = orders.map(order => renderToString(
+                <div className="page-break">
+                    <PickLabel order={order} />
+                </div>
+            )).join('');
+
+            const printWindow = window.open('', '_blank');
+            if (printWindow) {
+                printWindow.document.write(`
+                    <html>
+                        <head>
+                            <title>Print Picklist</title>
+                            <style>
+                                @import url('https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&display=swap');
+                                @page { size: 80mm 100mm; margin: 0; }
+                                body { margin: 0; font-family: 'PT Sans', sans-serif; }
+                                .page-break { page-break-after: always; }
+                                /* Include component styles directly */
+                                .label-container {
+                                    width: 80mm;
+                                    height: 100mm;
+                                    background-color: white;
+                                    padding: 8px;
+                                    display: flex;
+                                    flex-direction: column;
+                                    justify-content: space-between;
+                                    font-family: 'PT Sans', sans-serif;
+                                    color: black;
+                                    box-sizing: border-box;
+                                }
+                                .label-header { text-align: center; }
+                                .label-header p:first-child { font-weight: bold; font-size: 1.125rem; line-height: 1; }
+                                .label-header .sociolla { font-size: 0.75rem; }
+                                .label-header .order-date-label { font-size: 0.75rem; margin-top: 0.5rem; font-weight: 600; }
+                                .label-header .order-date { font-size: 0.75rem; }
+                                .label-title { text-align: center; margin: 4px 0; }
+                                .label-title p { font-weight: bold; font-size: 0.875rem; }
+                                .label-qr-code { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4px;}
+                                .label-qr-code .ref-number { font-family: monospace; font-weight: bold; font-size: 1.125rem; letter-spacing: 0.1em; margin-top: 4px;}
+                                .label-footer { border-bottom: 2px dashed black; width: 100%;}
+                            </style>
+                        </head>
+                        <body>
+                            ${labelsHtml}
+                        </body>
+                    </html>
+                `);
+                printWindow.document.close();
                 setTimeout(() => {
-                    window.print();
-                    root.unmount();
-                }, 500);
+                    printWindow.print();
+                    printWindow.close();
+                }, 500); // Give time for QR codes to render
             }
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Print Error', description: `Could not prepare picklist for printing: ${error.message}` });
@@ -214,16 +251,51 @@ function MonitoringOrdersContent() {
         }
     };
 
-
     const handlePrintOrder = (order: WaveOrder) => {
-        const printContainer = document.getElementById('print-container');
-        if (printContainer) {
-            const root = createRoot(printContainer);
-            root.render(<PickLabel order={order} />);
+        const labelHtml = renderToString(<PickLabel order={order} />);
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+             printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>Print Picklist</title>
+                        <style>
+                            @import url('https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&display=swap');
+                            @page { size: 80mm 100mm; margin: 0; }
+                            body { margin: 0; font-family: 'PT Sans', sans-serif; }
+                            /* Include component styles directly */
+                             .label-container {
+                                width: 80mm;
+                                height: 100mm;
+                                background-color: white;
+                                padding: 8px;
+                                display: flex;
+                                flex-direction: column;
+                                justify-content: space-between;
+                                font-family: 'PT Sans', sans-serif;
+                                color: black;
+                                box-sizing: border-box;
+                            }
+                            .label-header { text-align: center; }
+                            .label-header p:first-child { font-weight: bold; font-size: 1.125rem; line-height: 1; }
+                            .label-header .sociolla { font-size: 0.75rem; }
+                            .label-header .order-date-label { font-size: 0.75rem; margin-top: 0.5rem; font-weight: 600; }
+                            .label-header .order-date { font-size: 0.75rem; }
+                            .label-title { text-align: center; margin: 4px 0; }
+                            .label-title p { font-weight: bold; font-size: 0.875rem; }
+                            .label-qr-code { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4px;}
+                            .label-qr-code .ref-number { font-family: monospace; font-weight: bold; font-size: 1.125rem; letter-spacing: 0.1em; margin-top: 4px;}
+                            .label-footer { border-bottom: 2px dashed black; width: 100%;}
+                        </style>
+                    </head>
+                    <body>${labelHtml}</body>
+                </html>
+            `);
+            printWindow.document.close();
             setTimeout(() => {
-                window.print();
-                root.unmount();
-            }, 500); 
+                printWindow.print();
+                printWindow.close();
+            }, 500);
         }
     };
 
@@ -446,33 +518,6 @@ function MonitoringOrdersContent() {
                     </div>
                 </DialogContent>
             </Dialog>
-
-            {/* Hidden container for printing */}
-            <div id="print-container" className="hidden print:block"></div>
-             <style jsx global>{`
-                @media print {
-                  body > *:not(#print-container) {
-                    visibility: hidden;
-                    display: none;
-                  }
-                  #print-container, #print-container * {
-                    visibility: visible;
-                  }
-                  #print-container {
-                    display: block;
-                    position: absolute;
-                    left: 0;
-                    top: 0;
-                  }
-                   @page {
-                    size: 80mm 100mm;
-                    margin: 0;
-                  }
-                  .page-break {
-                      page-break-after: always;
-                  }
-                }
-            `}</style>
         </MainLayout>
     );
 }
