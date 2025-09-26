@@ -177,10 +177,28 @@ function MonitoringOrdersContent() {
             setIsSubmitting(false);
         }
     };
-    
-    const handlePrint = () => {
-        window.print();
-    }
+
+    const handlePrintOrder = (order: WaveOrder) => {
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+            const labelNode = document.createElement('div');
+            const ReactDOMServer = require('react-dom/server');
+            labelNode.innerHTML = ReactDOMServer.renderToString(<PickLabel order={order} />);
+
+            printWindow.document.write('<html><head><title>Print Picklist</title>');
+            printWindow.document.write('<style>@media print { @page { size: auto; margin: 0.1in; } body { margin: 0; } }</style>');
+            printWindow.document.write('</head><body>');
+            printWindow.document.write(labelNode.innerHTML);
+            printWindow.document.write('</body></html>');
+            printWindow.document.close();
+
+            setTimeout(() => {
+                printWindow.focus();
+                printWindow.print();
+                printWindow.close();
+            }, 500);
+        }
+    };
 
 
     return (
@@ -308,9 +326,9 @@ function MonitoringOrdersContent() {
             </Dialog>
             
             <Dialog open={isDetailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
-                <DialogContent className="max-w-3xl">
+                <DialogContent className="max-w-7xl">
                     <DialogHeader>
-                        <DialogTitle>Details for Wave: {selectedWave?.wave_document_number}</DialogTitle>
+                        <DialogTitle>Wave of {selectedWave?.wave_document_number}</DialogTitle>
                     </DialogHeader>
                     <div>
                         {loadingDetails ? (
@@ -318,52 +336,67 @@ function MonitoringOrdersContent() {
                                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
                             </div>
                         ) : (
-                            <>
-                            <div id="picklist-content" className="max-h-[60vh] overflow-y-auto space-y-2 p-1 bg-gray-100">
-                                {waveOrders.length > 0 ? waveOrders.map(order => (
-                                    <div key={order.id} className="label-container bg-white p-2">
-                                        <PickLabel order={order} />
-                                    </div>
-                                )) : (
-                                    <div className="text-center p-8 text-muted-foreground">No orders found for this wave.</div>
-                                )}
+                            <div className="space-y-4">
+                                <div className="max-h-[65vh] overflow-y-auto border rounded-lg">
+                                    <Table>
+                                        <TableHeader className="sticky top-0 bg-muted z-10">
+                                            <TableRow>
+                                                <TableHead>ORDER CODE</TableHead>
+                                                <TableHead>ORDER TYPE</TableHead>
+                                                <TableHead>STATUS</TableHead>
+                                                <TableHead>PRODUCTS</TableHead>
+                                                <TableHead className="text-right">ACTION</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {waveOrders.length > 0 ? waveOrders.map(order => (
+                                                <TableRow key={order.id}>
+                                                    <TableCell className="font-mono">{order.order_reference}</TableCell>
+                                                    <TableCell>{order.from}</TableCell>
+                                                    <TableCell><Badge variant="secondary">{order.status}</Badge></TableCell>
+                                                    <TableCell>
+                                                        <div className="border rounded-md p-2 bg-slate-50">
+                                                            <Table>
+                                                                <TableHeader>
+                                                                    <TableRow>
+                                                                        <TableHead className="text-xs p-1">SKU</TableHead>
+                                                                        <TableHead className="text-xs p-1">Qty</TableHead>
+                                                                        <TableHead className="text-xs p-1">Source</TableHead>
+                                                                    </TableRow>
+                                                                </TableHeader>
+                                                                <TableBody>
+                                                                    <TableRow>
+                                                                        <TableCell className="text-xs p-1">{order.sku}</TableCell>
+                                                                        <TableCell className="text-xs p-1"><Badge variant="outline">{order.qty}</Badge></TableCell>
+                                                                        <TableCell className="text-xs p-1">{order.location}</TableCell>
+                                                                    </TableRow>
+                                                                </TableBody>
+                                                            </Table>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        <div className="flex items-center justify-end gap-1">
+                                                            <Button variant="ghost" size="icon" onClick={() => handlePrintOrder(order)}>
+                                                                <Printer className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button variant="ghost" size="icon" disabled>
+                                                                <X className="h-5 w-5 text-red-500" />
+                                                            </Button>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            )) : (
+                                                <TableRow><TableCell colSpan={5} className="h-24 text-center">No orders in this wave.</TableCell></TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </div>
                             </div>
-                             <div className="flex justify-end mt-4 no-print">
-                                <Button onClick={handlePrint}>
-                                    <Printer className="mr-2 h-4 w-4" /> Print Picklist
-                                </Button>
-                            </div>
-                            </>
                         )}
                     </div>
                 </DialogContent>
             </Dialog>
 
-            <style jsx global>{`
-                @media print {
-                    body > * {
-                        visibility: hidden;
-                    }
-                    #picklist-content, #picklist-content * {
-                        visibility: visible;
-                    }
-                    #picklist-content {
-                        position: absolute;
-                        left: 0;
-                        top: 0;
-                        width: 100%;
-                        border: none;
-                        background-color: white !important;
-                        padding: 0 !important;
-                    }
-                    .label-container {
-                        page-break-after: always;
-                    }
-                    .no-print {
-                        display: none !important;
-                    }
-                }
-            `}</style>
         </MainLayout>
     );
 }
