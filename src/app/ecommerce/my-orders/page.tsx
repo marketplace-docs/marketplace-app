@@ -521,7 +521,7 @@ export default function MyOrdersPage() {
                                         <DialogTrigger asChild>
                                              <Button variant="link" className="text-violet-600"><Plus className="mr-2 h-4 w-4"/>ADD MANUAL ORDER</Button>
                                         </DialogTrigger>
-                                        <DialogContent>
+                                        <DialogContent className="sm:max-w-[425px]">
                                             <DialogHeader>
                                                 <DialogTitle>Add Manual Order</DialogTitle>
                                             </DialogHeader>
@@ -553,6 +553,14 @@ export default function MyOrdersPage() {
                                                 <div className="grid grid-cols-4 items-center gap-4">
                                                     <Label htmlFor="delivery_type" className="text-right">Delivery Type</Label>
                                                     <Input id="delivery_type" value={newOrder.delivery_type || ''} onChange={(e) => setNewOrder({...newOrder, delivery_type: e.target.value})} className="col-span-3" />
+                                                </div>
+                                                <div className="grid grid-cols-4 items-center gap-4">
+                                                    <Label htmlFor="address" className="text-right">Address</Label>
+                                                    <Input id="address" value={newOrder.address || ''} onChange={(e) => setNewOrder({...newOrder, address: e.target.value})} className="col-span-3" />
+                                                </div>
+                                                 <div className="grid grid-cols-4 items-center gap-4">
+                                                    <Label htmlFor="phone" className="text-right">Phone</Label>
+                                                    <Input id="phone" value={newOrder.phone || ''} onChange={(e) => setNewOrder({...newOrder, phone: e.target.value})} className="col-span-3" />
                                                 </div>
                                                 <div className="grid grid-cols-4 items-center gap-4">
                                                     <Label htmlFor="qty" className="text-right">Qty</Label>
