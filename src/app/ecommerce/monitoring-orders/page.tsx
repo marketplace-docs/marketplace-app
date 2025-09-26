@@ -20,6 +20,7 @@ import type { BatchProduct } from '@/types/batch-product';
 import type { ProductOutDocument } from '@/types/product-out-document';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PickLabel } from '@/components/pick-label';
+import ReactDOM from 'react-dom';
 
 type WaveStatus = 'Wave Progress' | 'Wave Done';
 
@@ -179,24 +180,13 @@ function MonitoringOrdersContent() {
     };
 
     const handlePrintOrder = (order: WaveOrder) => {
-        const printWindow = window.open('', '_blank');
-        if (printWindow) {
-            const labelNode = document.createElement('div');
-            const ReactDOMServer = require('react-dom/server');
-            labelNode.innerHTML = ReactDOMServer.renderToString(<PickLabel order={order} />);
-
-            printWindow.document.write('<html><head><title>Print Picklist</title>');
-            printWindow.document.write('<style>@media print { @page { size: auto; margin: 0.1in; } body { margin: 0; } }</style>');
-            printWindow.document.write('</head><body>');
-            printWindow.document.write(labelNode.innerHTML);
-            printWindow.document.write('</body></html>');
-            printWindow.document.close();
-
+        const printContainer = document.getElementById('print-container');
+        if (printContainer) {
+            ReactDOM.render(<PickLabel order={order} />, printContainer);
             setTimeout(() => {
-                printWindow.focus();
-                printWindow.print();
-                printWindow.close();
-            }, 500);
+                window.print();
+                 ReactDOM.unmountComponentAtNode(printContainer);
+            }, 100); // Small delay to ensure rendering before printing
         }
     };
 
@@ -397,6 +387,25 @@ function MonitoringOrdersContent() {
                 </DialogContent>
             </Dialog>
 
+            {/* Hidden container for printing */}
+            <div id="print-container" className="hidden print:block"></div>
+             <style jsx global>{`
+                @media print {
+                  body > *:not(#print-container) {
+                    display: none;
+                  }
+                  #print-container {
+                    display: block;
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                  }
+                   @page {
+                    size: 80mm 50mm;
+                    margin: 0;
+                  }
+                }
+            `}</style>
         </MainLayout>
     );
 }
@@ -408,3 +417,4 @@ export default function MonitoringOrdersPage() {
         </Suspense>
     );
 }
+
