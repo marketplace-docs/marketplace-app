@@ -21,7 +21,7 @@ import type { ProductOutDocument } from '@/types/product-out-document';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PickLabel } from '@/components/pick-label';
 import { Input } from '@/components/ui/input';
-import { useReactToPrint } from 'react-to-print';
+import { createRoot } from 'react-dom/client';
 
 
 type WaveStatus = 'Wave Progress' | 'Wave Done';
@@ -65,22 +65,6 @@ function MonitoringOrdersContent() {
     const [waveOrders, setWaveOrders] = useState<WaveOrder[]>([]);
     const [loadingDetails, setLoadingDetails] = useState(false);
     const [detailsSearchTerm, setDetailsSearchTerm] = useState('');
-    
-    // For printing
-    const printComponentRef = useRef<HTMLDivElement>(null);
-    const [ordersToPrint, setOrdersToPrint] = useState<WaveOrder[]>([]);
-    
-    const handlePrint = useReactToPrint({
-        content: () => printComponentRef.current,
-        onAfterPrint: () => setOrdersToPrint([]) // Clear after printing
-    });
-
-    // Effect to trigger print when ordersToPrint is populated
-    useEffect(() => {
-        if (ordersToPrint.length > 0 && handlePrint) {
-            handlePrint();
-        }
-    }, [ordersToPrint, handlePrint]);
 
 
     const fetchWaves = useCallback(async () => {
@@ -208,7 +192,52 @@ function MonitoringOrdersContent() {
         setIsPrinting(wave.id);
         try {
             const orders = await fetchWaveOrders(wave.id);
-            setOrdersToPrint(orders); // This will trigger the useEffect to print
+            
+            // Create a temporary iframe to render the components
+            const iframe = document.createElement('iframe');
+            iframe.style.position = 'absolute';
+            iframe.style.width = '0';
+            iframe.style.height = '0';
+            iframe.style.border = 'none';
+            document.body.appendChild(iframe);
+            
+            const iFrameDoc = iframe.contentWindow?.document || iframe.contentDocument;
+            if (!iFrameDoc) {
+                 throw new Error("Cannot access iframe document.");
+            }
+            
+            const printContainer = iFrameDoc.createElement('div');
+            iFrameDoc.body.appendChild(printContainer);
+            
+            const root = createRoot(printContainer);
+            root.render(
+                <>
+                    {orders.map(order => (
+                        <PickLabel key={order.id} order={order} />
+                    ))}
+                </>
+            );
+
+            // Give React time to render the components
+            setTimeout(() => {
+                const printWindow = window.open('', '_blank');
+                if (printWindow) {
+                    printWindow.document.write('<html><head><title>Print Picklist</title></head><body>');
+                    printWindow.document.write(printContainer.innerHTML);
+                    printWindow.document.write('</body></html>');
+                    printWindow.document.close();
+                    
+                    // Give the new window time to parse and render QR codes
+                    setTimeout(() => {
+                        printWindow.print();
+                        printWindow.close();
+                        // Clean up
+                        root.unmount();
+                        document.body.removeChild(iframe);
+                    }, 500); 
+                }
+            }, 500);
+
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Print Error', description: `Could not prepare picklist for printing: ${error.message}` });
         } finally {
@@ -217,7 +246,30 @@ function MonitoringOrdersContent() {
     };
 
     const handlePrintOrder = (order: WaveOrder) => {
-        setOrdersToPrint([order]); // This will trigger the useEffect to print
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+        const iFrameDoc = iframe.contentWindow?.document;
+        if (iFrameDoc) {
+            const printContainer = iFrameDoc.createElement('div');
+            iFrameDoc.body.appendChild(printContainer);
+            const root = createRoot(printContainer);
+            root.render(<PickLabel order={order} />);
+
+            setTimeout(() => {
+                 const printWindow = window.open('', '_blank');
+                 if (printWindow) {
+                    printWindow.document.write(printContainer.innerHTML);
+                    printWindow.document.close();
+                    setTimeout(() => {
+                         printWindow.print();
+                         printWindow.close();
+                         root.unmount();
+                         document.body.removeChild(iframe);
+                    }, 500);
+                }
+            }, 500);
+        }
     };
 
 
@@ -440,15 +492,6 @@ function MonitoringOrdersContent() {
                     </div>
                 </DialogContent>
             </Dialog>
-
-             {/* Hidden component for printing */}
-            <div className="hidden">
-                <div ref={printComponentRef}>
-                    {ordersToPrint.map(order => (
-                        <PickLabel key={order.id} order={order} />
-                    ))}
-                </div>
-            </div>
         </MainLayout>
     );
 }
@@ -460,4 +503,3 @@ export default function MonitoringOrdersPage() {
         </Suspense>
     );
 }
-
