@@ -19,6 +19,7 @@ import { useAuth } from '@/hooks/use-auth';
 import type { BatchProduct } from '@/types/batch-product';
 import type { ProductOutDocument } from '@/types/product-out-document';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { PickLabel } from '@/components/pick-label';
 
 type WaveStatus = 'Wave Progress' | 'Wave Done';
 
@@ -37,6 +38,7 @@ type WaveOrder = {
     order_reference: string;
     sku: string;
     qty: number;
+    from: string;
     location: string;
     status: 'Assigned' | 'Picked' | 'Packed' | 'Shipped' | 'Delivered';
 };
@@ -131,6 +133,7 @@ function MonitoringOrdersContent() {
                     order_reference: order.order_reference,
                     sku: order.sku,
                     qty: order.qty,
+                    from: order.from,
                     location: availableBatch ? availableBatch.location : 'N/A - OOS?',
                     status: status,
                 };
@@ -177,12 +180,31 @@ function MonitoringOrdersContent() {
     
     const handlePrint = () => {
         const printableContent = document.getElementById('picklist-content');
-        const printWindow = window.open('', '', 'height=600,width=800');
+        const printWindow = window.open('', '', 'height=800,width=600');
 
         if (printWindow && printableContent) {
             printWindow.document.write('<html><head><title>Print Picklist</title>');
-            // You can add styles here for printing
-            printWindow.document.write('<style> body { font-family: sans-serif; } table { width: 100%; border-collapse: collapse; } th, td { border: 1px solid #ddd; padding: 8px; } .no-print { display: none; } </style>');
+            printWindow.document.write(`
+                <style>
+                    @media print {
+                        @page {
+                            size: 80mm 50mm;
+                            margin: 0;
+                        }
+                        body {
+                            margin: 0;
+                            -webkit-print-color-adjust: exact;
+                        }
+                        .label-container {
+                            page-break-after: always;
+                            width: 80mm;
+                            height: 50mm;
+                        }
+                    }
+                    body { font-family: sans-serif; }
+                    .no-print { display: none; }
+                </style>
+            `);
             printWindow.document.write('</head><body>');
             printWindow.document.write(printableContent.innerHTML);
             printWindow.document.write('</body></html>');
@@ -228,7 +250,7 @@ function MonitoringOrdersContent() {
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="border rounded-lg" id="printable-content">
+                        <div className="border rounded-lg" id="main-table-content">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -321,53 +343,21 @@ function MonitoringOrdersContent() {
                     <DialogHeader>
                         <DialogTitle>Details for Wave: {selectedWave?.wave_document_number}</DialogTitle>
                     </DialogHeader>
-                    <div id="picklist-content">
+                    <div>
                         {loadingDetails ? (
                             <div className="flex justify-center items-center h-48">
                                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
                             </div>
                         ) : (
                             <>
-                            <div className="max-h-[60vh] overflow-y-auto border rounded-lg">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Order Ref.</TableHead>
-                                            <TableHead>SKU</TableHead>
-                                            <TableHead>Qty</TableHead>
-                                            <TableHead>Location</TableHead>
-                                            <TableHead>Status</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {waveOrders.length > 0 ? waveOrders.map(order => (
-                                            <TableRow key={order.id}>
-                                                <TableCell>{order.order_reference}</TableCell>
-                                                <TableCell>{order.sku}</TableCell>
-                                                <TableCell>{order.qty}</TableCell>
-                                                <TableCell>{order.location}</TableCell>
-                                                <TableCell>
-                                                    <Badge className={cn('gap-1', 
-                                                        order.status === 'Assigned' ? 'bg-orange-400' : 
-                                                        order.status === 'Picked' ? 'bg-yellow-500' :
-                                                        order.status === 'Packed' ? 'bg-blue-500' :
-                                                        order.status === 'Shipped' ? 'bg-purple-500' :
-                                                        'bg-green-600'
-                                                    )}>
-                                                        {order.status === 'Assigned' && <UserCheck className="h-3 w-3" />}
-                                                        {order.status === 'Picked' && <Check className="h-3 w-3" />}
-                                                        {order.status === 'Packed' && <PackageCheckIcon className="h-3 w-3" />}
-                                                        {order.status === 'Shipped' && <Send className="h-3 w-3" />}
-                                                        {order.status === 'Delivered' && <CheckCheck className="h-3 w-3" />}
-                                                        {order.status}
-                                                    </Badge>
-                                                </TableCell>
-                                            </TableRow>
-                                        )) : (
-                                             <TableRow><TableCell colSpan={5} className="text-center h-24">No orders found for this wave.</TableCell></TableRow>
-                                        )}
-                                    </TableBody>
-                                </Table>
+                            <div id="picklist-content" className="max-h-[60vh] overflow-y-auto space-y-2 p-1 bg-gray-100">
+                                {waveOrders.length > 0 ? waveOrders.map(order => (
+                                    <div key={order.id} className="label-container">
+                                        <PickLabel order={order} />
+                                    </div>
+                                )) : (
+                                    <div className="text-center p-8 text-muted-foreground">No orders found for this wave.</div>
+                                )}
                             </div>
                              <div className="flex justify-end mt-4 no-print">
                                 <Button onClick={handlePrint}>
