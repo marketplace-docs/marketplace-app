@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
@@ -55,6 +56,7 @@ function MonitoringOrdersContent() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isPrinting, setIsPrinting] = useState<number | null>(null);
 
     const [isCancelDialogOpen, setCancelDialogOpen] = useState(false);
     const [isDetailsDialogOpen, setDetailsDialogOpen] = useState(false);
@@ -88,66 +90,70 @@ function MonitoringOrdersContent() {
         }
     }, [statusFilter, allWaves]);
 
+    const fetchWaveOrders = useCallback(async (waveId: number): Promise<WaveOrder[]> => {
+        const [waveDetailsRes, allBatchesRes, productOutRes] = await Promise.all([
+            fetch(`/api/waves/${waveId}`),
+            fetch('/api/master-product/batch-products'),
+            fetch('/api/product-out-documents')
+        ]);
+        
+        if (!waveDetailsRes.ok) throw new Error('Failed to fetch wave details.');
+        if (!allBatchesRes.ok) throw new Error('Failed to fetch product stock data.');
+        if (!productOutRes.ok) throw new Error('Failed to fetch product out documents.');
+
+        const waveDetails = await waveDetailsRes.json();
+        const allBatches: BatchProduct[] = await allBatchesRes.json();
+        const allProductOutDocs: ProductOutDocument[] = await productOutRes.json();
+        
+        const ordersWithLocationAndStatus = waveDetails.orders.map((order: any) => {
+            const availableBatch = allBatches
+                .filter(b => b.sku === order.sku && b.stock > 0)
+                .sort((a, b) => new Date(a.exp_date).getTime() - new Date(b.exp_date).getTime())
+                [0];
+            
+            const productOutDoc = allProductOutDocs.find(
+                doc => doc.order_reference === order.order_reference && doc.status === 'Issue - Order'
+            );
+
+            let status: WaveOrder['status'] = 'Assigned';
+            if (productOutDoc) {
+                if (productOutDoc.shipping_status === 'Delivered') {
+                    status = 'Delivered';
+                } else if (productOutDoc.shipping_status === 'Shipped') {
+                    status = 'Shipped';
+                } else if (productOutDoc.packer_name) {
+                    status = 'Packed';
+                } else {
+                    status = 'Picked';
+                }
+            }
+
+            return {
+                id: order.id,
+                order_reference: order.order_reference,
+                sku: order.sku,
+                qty: order.qty,
+                from: order.from,
+                location: availableBatch ? availableBatch.location : 'N/A - OOS?',
+                status: status,
+            };
+        });
+        return ordersWithLocationAndStatus;
+    }, []);
+
     const handleViewDetails = useCallback(async (wave: Wave) => {
         setSelectedWave(wave);
         setDetailsDialogOpen(true);
         setLoadingDetails(true);
         try {
-            const [waveDetailsRes, allBatchesRes, productOutRes] = await Promise.all([
-                fetch(`/api/waves/${wave.id}`),
-                fetch('/api/master-product/batch-products'),
-                fetch('/api/product-out-documents')
-            ]);
-            
-            if (!waveDetailsRes.ok) throw new Error('Failed to fetch wave details.');
-            if (!allBatchesRes.ok) throw new Error('Failed to fetch product stock data.');
-            if (!productOutRes.ok) throw new Error('Failed to fetch product out documents.');
-
-            const waveDetails = await waveDetailsRes.json();
-            const allBatches: BatchProduct[] = await allBatchesRes.json();
-            const allProductOutDocs: ProductOutDocument[] = await productOutRes.json();
-            
-            const ordersWithLocationAndStatus = waveDetails.orders.map((order: any) => {
-                const availableBatch = allBatches
-                    .filter(b => b.sku === order.sku && b.stock > 0)
-                    .sort((a, b) => new Date(a.exp_date).getTime() - new Date(b.exp_date).getTime())
-                    [0];
-                
-                const productOutDoc = allProductOutDocs.find(
-                    doc => doc.order_reference === order.order_reference && doc.status === 'Issue - Order'
-                );
-
-                let status: WaveOrder['status'] = 'Assigned';
-                if (productOutDoc) {
-                    if (productOutDoc.shipping_status === 'Delivered') {
-                        status = 'Delivered';
-                    } else if (productOutDoc.shipping_status === 'Shipped') {
-                        status = 'Shipped';
-                    } else if (productOutDoc.packer_name) {
-                        status = 'Packed';
-                    } else {
-                        status = 'Picked';
-                    }
-                }
-
-                return {
-                    id: order.id,
-                    order_reference: order.order_reference,
-                    sku: order.sku,
-                    qty: order.qty,
-                    from: order.from,
-                    location: availableBatch ? availableBatch.location : 'N/A - OOS?',
-                    status: status,
-                };
-            });
-
-            setWaveOrders(ordersWithLocationAndStatus);
+            const orders = await fetchWaveOrders(wave.id);
+            setWaveOrders(orders);
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Error', description: error.message });
         } finally {
             setLoadingDetails(false);
         }
-    }, [toast]);
+    }, [toast, fetchWaveOrders]);
 
     useEffect(() => {
         fetchWaves();
@@ -179,6 +185,35 @@ function MonitoringOrdersContent() {
             setIsSubmitting(false);
         }
     };
+    
+    const handlePrintWave = async (wave: Wave) => {
+        setIsPrinting(wave.id);
+        try {
+            const orders = await fetchWaveOrders(wave.id);
+            const printContainer = document.getElementById('print-container');
+            if (printContainer) {
+                const root = createRoot(printContainer);
+                root.render(
+                    <>
+                        {orders.map(order => (
+                            <div key={order.id} className="page-break">
+                                <PickLabel order={order} />
+                            </div>
+                        ))}
+                    </>
+                );
+                setTimeout(() => {
+                    window.print();
+                    root.unmount();
+                }, 500);
+            }
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Print Error', description: `Could not prepare picklist for printing: ${error.message}` });
+        } finally {
+            setIsPrinting(null);
+        }
+    };
+
 
     const handlePrintOrder = (order: WaveOrder) => {
         const printContainer = document.getElementById('print-container');
@@ -275,6 +310,9 @@ function MonitoringOrdersContent() {
                                                 <TableCell></TableCell>
                                                 <TableCell className="text-right no-print">
                                                     <div className="flex items-center justify-end gap-1">
+                                                        <Button variant="ghost" size="icon" className="text-blue-600 hover:text-blue-700 h-8 w-8" onClick={() => handlePrintWave(wave)} disabled={isPrinting === wave.id}>
+                                                            {isPrinting === wave.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
+                                                        </Button>
                                                          <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-600 h-8 w-8" onClick={() => handleViewDetails(wave)}>
                                                             <List className="h-4 w-4" />
                                                         </Button>
@@ -429,6 +467,9 @@ function MonitoringOrdersContent() {
                    @page {
                     size: 80mm 100mm;
                     margin: 0;
+                  }
+                  .page-break {
+                      page-break-after: always;
                   }
                 }
             `}</style>
