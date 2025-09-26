@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect, useCallback, Suspense, useRef } from 'react';
@@ -19,10 +18,10 @@ import { useAuth } from '@/hooks/use-auth';
 import type { BatchProduct } from '@/types/batch-product';
 import type { ProductOutDocument } from '@/types/product-out-document';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PickLabel } from '@/components/pick-label';
 import { Input } from '@/components/ui/input';
 import { createRoot } from 'react-dom/client';
-
+import { PickLabel } from '@/components/pick-label';
+import { useRouter } from 'next/navigation';
 
 type WaveStatus = 'Wave Progress' | 'Wave Done';
 
@@ -48,6 +47,7 @@ type WaveOrder = {
 
 function MonitoringOrdersContent() {
     const { user } = useAuth();
+    const router = useRouter();
     const { toast } = useToast();
     const searchParams = useSearchParams();
 
@@ -192,52 +192,9 @@ function MonitoringOrdersContent() {
         setIsPrinting(wave.id);
         try {
             const orders = await fetchWaveOrders(wave.id);
-            
-            // Create a temporary iframe to render the components
-            const iframe = document.createElement('iframe');
-            iframe.style.position = 'absolute';
-            iframe.style.width = '0';
-            iframe.style.height = '0';
-            iframe.style.border = 'none';
-            document.body.appendChild(iframe);
-            
-            const iFrameDoc = iframe.contentWindow?.document || iframe.contentDocument;
-            if (!iFrameDoc) {
-                 throw new Error("Cannot access iframe document.");
-            }
-            
-            const printContainer = iFrameDoc.createElement('div');
-            iFrameDoc.body.appendChild(printContainer);
-            
-            const root = createRoot(printContainer);
-            root.render(
-                <>
-                    {orders.map(order => (
-                        <PickLabel key={order.id} order={order} />
-                    ))}
-                </>
-            );
-
-            // Give React time to render the components
-            setTimeout(() => {
-                const printWindow = window.open('', '_blank');
-                if (printWindow) {
-                    printWindow.document.write('<html><head><title>Print Picklist</title></head><body>');
-                    printWindow.document.write(printContainer.innerHTML);
-                    printWindow.document.write('</body></html>');
-                    printWindow.document.close();
-                    
-                    // Give the new window time to parse and render QR codes
-                    setTimeout(() => {
-                        printWindow.print();
-                        printWindow.close();
-                        // Clean up
-                        root.unmount();
-                        document.body.removeChild(iframe);
-                    }, 500); 
-                }
-            }, 500);
-
+            const orderIds = orders.map(o => o.id);
+            const url = `/ecommerce/monitoring-orders/print?orderIds=${orderIds.join(',')}`;
+            window.open(url, '_blank');
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Print Error', description: `Could not prepare picklist for printing: ${error.message}` });
         } finally {
@@ -246,30 +203,8 @@ function MonitoringOrdersContent() {
     };
 
     const handlePrintOrder = (order: WaveOrder) => {
-        const iframe = document.createElement('iframe');
-        iframe.style.display = 'none';
-        document.body.appendChild(iframe);
-        const iFrameDoc = iframe.contentWindow?.document;
-        if (iFrameDoc) {
-            const printContainer = iFrameDoc.createElement('div');
-            iFrameDoc.body.appendChild(printContainer);
-            const root = createRoot(printContainer);
-            root.render(<PickLabel order={order} />);
-
-            setTimeout(() => {
-                 const printWindow = window.open('', '_blank');
-                 if (printWindow) {
-                    printWindow.document.write(printContainer.innerHTML);
-                    printWindow.document.close();
-                    setTimeout(() => {
-                         printWindow.print();
-                         printWindow.close();
-                         root.unmount();
-                         document.body.removeChild(iframe);
-                    }, 500);
-                }
-            }, 500);
-        }
+        const url = `/ecommerce/monitoring-orders/print?orderIds=${order.id}`;
+        window.open(url, '_blank');
     };
 
 
@@ -503,3 +438,5 @@ export default function MonitoringOrdersPage() {
         </Suspense>
     );
 }
+
+    
