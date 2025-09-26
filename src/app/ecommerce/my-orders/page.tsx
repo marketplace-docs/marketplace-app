@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
 import { format, isWithinInterval } from 'date-fns';
-import { Loader2, AlertCircle, PackageMinus, Search, SlidersHorizontal, Calendar as CalendarIcon, Upload, Play, Plus, MessageSquareText, Pencil, Save, Phone, Home } from 'lucide-react';
+import { Loader2, AlertCircle, PackageMinus, Search, SlidersHorizontal, Calendar as CalendarIcon, Upload, Play, Plus, MessageSquareText, Pencil, Save, Phone, Home, Trash2 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
@@ -65,13 +65,11 @@ export default function MyOrdersPage() {
     const [selection, setSelection] = useState<Record<string, boolean>>({});
     const fileInputRef = useRef<HTMLInputElement>(null);
     
-    const [isEditing, setIsEditing] = useState(false);
-    const [editedOrders, setEditedOrders] = useState<Record<number, Partial<Order>>>({});
-    
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isWaveDialogOpen, setWaveDialogOpen] = useState(false);
     const [isUploadDialogOpen, setUploadDialogOpen] = useState(false);
     const [isAddDialogOpen, setAddDialogOpen] = useState(false);
+    const [isBulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
 
     const defaultNewOrderState: Partial<NewOrder> = {
       qty: 1,
@@ -384,47 +382,37 @@ export default function MyOrdersPage() {
         }
     };
 
-    const handleToggleEdit = async () => {
-        if (isEditing) { // When clicking "Save Changes"
-            if (Object.keys(editedOrders).length === 0) {
-                toast({ title: 'No changes to save.' });
-                setIsEditing(false);
-                return;
-            }
-            setIsSubmitting(true);
-            try {
-                const updatePromises = Object.entries(editedOrders).map(([id, changes]) =>
-                    fetch(`/api/manual-orders/${id}`, {
-                        method: 'PATCH',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ ...changes, user }),
-                    })
-                );
-                
-                await Promise.all(updatePromises);
-                toast({ title: 'Success', description: 'All changes have been saved.' });
-                setEditedOrders({});
-                await fetchOrders();
-            } catch (err: any) {
-                toast({ variant: 'destructive', title: 'Save Failed', description: err.message });
-            } finally {
-                setIsSubmitting(false);
-                setIsEditing(false);
-            }
-        } else { // When clicking "Edit Orders"
-            setIsEditing(true);
+    const handleBulkDelete = async () => {
+        if (!user || selectedCount === 0) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Please select at least one order to delete.' });
+            return;
         }
-    };
 
-    const handleOrderChange = (id: number, field: keyof Order, value: string | number) => {
-        setEditedOrders(prev => ({
-            ...prev,
-            [id]: { ...prev[id], [field]: value }
-        }));
-        setFilteredOrders(prev => prev.map(order => 
-            order.id === id ? { ...order, [field]: value } : order
-        ));
-    };
+        const selectedOrderRefs = Object.keys(selection).filter(ref => selection[ref]);
+        const selectedOrdersToDelete = allOrders.filter(order => selectedOrderRefs.includes(order.reference));
+        const idsToDelete = selectedOrdersToDelete.map(order => order.id);
+
+        setIsSubmitting(true);
+        try {
+            const response = await fetch('/api/manual-orders/bulk-delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: idsToDelete, user }),
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to delete selected orders.');
+            }
+            toast({ title: 'Success', description: `${idsToDelete.length} orders have been deleted.` });
+            await fetchOrders();
+            setSelection({});
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Delete Failed', description: error.message });
+        } finally {
+            setIsSubmitting(false);
+            setBulkDeleteDialogOpen(false);
+        }
+    }
 
 
     return (
@@ -565,10 +553,28 @@ export default function MyOrdersPage() {
                                             </DialogFooter>
                                         </DialogContent>
                                     </Dialog>
-                                    <Button variant="link" className="text-violet-600" onClick={handleToggleEdit} disabled={isSubmitting}>
-                                        {isEditing ? <Save className="mr-2 h-4 w-4" /> : <Pencil className="mr-2 h-4 w-4" />}
-                                        {isEditing ? 'SAVE CHANGES' : 'EDIT ORDERS'}
-                                    </Button>
+                                     <Dialog open={isBulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
+                                        <DialogTrigger asChild>
+                                            <Button variant="link" className="text-red-600" disabled={selectedCount === 0}>
+                                                <Trash2 className="mr-2 h-4 w-4" />DELETE SELECTED
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent>
+                                            <DialogHeader>
+                                                <DialogTitle>Confirm Delete Selected</DialogTitle>
+                                                <DialogDescription>
+                                                   Are you sure you want to delete <span className="font-bold text-foreground">{selectedCount}</span> selected orders? This action cannot be undone.
+                                                </DialogDescription>
+                                            </DialogHeader>
+                                            <DialogFooter>
+                                                <Button variant="outline" onClick={() => setBulkDeleteDialogOpen(false)}>Cancel</Button>
+                                                <Button onClick={handleBulkDelete} disabled={isSubmitting} variant="destructive">
+                                                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Trash2 className="mr-2 h-4 w-4"/>}
+                                                    Delete
+                                                </Button>
+                                            </DialogFooter>
+                                        </DialogContent>
+                                    </Dialog>
                                     <Dialog open={isUploadDialogOpen} onOpenChange={setUploadDialogOpen}>
                                         <DialogTrigger asChild>
                                             <Button variant="link" className="text-violet-600"><Upload className="mr-2 h-4 w-4"/>UPLOAD MANUAL ORDER</Button>
@@ -679,7 +685,7 @@ export default function MyOrdersPage() {
                                         <Popover>
                                             <PopoverTrigger asChild>
                                                 <Button variant="link" className="p-0 h-auto font-medium text-blue-600 hover:underline cursor-pointer">
-                                                    {isEditing ? <Input value={editedOrders[order.id]?.reference ?? order.reference} onChange={(e) => handleOrderChange(order.id, 'reference', e.target.value)} className="h-8" /> : order.reference}
+                                                    {order.reference}
                                                 </Button>
                                             </PopoverTrigger>
                                             <PopoverContent className="w-80">
@@ -739,7 +745,7 @@ export default function MyOrdersPage() {
                                         <Popover>
                                             <PopoverTrigger asChild>
                                                 <Button variant="link" className="p-0 h-auto cursor-pointer">
-                                                     {isEditing ? <Input value={editedOrders[order.id]?.customer ?? order.customer} onChange={(e) => handleOrderChange(order.id, 'customer', e.target.value)} className="h-8" /> : order.customer}
+                                                     {order.customer}
                                                 </Button>
                                             </PopoverTrigger>
                                             <PopoverContent className="w-80">
@@ -770,10 +776,10 @@ export default function MyOrdersPage() {
                                             </PopoverContent>
                                         </Popover>
                                     </TableCell>
-                                    <TableCell>{isEditing ? <Input value={editedOrders[order.id]?.type ?? order.type} onChange={(e) => handleOrderChange(order.id, 'type', e.target.value)} className="h-8" /> : order.type}</TableCell>
-                                    <TableCell>{isEditing ? <Input value={editedOrders[order.id]?.from ?? order.from} onChange={(e) => handleOrderChange(order.id, 'from', e.target.value)} className="h-8" /> : order.from}</TableCell>
-                                    <TableCell>{isEditing ? <Input value={editedOrders[order.id]?.delivery_type ?? order.delivery_type} onChange={(e) => handleOrderChange(order.id, 'delivery_type', e.target.value)} className="h-8" /> : order.delivery_type}</TableCell>
-                                    <TableCell>{isEditing ? <Input type="number" value={editedOrders[order.id]?.qty ?? order.qty} onChange={(e) => handleOrderChange(order.id, 'qty', parseInt(e.target.value) || 0)} className="h-8" /> : order.qty}</TableCell>
+                                    <TableCell>{order.type}</TableCell>
+                                    <TableCell>{order.from}</TableCell>
+                                    <TableCell>{order.delivery_type}</TableCell>
+                                    <TableCell>{order.qty}</TableCell>
                                 </TableRow>
                                 ))
                             ) : (
