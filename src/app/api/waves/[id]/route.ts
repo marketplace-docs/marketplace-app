@@ -248,6 +248,69 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     return NextResponse.json({ message: 'Order marked as Out of Stock.' });
   }
 
+  // Handle removing a single order from a wave
+  if (action === 'remove_order') {
+    if (!orderId) {
+        return NextResponse.json({ error: 'Order ID is required to remove from wave.' }, { status: 400 });
+    }
+    
+    // Find the order to be removed
+    const { data: waveOrder, error: findError } = await supabaseService
+        .from('wave_orders')
+        .select('*')
+        .eq('order_reference', orderId)
+        .eq('wave_id', id)
+        .single();
+    
+    if (findError || !waveOrder) {
+        return NextResponse.json({ error: 'Order not found in this wave.' }, { status: 404 });
+    }
+
+    // Return it to manual_orders with 'Payment Accepted' status
+    const { error: insertError } = await supabaseService
+        .from('manual_orders')
+        .upsert({
+            id: waveOrder.order_id, 
+            reference: waveOrder.order_reference,
+            sku: waveOrder.sku,
+            qty: waveOrder.qty,
+            customer: waveOrder.customer,
+            city: waveOrder.city,
+            order_date: waveOrder.order_date,
+            type: waveOrder.type,
+            from: waveOrder.from,
+            delivery_type: waveOrder.delivery_type,
+            status: 'Payment Accepted'
+        }, { onConflict: 'id' });
+
+    if (insertError) {
+        return NextResponse.json({ error: 'Failed to return order to manual queue.' }, { status: 500 });
+    }
+
+    // Delete from wave_orders
+    const { error: deleteError } = await supabaseService.from('wave_orders').delete().eq('id', waveOrder.id);
+    if (deleteError) {
+      // This is a problem, but the order is already back in the queue, so we should log it and proceed.
+      console.error(`CRITICAL: Failed to delete order ${waveOrder.id} from wave_orders table.`);
+    }
+
+    // Decrement total_orders count in the wave
+    const { error: waveUpdateError } = await supabaseService.rpc('decrement_wave_orders', { wave_id_to_update: parseInt(id) });
+    if(waveUpdateError) {
+        console.error(`Failed to decrement order count for wave ${id}.`);
+    }
+
+    await logActivity({
+        userName: user.name,
+        userEmail: user.email,
+        action: 'REMOVE_ORDER_FROM_WAVE',
+        details: `Order ${waveOrder.order_reference} removed from wave ID ${id} and returned to queue.`,
+    });
+
+    return NextResponse.json({ message: 'Order removed from wave and returned to the queue.' });
+
+  }
+
   // Handle normal status updates
   if (action === 'update_status') {
      const { data, error } = await supabaseService

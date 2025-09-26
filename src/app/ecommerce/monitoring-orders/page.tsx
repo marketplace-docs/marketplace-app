@@ -62,15 +62,15 @@ function MonitoringOrdersContent() {
 
     const [isCancelDialogOpen, setCancelDialogOpen] = useState(false);
     const [isDetailsDialogOpen, setDetailsDialogOpen] = useState(false);
+    const [isRemoveOrderDialogOpen, setRemoveOrderDialogOpen] = useState(false);
     const [selectedWave, setSelectedWave] = useState<Wave | null>(null);
+    const [selectedOrder, setSelectedOrder] = useState<WaveOrder | null>(null);
     const [waveOrders, setWaveOrders] = useState<WaveOrder[]>([]);
     const [loadingDetails, setLoadingDetails] = useState(false);
     const [detailsSearchTerm, setDetailsSearchTerm] = useState('');
 
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(25);
-    const [printData, setPrintData] = useState<WaveOrder[]>([]);
-    const printContainerRef = useRef<HTMLDivElement>(null);
 
 
     const fetchWaves = useCallback(async () => {
@@ -214,62 +214,53 @@ function MonitoringOrdersContent() {
     };
     
     const handlePrintWave = async (wave: Wave) => {
-        setIsPrinting(wave.id);
-        try {
-            const orders = await fetchWaveOrders(wave.id);
-            if (orders.length === 0) {
-                toast({ variant: 'destructive', title: 'Print Error', description: 'No orders found in this wave to print.' });
-                setIsPrinting(null);
-                return;
-            }
-
-            const printContainer = document.createElement('div');
-            document.body.appendChild(printContainer);
-            const root = createRoot(printContainer);
-
-            const renderPromise = new Promise<void>((resolve) => {
-                root.render(
-                    <>
-                        {orders.map(order => <PickLabel key={order.id} order={order} />)}
-                        <style>{`
-                            @media print {
-                                body { margin: 0; padding: 0; }
-                                .label-container { page-break-after: always; }
-                            }
-                            @page { size: A6; margin: 0; }
-                        `}</style>
-                    </>
-                );
-                // Give React a moment to render
-                setTimeout(resolve, 500); 
-            });
-
-            await renderPromise;
-            
-            const printWindow = window.open('', '_blank');
-            if (printWindow) {
-                printWindow.document.write(printContainer.innerHTML);
-                printWindow.document.close();
-                printWindow.focus();
-                printWindow.print();
-                printWindow.close();
-            } else {
-                throw new Error('Could not open print window. Please check your browser settings.');
-            }
-
-            root.unmount();
-            document.body.removeChild(printContainer);
-
-        } catch (error: any) {
-            toast({ variant: 'destructive', title: 'Print Error', description: `Could not prepare picklist for printing: ${error.message}` });
-        } finally {
-            setIsPrinting(null);
+        const orderIds = (await fetchWaveOrders(wave.id)).map(o => o.id);
+        if (orderIds.length === 0) {
+            toast({ variant: 'destructive', title: 'Print Error', description: 'No orders found in this wave to print.' });
+            return;
         }
+        const url = `/ecommerce/monitoring-orders/print?orderIds=${orderIds.join(',')}`;
+        window.open(url, '_blank');
     };
 
     const handlePrintOrder = (order: WaveOrder) => {
         const url = `/ecommerce/monitoring-orders/print?orderIds=${order.id}`;
         window.open(url, '_blank');
+    };
+
+    const handleRemoveOrder = async () => {
+        if (!selectedOrder || !selectedWave || !user) return;
+        
+        setIsSubmitting(true);
+        try {
+             const response = await fetch(`/api/waves/${selectedWave.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    action: 'remove_order', 
+                    orderId: selectedOrder.order_reference, 
+                    user 
+                }),
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to remove order from wave.');
+            }
+            
+            toast({ title: 'Success', description: `Order ${selectedOrder.order_reference} has been returned to the queue.` });
+            
+            // Refresh details in dialog
+            const updatedOrders = await fetchWaveOrders(selectedWave.id);
+            setWaveOrders(updatedOrders);
+            // Also refresh main wave list to update counts
+            fetchWaves();
+
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Error', description: error.message });
+        } finally {
+            setIsSubmitting(false);
+            setRemoveOrderDialogOpen(false);
+        }
     };
 
 
@@ -516,7 +507,7 @@ function MonitoringOrdersContent() {
                                                             <Button variant="ghost" size="icon" onClick={() => handlePrintOrder(order)}>
                                                                 <Printer className="h-4 w-4" />
                                                             </Button>
-                                                            <Button variant="ghost" size="icon" disabled>
+                                                            <Button variant="ghost" size="icon" onClick={() => { setSelectedOrder(order); setRemoveOrderDialogOpen(true); }}>
                                                                 <X className="h-5 w-5 text-red-500" />
                                                             </Button>
                                                         </div>
@@ -533,6 +524,25 @@ function MonitoringOrdersContent() {
                     </div>
                 </DialogContent>
             </Dialog>
+            
+             <Dialog open={isRemoveOrderDialogOpen} onOpenChange={setRemoveOrderDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Remove Order from Wave?</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to remove order <span className="font-bold">{selectedOrder?.order_reference}</span> from this wave? It will be returned to the 'My Orders' queue.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setRemoveOrderDialogOpen(false)}>Cancel</Button>
+                        <Button variant="destructive" onClick={handleRemoveOrder} disabled={isSubmitting}>
+                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Yes, Remove
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
         </MainLayout>
     );
 }
