@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
 import { format, isWithinInterval } from 'date-fns';
-import { Loader2, AlertCircle, PackageMinus, Search, SlidersHorizontal, Calendar as CalendarIcon, Upload, Play, Plus, MessageSquareText, Pencil, Save } from 'lucide-react';
+import { Loader2, AlertCircle, PackageMinus, Search, SlidersHorizontal, Calendar as CalendarIcon, Upload, Play, Plus, MessageSquareText, Pencil, Save, Phone, Home } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
@@ -680,11 +680,39 @@ export default function MyOrdersPage() {
                                         />
                                     </TableCell>
                                     <TableCell>
-                                        {isEditing ? (
-                                            <Input value={editedOrders[order.id]?.reference ?? order.reference} onChange={(e) => handleOrderChange(order.id, 'reference', e.target.value)} className="h-8" />
-                                        ) : (
-                                            order.reference
-                                        )}
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <Button variant="link" className="p-0 h-auto font-medium text-blue-600 hover:underline cursor-pointer">
+                                                    {isEditing ? <Input value={editedOrders[order.id]?.reference ?? order.reference} onChange={(e) => handleOrderChange(order.id, 'reference', e.target.value)} className="h-8" /> : order.reference}
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-80">
+                                            {order.status === 'Payment Accepted' ? (
+                                                    <Table>
+                                                        <TableHeader>
+                                                            <TableRow>
+                                                                <TableHead>SKU</TableHead>
+                                                                <TableHead>QTY</TableHead>
+                                                                <TableHead>STOCK</TableHead>
+                                                                <TableHead>LOCATION</TableHead>
+                                                            </TableRow>
+                                                        </TableHeader>
+                                                        <TableBody>
+                                                            <TableRow>
+                                                                <TableCell>{order.sku}</TableCell>
+                                                                <TableCell>{order.qty}</TableCell>
+                                                                <TableCell>{order.total_stock_on_hand}</TableCell>
+                                                                <TableCell>{order.location}</TableCell>
+                                                            </TableRow>
+                                                        </TableBody>
+                                                    </Table>
+                                            ) : (
+                                                    <Badge variant="secondary" className="w-full justify-center text-base bg-gray-200 text-gray-800">
+                                                        Out of Stock
+                                                    </Badge>
+                                            )}
+                                            </PopoverContent>
+                                        </Popover>
                                     </TableCell>
                                     <TableCell>
                                       <div className="flex items-center gap-2">
@@ -711,7 +739,41 @@ export default function MyOrdersPage() {
                                       </div>
                                     </TableCell>
                                     <TableCell>{format(new Date(order.order_date), 'yyyy-MM-dd HH:mm:ss')}</TableCell>
-                                    <TableCell>{isEditing ? <Input value={editedOrders[order.id]?.customer ?? order.customer} onChange={(e) => handleOrderChange(order.id, 'customer', e.target.value)} className="h-8" /> : order.customer}</TableCell>
+                                    <TableCell>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <Button variant="link" className="p-0 h-auto cursor-pointer">
+                                                     {isEditing ? <Input value={editedOrders[order.id]?.customer ?? order.customer} onChange={(e) => handleOrderChange(order.id, 'customer', e.target.value)} className="h-8" /> : order.customer}
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-80">
+                                                <div className="grid gap-4">
+                                                    <div className="space-y-2">
+                                                        <h4 className="font-medium leading-none">Customer Details</h4>
+                                                        <p className="text-sm text-muted-foreground">
+                                                            Contact and address information.
+                                                        </p>
+                                                    </div>
+                                                    <div className="grid gap-2">
+                                                        <div className="grid grid-cols-[25px_1fr] items-start pb-2 last:mb-0 last:pb-0">
+                                                            <Home className="h-4 w-4" />
+                                                            <div className="space-y-1">
+                                                                <p className="text-sm font-medium leading-none">Address</p>
+                                                                <p className="text-sm text-muted-foreground">{order.address || 'N/A'}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="grid grid-cols-[25px_1fr] items-start last:mb-0 last:pb-0">
+                                                            <Phone className="h-4 w-4" />
+                                                            <div className="space-y-1">
+                                                                <p className="text-sm font-medium leading-none">Phone</p>
+                                                                <p className="text-sm text-muted-foreground">{order.phone || 'N/A'}</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </PopoverContent>
+                                        </Popover>
+                                    </TableCell>
                                     <TableCell>{isEditing ? <Input value={editedOrders[order.id]?.city ?? order.city} onChange={(e) => handleOrderChange(order.id, 'city', e.target.value)} className="h-8" /> : order.city}</TableCell>
                                     <TableCell>{isEditing ? <Input value={editedOrders[order.id]?.type ?? order.type} onChange={(e) => handleOrderChange(order.id, 'type', e.target.value)} className="h-8" /> : order.type}</TableCell>
                                     <TableCell>{isEditing ? <Input value={editedOrders[order.id]?.from ?? order.from} onChange={(e) => handleOrderChange(order.id, 'from', e.target.value)} className="h-8" /> : order.from}</TableCell>
