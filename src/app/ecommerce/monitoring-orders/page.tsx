@@ -179,43 +179,7 @@ function MonitoringOrdersContent() {
     };
     
     const handlePrint = () => {
-        const printableContent = document.getElementById('picklist-content');
-        const printWindow = window.open('', '', 'height=800,width=600');
-
-        if (printWindow && printableContent) {
-            printWindow.document.write('<html><head><title>Print Picklist</title>');
-            printWindow.document.write(`
-                <style>
-                    @media print {
-                        @page {
-                            size: 80mm 50mm;
-                            margin: 0;
-                        }
-                        body {
-                            margin: 0;
-                            -webkit-print-color-adjust: exact;
-                        }
-                        .label-container {
-                            page-break-after: always;
-                            width: 80mm;
-                            height: 50mm;
-                        }
-                    }
-                    body { font-family: sans-serif; }
-                    .no-print { display: none; }
-                </style>
-            `);
-            printWindow.document.write('</head><body>');
-            printWindow.document.write(printableContent.innerHTML);
-            printWindow.document.write('</body></html>');
-            printWindow.document.close();
-            
-            // Give the browser a moment to render the QR codes before printing
-            setTimeout(() => {
-                printWindow.print();
-                printWindow.close();
-            }, 500);
-        }
+        window.print();
     }
 
 
@@ -357,7 +321,7 @@ function MonitoringOrdersContent() {
                             <>
                             <div id="picklist-content" className="max-h-[60vh] overflow-y-auto space-y-2 p-1 bg-gray-100">
                                 {waveOrders.length > 0 ? waveOrders.map(order => (
-                                    <div key={order.id} className="label-container">
+                                    <div key={order.id} className="label-container bg-white p-2">
                                         <PickLabel order={order} />
                                     </div>
                                 )) : (
@@ -375,6 +339,31 @@ function MonitoringOrdersContent() {
                 </DialogContent>
             </Dialog>
 
+            <style jsx global>{`
+                @media print {
+                    body > * {
+                        visibility: hidden;
+                    }
+                    #picklist-content, #picklist-content * {
+                        visibility: visible;
+                    }
+                    #picklist-content {
+                        position: absolute;
+                        left: 0;
+                        top: 0;
+                        width: 100%;
+                        border: none;
+                        background-color: white !important;
+                        padding: 0 !important;
+                    }
+                    .label-container {
+                        page-break-after: always;
+                    }
+                    .no-print {
+                        display: none !important;
+                    }
+                }
+            `}</style>
         </MainLayout>
     );
 }

@@ -3,27 +3,50 @@
 
 import React from 'react';
 import QRCode from 'qrcode.react';
+import Barcode from 'react-barcode';
+import { format } from 'date-fns';
 
 type OrderInfo = {
     from: string;
     order_reference: string;
+    location: string;
 }
 
 export const PickLabel: React.FC<{ order: OrderInfo }> = ({ order }) => {
     return (
         <div 
-            className="w-[80mm] h-[50mm] bg-white border-2 border-black flex flex-col font-sans text-black"
+            className="w-[288px] h-auto bg-white p-2 flex flex-col font-sans text-black"
             style={{ boxSizing: 'border-box' }}
         >
-            <div className="text-center border-b-2 border-black p-1">
-                <p className="font-bold text-blue-700 text-sm">Market Place</p>
-                <p className="font-bold text-xs">{order.from}</p>
+            <div className="text-center">
+                <p className="font-bold text-lg leading-tight">Shopee</p>
+                <p className="text-xs">by sociolla</p>
+                <p className="text-xs mt-2 font-semibold">Order At</p>
+                <p className="text-xs">{format(new Date(), 'yyyy-MM-dd HH:mm')}</p>
             </div>
-            <div className="flex-grow flex items-center justify-center p-1">
-                <QRCode value={order.order_reference} size={100} level="M" />
+            
+            <div className="text-center my-2">
+                <p className="font-bold text-sm">PICKING LIST</p>
+                <p className="font-bold text-sm">FLOOR {order.location?.split('-')[0].toUpperCase() || 'N/A'}</p>
             </div>
-            <div className="text-center border-t-2 border-black p-1">
-                <p className="font-mono font-bold text-sm tracking-widest">{order.order_reference}</p>
+
+            <div className="flex-grow flex flex-col items-center justify-center p-1">
+                <QRCode value={order.order_reference} size={128} level="M" />
+                <Barcode 
+                    value={order.order_reference} 
+                    format="CODE128"
+                    width={1.5}
+                    height={40}
+                    displayValue={false}
+                    margin={5}
+                />
+                <p className="font-mono font-bold text-lg tracking-widest mt-1"># {order.order_reference}</p>
+            </div>
+            
+            <div className="text-center text-[8px] leading-tight border-t-2 border-dashed border-black mt-2 pt-1">
+                <p className="font-bold">PT Sociolla Bael Indonesia</p>
+                <p>E-mail: cs@sociolla.com</p>
+                <p>Web: www.sociolla.com</p>
             </div>
         </div>
     );
