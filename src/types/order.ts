@@ -14,6 +14,6 @@ export type Order = {
   qty: number;
   total_stock_on_hand: number;
   location: string;
-  address: string; // New field
-  phone: string; // New field
+  address: string;
+  phone: string;
 };
