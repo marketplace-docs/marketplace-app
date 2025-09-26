@@ -15,7 +15,7 @@ type OrderInfo = {
 export const PickLabel: React.FC<{ order: OrderInfo }> = ({ order }) => {
     return (
         <div 
-            className="w-[288px] h-auto bg-white p-2 flex flex-col font-sans text-black"
+            className="w-[288px] h-[480px] bg-white p-2 flex flex-col justify-between font-sans text-black"
             style={{ boxSizing: 'border-box' }}
         >
             <div className="text-center">
@@ -43,11 +43,7 @@ export const PickLabel: React.FC<{ order: OrderInfo }> = ({ order }) => {
                 <p className="font-mono font-bold text-lg tracking-widest mt-1"># {order.order_reference}</p>
             </div>
             
-            <div className="text-center text-[8px] leading-tight border-t-2 border-dashed border-black mt-2 pt-1">
-                <p className="font-bold">PT Sociolla Bael Indonesia</p>
-                <p>E-mail: cs@sociolla.com</p>
-                <p>Web: www.sociolla.com</p>
-            </div>
+            <div className="border-b-2 border-dashed border-black w-full"></div>
         </div>
     );
 };
