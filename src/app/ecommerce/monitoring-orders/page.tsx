@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useCallback, Suspense, useRef } from 'react';
@@ -19,8 +20,6 @@ import type { BatchProduct } from '@/types/batch-product';
 import type { ProductOutDocument } from '@/types/product-out-document';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { createRoot } from 'react-dom/client';
-import { PickLabel } from '@/components/pick-label';
 import { useRouter } from 'next/navigation';
 
 type WaveStatus = 'Wave Progress' | 'Wave Done';

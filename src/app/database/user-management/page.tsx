@@ -373,7 +373,7 @@ export default function DatabaseUserPage() {
                             <SelectValue placeholder={rowsPerPage} />
                         </SelectTrigger>
                         <SelectContent side="top">
-                            {[10, 20, 30].map((pageSize) => (
+                            {[10, 20, 50, 100, 150].map((pageSize) => (
                                 <SelectItem key={pageSize} value={`${pageSize}`}>
                                     {pageSize}
                                 </SelectItem>
@@ -484,3 +484,5 @@ export default function DatabaseUserPage() {
       </MainLayout>
     )
 }
+
+    

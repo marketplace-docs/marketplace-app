@@ -220,7 +220,7 @@ export default function OutOfStockManagementPage() {
                                 <Select value={`${rowsPerPage}`} onValueChange={(value) => { setRowsPerPage(Number(value)); }}>
                                     <SelectTrigger className="h-8 w-[70px]"><SelectValue placeholder={rowsPerPage} /></SelectTrigger>
                                     <SelectContent side="top">
-                                        {[10, 25, 50, 100].map((pageSize) => (<SelectItem key={pageSize} value={`${pageSize}`}>{pageSize}</SelectItem>))}
+                                        {[10, 20, 50, 100, 150].map((pageSize) => (<SelectItem key={pageSize} value={`${pageSize}`}>{pageSize}</SelectItem>))}
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -252,3 +252,5 @@ export default function OutOfStockManagementPage() {
         </MainLayout>
     );
 }
+
+    

@@ -291,6 +291,12 @@ export default function MyOrdersPage() {
             return;
         }
 
+        if (selectedCount > 150) {
+            toast({ variant: 'destructive', title: 'Order Limit Exceeded', description: `Cannot start a wave with more than 150 orders. You have selected ${selectedCount}.` });
+            setWaveDialogOpen(false);
+            return;
+        }
+
         const selectedOrderRefs = Object.keys(selection).filter(ref => selection[ref]);
         const selectedOrdersFull = allOrders.filter(order => selectedOrderRefs.includes(order.reference));
         
@@ -798,3 +804,6 @@ export default function MyOrdersPage() {
     );
 }
 
+
+
+    
