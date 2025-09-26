@@ -42,7 +42,6 @@ type NewOrder = Omit<Order, 'id' | 'status' | 'order_date' | 'total_stock_on_han
 
 type Filters = {
     reference: string;
-    city: string;
     customer: string;
     orderType: string;
     from: string;
@@ -77,15 +76,17 @@ export default function MyOrdersPage() {
     const defaultNewOrderState: Partial<NewOrder> = {
       qty: 1,
       sku: '',
+      customer: 'Edit By Sociolla',
+      city: 'Tangerang',
       address: 'Jln. Testing Order, No.Blok A 92, 28, Tangerang Selatan, 15677',
       phone: '08956103267566',
+      delivery_type: 'Regular',
     };
     
     const [newOrder, setNewOrder] = useState<Partial<NewOrder>>(defaultNewOrderState);
 
     const [filters, setFilters] = useState<Filters>({
         reference: '',
-        city: '',
         customer: '',
         orderType: '',
         from: '',
@@ -169,9 +170,6 @@ export default function MyOrdersPage() {
         if (filters.reference) {
             tempOrders = tempOrders.filter(o => o.reference.toLowerCase().includes(filters.reference.toLowerCase()));
         }
-        if (filters.city) {
-            tempOrders = tempOrders.filter(o => o.city.toLowerCase().includes(filters.city.toLowerCase()));
-        }
         if (filters.customer) {
             tempOrders = tempOrders.filter(o => o.customer.toLowerCase().includes(filters.customer.toLowerCase()));
         }
@@ -201,7 +199,7 @@ export default function MyOrdersPage() {
 
     const handleReset = () => {
         setFilters({
-            reference: '', city: '', customer: '', orderType: '', from: '', sku: '', qty: '',
+            reference: '', customer: '', orderType: '', from: '', sku: '', qty: '',
             deliveryType: '', dateRange: undefined, reserved: false, ecobox: false
         });
         setFilteredOrders(allOrders);
@@ -448,7 +446,6 @@ export default function MyOrdersPage() {
                         <AccordionContent className="p-4">
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                                 <Input placeholder="Reference" value={filters.reference} onChange={(e) => handleFilterChange('reference', e.target.value)} />
-                                <Input placeholder="City" value={filters.city} onChange={(e) => handleFilterChange('city', e.target.value)} />
                                 <Input placeholder="Customer" value={filters.customer} onChange={(e) => handleFilterChange('customer', e.target.value)} />
                                 <Select value={filters.orderType} onValueChange={(value) => handleFilterChange('orderType', value)}>
                                     <SelectTrigger><SelectValue placeholder="Order Type" /></SelectTrigger>
@@ -541,10 +538,6 @@ export default function MyOrdersPage() {
                                                 <div className="grid grid-cols-4 items-center gap-4">
                                                     <Label htmlFor="customer" className="text-right">Customer</Label>
                                                     <Input id="customer" value={newOrder.customer || ''} onChange={(e) => setNewOrder({...newOrder, customer: e.target.value})} className="col-span-3" />
-                                                </div>
-                                                <div className="grid grid-cols-4 items-center gap-4">
-                                                    <Label htmlFor="city" className="text-right">City</Label>
-                                                    <Input id="city" value={newOrder.city || ''} onChange={(e) => setNewOrder({...newOrder, city: e.target.value})} className="col-span-3" />
                                                 </div>
                                                 <div className="grid grid-cols-4 items-center gap-4">
                                                     <Label htmlFor="type" className="text-right">Type</Label>
@@ -650,7 +643,6 @@ export default function MyOrdersPage() {
                                 <TableHead>Status</TableHead>
                                 <TableHead>Order Date</TableHead>
                                 <TableHead>Customer</TableHead>
-                                <TableHead>City</TableHead>
                                 <TableHead>Type</TableHead>
                                 <TableHead>From</TableHead>
                                 <TableHead>Delivery Type</TableHead>
@@ -660,13 +652,13 @@ export default function MyOrdersPage() {
                         <TableBody>
                              {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={10} className="h-24 text-center">
+                                    <TableCell colSpan={9} className="h-24 text-center">
                                         <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                                     </TableCell>
                                 </TableRow>
                             ) : error ? (
                                 <TableRow>
-                                    <TableCell colSpan={10} className="h-24 text-center">
+                                    <TableCell colSpan={9} className="h-24 text-center">
                                          <Alert variant="destructive">
                                             <AlertCircle className="h-4 w-4" />
                                             <AlertTitle>Error</AlertTitle>
@@ -778,7 +770,6 @@ export default function MyOrdersPage() {
                                             </PopoverContent>
                                         </Popover>
                                     </TableCell>
-                                    <TableCell>{isEditing ? <Input value={editedOrders[order.id]?.city ?? order.city} onChange={(e) => handleOrderChange(order.id, 'city', e.target.value)} className="h-8" /> : order.city}</TableCell>
                                     <TableCell>{isEditing ? <Input value={editedOrders[order.id]?.type ?? order.type} onChange={(e) => handleOrderChange(order.id, 'type', e.target.value)} className="h-8" /> : order.type}</TableCell>
                                     <TableCell>{isEditing ? <Input value={editedOrders[order.id]?.from ?? order.from} onChange={(e) => handleOrderChange(order.id, 'from', e.target.value)} className="h-8" /> : order.from}</TableCell>
                                     <TableCell>{isEditing ? <Input value={editedOrders[order.id]?.delivery_type ?? order.delivery_type} onChange={(e) => handleOrderChange(order.id, 'delivery_type', e.target.value)} className="h-8" /> : order.delivery_type}</TableCell>
@@ -787,7 +778,7 @@ export default function MyOrdersPage() {
                                 ))
                             ) : (
                                <TableRow>
-                                    <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
+                                    <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
                                         <PackageMinus className="h-12 w-12 mx-auto mb-2" />
                                         No orders found.
                                     </TableCell>
