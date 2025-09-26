@@ -209,7 +209,12 @@ function MonitoringOrdersContent() {
             printWindow.document.write(printableContent.innerHTML);
             printWindow.document.write('</body></html>');
             printWindow.document.close();
-            printWindow.print();
+            
+            // Give the browser a moment to render the QR codes before printing
+            setTimeout(() => {
+                printWindow.print();
+                printWindow.close();
+            }, 500);
         }
     }
 
