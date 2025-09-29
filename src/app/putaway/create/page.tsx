@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -57,50 +58,52 @@ export default function AssignTaskPage() {
 
   return (
     <MainLayout>
-      <div className="w-full max-w-xl mx-auto">
-        <h1 className="text-2xl font-bold mb-6">Assign Task</h1>
-        <Card>
-          <CardContent className="p-0">
-            <div className="relative">
-              <Label htmlFor="putaway-code" className="sr-only">
-                Scan/Input putaway code
-              </Label>
-              <Input
-                id="putaway-code"
-                ref={putawayCodeRef}
-                type="text"
-                placeholder="Scan/Input putaway code"
-                className="w-full h-20 text-lg px-4 border-x-0 border-t-0 rounded-t-lg rounded-b-none border-b-2 focus-visible:ring-0 focus-visible:ring-offset-0"
-                value={putawayCode}
-                onChange={(e) => setPutawayCode(e.target.value)}
-                onKeyDown={handlePutawayCodeSubmit}
-                disabled={currentStep !== 'putaway_code' || isLoading}
-              />
-              {isLoading && currentStep === 'putaway_code' && (
-                <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 animate-spin" />
-              )}
-            </div>
-            <div>
-              <Label htmlFor="ean-code" className="sr-only">
-                Scan/Input ean code
-              </Label>
-              <Input
-                id="ean-code"
-                ref={eanCodeRef}
-                type="text"
-                placeholder="Scan/Input ean code"
-                className="w-full h-20 text-lg px-4 border-0 rounded-b-lg rounded-t-none bg-muted focus-visible:ring-0 focus-visible:ring-offset-0"
-                value={eanCode}
-                onChange={(e) => setEanCode(e.target.value)}
-                onKeyDown={handleEanCodeSubmit}
-                disabled={currentStep !== 'ean_code' || isLoading}
-              />
-               {isLoading && currentStep === 'ean_code' && (
-                <Loader2 className="absolute right-4 bottom-7 h-5 w-5 animate-spin" />
-              )}
-            </div>
-          </CardContent>
-        </Card>
+      <div className="flex flex-col items-center justify-center w-full h-full">
+        <div className="w-full max-w-2xl">
+          <h1 className="text-2xl font-bold mb-6 text-center">Assign Task</h1>
+          <Card>
+            <CardContent className="p-0">
+              <div className="relative">
+                <Label htmlFor="putaway-code" className="sr-only">
+                  Scan/Input putaway code
+                </Label>
+                <Input
+                  id="putaway-code"
+                  ref={putawayCodeRef}
+                  type="text"
+                  placeholder="Scan/Input putaway code"
+                  className="w-full h-20 text-lg px-4 border-x-0 border-t-0 rounded-t-lg rounded-b-none border-b-2 focus-visible:ring-0 focus-visible:ring-offset-0"
+                  value={putawayCode}
+                  onChange={(e) => setPutawayCode(e.target.value)}
+                  onKeyDown={handlePutawayCodeSubmit}
+                  disabled={currentStep !== 'putaway_code' || isLoading}
+                />
+                {isLoading && currentStep === 'putaway_code' && (
+                  <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 animate-spin" />
+                )}
+              </div>
+              <div>
+                <Label htmlFor="ean-code" className="sr-only">
+                  Scan/Input ean code
+                </Label>
+                <Input
+                  id="ean-code"
+                  ref={eanCodeRef}
+                  type="text"
+                  placeholder="Scan/Input ean code"
+                  className="w-full h-20 text-lg px-4 border-0 rounded-b-lg rounded-t-none bg-muted focus-visible:ring-0 focus-visible:ring-offset-0"
+                  value={eanCode}
+                  onChange={(e) => setEanCode(e.target.value)}
+                  onKeyDown={handleEanCodeSubmit}
+                  disabled={currentStep !== 'ean_code' || isLoading}
+                />
+                 {isLoading && currentStep === 'ean_code' && (
+                  <Loader2 className="absolute right-4 bottom-7 h-5 w-5 animate-spin" />
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </MainLayout>
   );
