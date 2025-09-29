@@ -1,382 +1,104 @@
 'use client';
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import React, { useState, useRef, useEffect } from 'react';
+import { MainLayout } from '@/components/layout/main-layout';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { MainLayout } from '@/components/layout/main-layout';
-import { useRouter } from 'next/navigation';
-import { Loader2, Plus, Trash2, Upload } from 'lucide-react';
-import { format, parse, isValid } from 'date-fns';
-import { useAuth } from '@/hooks/use-auth';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Loader2 } from 'lucide-react';
 
-type PutawayItem = {
-    sku: string;
-    barcode: string;
-    brand: string;
-    exp_date: string;
-    location: string;
-    qty: number;
-};
+type Step = 'putaway_code' | 'ean_code';
 
-type ProductMaster = {
-    sku: string;
-    barcode: string;
-    brand: string;
-};
-
-export default function CreatePutawayPage() {
-  const { user } = useAuth();
-  const [stagedItems, setStagedItems] = useState<PutawayItem[]>([]);
-  const [newItem, setNewItem] = useState<Omit<PutawayItem, 'qty'> & { qty: string }>({
-    sku: '', barcode: '', brand: '', exp_date: '', location: '', qty: ''
-  });
-  const [docDetails, setDocDetails] = useState({
-    no_document: '',
-    date: new Date(),
-    check_by: '',
-    status: 'Pending' as 'Done' | 'Pending',
-  });
-  
-  const [isProductLoading, setIsProductLoading] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isUploadDialogOpen, setUploadDialogOpen] = useState(false);
+export default function AssignTaskPage() {
+  const [putawayCode, setPutawayCode] = useState('');
+  const [eanCode, setEanCode] = useState('');
+  const [currentStep, setCurrentStep] = useState<Step>('putaway_code');
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const router = useRouter();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const canCreate = user?.role === 'Super Admin';
-  
-  const handleItemInputChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setNewItem(prev => ({ ...prev, [name]: value }));
-
-    if ((name === 'barcode' || name === 'sku') && value) {
-        setIsProductLoading(true);
-        try {
-            const response = await fetch(`/api/master-products/${value}`);
-            if (response.ok) {
-                const product: ProductMaster = await response.json();
-                setNewItem(prev => ({
-                    ...prev,
-                    sku: product.sku,
-                    barcode: product.barcode,
-                    brand: product.brand,
-                }));
-            } else {
-                 setNewItem(prev => ({ ...prev, brand: '' }));
-            }
-        } catch (error) {
-            console.error("Failed to fetch product data", error);
-            setNewItem(prev => ({ ...prev, brand: '' }));
-        } finally {
-            setIsProductLoading(false);
-        }
-    }
-  }, []);
-
-  const generateDocNumber = useCallback(async () => {
-    try {
-        const response = await fetch('/api/putaway-documents/generate-number');
-        if (!response.ok) throw new Error('Failed to generate document number.');
-        const data = await response.json();
-        setDocDetails(prev => ({ ...prev, no_document: data.newDocNumber }));
-    } catch (error) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not generate document number.' });
-    }
-  }, [toast]);
+  const putawayCodeRef = useRef<HTMLInputElement>(null);
+  const eanCodeRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (canCreate) {
-        generateDocNumber();
+    if (currentStep === 'putaway_code') {
+      putawayCodeRef.current?.focus();
+    } else if (currentStep === 'ean_code') {
+      eanCodeRef.current?.focus();
     }
-  }, [canCreate, generateDocNumber]);
-  
-  const handleAddItem = () => {
-    const qty = parseInt(newItem.qty, 10);
-    if (!newItem.sku || !newItem.barcode || !newItem.location || !newItem.exp_date || isNaN(qty) || qty <= 0) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Please fill all item fields with valid data.' });
-        return;
-    }
-    
-    setStagedItems(prev => [...prev, { ...newItem, qty }]);
-    setNewItem({ sku: '', barcode: '', brand: '', exp_date: '', location: '', qty: '' }); // Reset form
-  };
+  }, [currentStep]);
 
-  const handleRemoveItem = (index: number) => {
-    setStagedItems(prev => prev.filter((_, i) => i !== index));
-  };
-
-
-  const handleSubmitDocument = async () => {
-    if (stagedItems.length === 0) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Please add at least one item to the document.' });
-        return;
-    }
-    if (!docDetails.check_by) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Please enter who checked the document.' });
-        return;
-    }
-    if (!user) {
-      toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
-      return;
-    }
-    
-    setIsSubmitting(true);
-    try {
-        const documentsToCreate = stagedItems.map(item => ({
-            ...item,
-            no_document: docDetails.no_document,
-            status: docDetails.status,
-            check_by: docDetails.check_by,
-        }));
-
-        const response = await fetch('/api/putaway-documents', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                documents: documentsToCreate,
-                user
-            })
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to create document');
-        }
-
-        toast({
-            title: 'Success',
-            description: `Document ${docDetails.no_document} with ${stagedItems.length} items has been created.`,
-        });
-        router.push('/putaway/monitoring-document');
-
-    } catch (error: any) {
-        toast({
-            variant: 'destructive',
-            title: 'Error',
-            description: error.message || 'Something went wrong while creating the document.',
-        });
-    } finally {
-        setIsSubmitting(false);
+  const handlePutawayCodeSubmit = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && putawayCode) {
+      // Here you would typically validate the putaway code
+      // For now, we'll just move to the next step
+      setCurrentStep('ean_code');
+      toast({ title: 'Putaway Code Scanned', description: `Code: ${putawayCode}` });
     }
   };
-  
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
 
-    setIsSubmitting(true);
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const text = e.target?.result as string;
-      try {
-        const lines = text.split('\n').filter(line => line.trim() !== '');
-        if (lines.length <= 1) throw new Error("CSV is empty or has only a header.");
-        
-        const header = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
-        const requiredHeaders = ['sku', 'barcode', 'brand', 'exp_date', 'location', 'qty'];
-        if (!requiredHeaders.every(h => header.includes(h))) {
-            throw new Error(`Invalid CSV. Required headers: ${requiredHeaders.join(', ')}`);
-        }
-
-        const newItems: PutawayItem[] = [];
-
-        lines.slice(1).forEach(line => {
-          const values = line.split(',');
-          const itemData: any = {};
-          header.forEach((col, index) => itemData[col] = values[index]?.trim().replace(/"/g, ''));
-
-          const qty = parseInt(itemData.qty || '0', 10);
-          const parsedDate = parse(itemData.exp_date, 'dd/MM/yyyy', new Date());
-          
-          if (itemData.sku && itemData.barcode && itemData.location && isValid(parsedDate) && !isNaN(qty)) {
-            const parsedItem = {
-              sku: itemData.sku,
-              barcode: itemData.barcode,
-              brand: itemData.brand,
-              exp_date: format(parsedDate, 'yyyy-MM-dd'),
-              location: itemData.location,
-              qty: qty,
-            };
-            newItems.push(parsedItem);
-          }
-        });
-
-        
-        setStagedItems(prev => [...prev, ...newItems]);
-        setUploadDialogOpen(false);
-        toast({
-          title: "Upload Successful",
-          description: `${newItems.length} items have been added to the document.`,
-        });
-
-      } catch (error: any) {
-        toast({ variant: 'destructive', title: 'Upload Failed', description: error.message });
-      } finally {
-        setIsSubmitting(false);
-        if (fileInputRef.current) fileInputRef.current.value = '';
-      }
-    };
-    reader.readAsText(file);
+  const handleEanCodeSubmit = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && eanCode) {
+      // Here you would process both codes
+      setIsLoading(true);
+      toast({ title: 'Processing...', description: `Putaway: ${putawayCode}, EAN: ${eanCode}` });
+      setTimeout(() => {
+        // Simulate API call
+        console.log({ putawayCode, eanCode });
+        // Reset for next task
+        setPutawayCode('');
+        setEanCode('');
+        setCurrentStep('putaway_code');
+        setIsLoading(false);
+        toast({ title: 'Task Assigned', description: 'Ready for next scan.' });
+      }, 1500);
+    }
   };
 
   return (
     <MainLayout>
-      <div className="w-full space-y-6">
-        <h1 className="text-2xl font-bold">Putaway</h1>
+      <div className="w-full max-w-xl mx-auto">
+        <h1 className="text-2xl font-bold mb-6">Assign Task</h1>
         <Card>
-          <CardHeader>
-            <CardTitle>Create Document</CardTitle>
-            <CardDescription>
-              Add one or more items to a document and submit them all at once.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-             {/* Document Details Form */}
-            <div className="space-y-4 p-4 border rounded-lg">
-                <h3 className="text-lg font-medium">Document Details</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                     <div className="space-y-2">
-                        <Label htmlFor="no_document">No. Document</Label>
-                        <Input id="no_document" value={docDetails.no_document} readOnly className="bg-muted"/>
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="date">Date</Label>
-                        <Input id="date" value={format(docDetails.date, "dd/MM/yyyy HH:mm")} disabled />
-                    </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="check_by">Check By</Label>
-                        <Input id="check_by" placeholder="Checked by name" value={docDetails.check_by} onChange={(e) => setDocDetails(prev => ({ ...prev, check_by: e.target.value }))} />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="status">Status</Label>
-                        <Select value={docDetails.status} onValueChange={(value) => setDocDetails(prev => ({ ...prev, status: value as 'Done' | 'Pending' }))}>
-                            <SelectTrigger id="status"><SelectValue placeholder="Select Status" /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="Done">Done</SelectItem>
-                                <SelectItem value="Pending">Pending</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </div>
+          <CardContent className="p-0">
+            <div className="relative">
+              <Label htmlFor="putaway-code" className="sr-only">
+                Scan/Input putaway code
+              </Label>
+              <Input
+                id="putaway-code"
+                ref={putawayCodeRef}
+                type="text"
+                placeholder="Scan/Input putaway code"
+                className="w-full h-20 text-lg px-4 border-x-0 border-t-0 rounded-t-lg rounded-b-none border-b-2 focus-visible:ring-0 focus-visible:ring-offset-0"
+                value={putawayCode}
+                onChange={(e) => setPutawayCode(e.target.value)}
+                onKeyDown={handlePutawayCodeSubmit}
+                disabled={currentStep !== 'putaway_code' || isLoading}
+              />
+              {isLoading && currentStep === 'putaway_code' && (
+                <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 animate-spin" />
+              )}
             </div>
-
-            {/* Add Item Form */}
-            <div className="space-y-4 p-4 border rounded-lg">
-                <h3 className="text-lg font-medium">Add Item to Document</h3>
-                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-                    <div className="space-y-2">
-                        <Label htmlFor="barcode">Barcode</Label>
-                        <Input id="barcode" name="barcode" placeholder="Enter barcode" value={newItem.barcode} onChange={handleItemInputChange} />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="sku">SKU</Label>
-                        <Input id="sku" name="sku" placeholder="Enter SKU" value={newItem.sku} onChange={handleItemInputChange} />
-                    </div>
-                    <div className="space-y-2 relative">
-                        <Label htmlFor="brand">Brand</Label>
-                        <Input id="brand" name="brand" placeholder="Product brand" value={newItem.brand} className="bg-muted" readOnly />
-                        {isProductLoading && <Loader2 className="absolute right-2 top-8 h-4 w-4 animate-spin" />}
-                    </div>
-                    <div className="space-y-2"><Label htmlFor="exp_date">EXP Date</Label><Input id="exp_date" name="exp_date" type="date" value={newItem.exp_date} onChange={handleItemInputChange}/></div>
-                    <div className="space-y-2"><Label htmlFor="location">Location</Label><Input id="location" name="location" placeholder="Enter location" value={newItem.location} onChange={handleItemInputChange}/></div>
-                    <div className="space-y-2"><Label htmlFor="qty">QTY</Label><Input id="qty" name="qty" type="number" placeholder="Enter quantity" value={newItem.qty} onChange={handleItemInputChange}/></div>
-                    <div className="flex gap-2">
-                      <Button type="button" onClick={handleAddItem} disabled={!canCreate} className="w-full lg:w-auto flex-1"><Plus className="mr-2 h-4 w-4" /> Add Item</Button>
-                      <Dialog open={isUploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-                        <DialogTrigger asChild>
-                          <Button variant="outline" disabled={!canCreate}><Upload className="h-4 w-4"/></Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                              <DialogTitle>Upload Items CSV</DialogTitle>
-                              <DialogDescription>
-                                  Select a CSV file to add multiple items to this document. Required headers: sku, barcode, brand, exp_date(dd/MM/yyyy), location, qty.
-                              </DialogDescription>
-                          </DialogHeader>
-                           <div className="py-4">
-                               <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
-                               <Button onClick={() => fileInputRef.current?.click()} className="w-full" disabled={isSubmitting}>
-                                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Choose File'}
-                               </Button>
-                               <p className="text-xs text-muted-foreground mt-2">
-                                    Don't have a template? <a href="/templates/putaway_items_template.csv" download className="underline text-primary">Download CSV template</a>
-                               </p>
-                            </div>
-                        </DialogContent>
-                      </Dialog>
-                    </div>
-                </div>
+            <div>
+              <Label htmlFor="ean-code" className="sr-only">
+                Scan/Input ean code
+              </Label>
+              <Input
+                id="ean-code"
+                ref={eanCodeRef}
+                type="text"
+                placeholder="Scan/Input ean code"
+                className="w-full h-20 text-lg px-4 border-0 rounded-b-lg rounded-t-none bg-muted focus-visible:ring-0 focus-visible:ring-offset-0"
+                value={eanCode}
+                onChange={(e) => setEanCode(e.target.value)}
+                onKeyDown={handleEanCodeSubmit}
+                disabled={currentStep !== 'ean_code' || isLoading}
+              />
+               {isLoading && currentStep === 'ean_code' && (
+                <Loader2 className="absolute right-4 bottom-7 h-5 w-5 animate-spin" />
+              )}
             </div>
-            
-            {/* Staged Items Table */}
-            <div className="space-y-4">
-                <h3 className="text-lg font-medium">Document Items ({stagedItems.length})</h3>
-                <div className="border rounded-lg">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>SKU</TableHead>
-                                <TableHead>Barcode</TableHead>
-                                <TableHead>Location</TableHead>
-                                <TableHead>EXP Date</TableHead>
-                                <TableHead>QTY</TableHead>
-                                <TableHead className="text-right">Action</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {stagedItems.length > 0 ? (
-                                stagedItems.map((item, index) => (
-                                    <TableRow key={index}>
-                                        <TableCell>{item.sku}</TableCell>
-                                        <TableCell>{item.barcode}</TableCell>
-                                        <TableCell>{item.location}</TableCell>
-                                        <TableCell>{format(new Date(item.exp_date), 'dd/MM/yyyy')}</TableCell>
-                                        <TableCell>{item.qty.toLocaleString()}</TableCell>
-                                        <TableCell className="text-right">
-                                            <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(index)}>
-                                                <Trash2 className="h-4 w-4 text-destructive" />
-                                            </Button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            ) : (
-                                <TableRow>
-                                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">No items added yet.</TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </div>
-            </div>
-
-             <div className="flex justify-end pt-4">
-                {canCreate && (
-                <Button size="lg" onClick={handleSubmitDocument} disabled={isSubmitting || stagedItems.length === 0}>
-                   {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                   Submit Document
-                </Button>
-                )}
-              </div>
-
           </CardContent>
         </Card>
       </div>
