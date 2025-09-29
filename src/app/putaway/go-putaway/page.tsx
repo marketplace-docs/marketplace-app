@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Loader2, Search, Package, ScanLine, Warehouse, CheckSquare } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import type { InboundDocument } from "@/types/inbound-document";
@@ -99,7 +99,6 @@ export default function GoPutawayPage() {
                 check_by: user.name,
             };
 
-            // 1. Create the putaway document (stock movement)
             const putawayResponse = await fetch('/api/putaway-documents', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -111,7 +110,6 @@ export default function GoPutawayPage() {
                 throw new Error(errorData.error || 'Failed to create putaway document.');
             }
             
-            // 2. Update the original inbound document status to 'Done'
             const updateStatusResponse = await fetch(`/api/inbound-documents/${foundDocument.id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
@@ -122,13 +120,11 @@ export default function GoPutawayPage() {
             });
 
             if (!updateStatusResponse.ok) {
-                // Log this error, but the main operation succeeded so we don't throw an error to the user
                 console.error("Failed to update inbound document status, but putaway was successful.");
             }
 
             toast({ title: 'Putaway Successful', description: `${qty} units of ${foundDocument.sku} have been placed at ${scannedLocation}.` });
             
-            // Reset state for next operation
             setDocRef('');
             setFoundDocument(null);
             setScannedBarcode('');
@@ -147,7 +143,7 @@ export default function GoPutawayPage() {
     return (
         <MainLayout>
              <div className="flex-1 flex items-center justify-center">
-                <Card className="w-full max-w-2xl">
+                <Card className="w-full">
                     <CardHeader>
                         <CardTitle>Assign Task Putaway</CardTitle>
                         <CardDescription>Scan an inbound document to begin the putaway process.</CardDescription>
@@ -217,3 +213,5 @@ export default function GoPutawayPage() {
         </MainLayout>
     );
 }
+
+    
