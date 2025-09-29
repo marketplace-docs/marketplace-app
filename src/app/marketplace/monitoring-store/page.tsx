@@ -380,7 +380,7 @@ export default function MonitoringStorePage() {
                             <SelectValue placeholder={rowsPerPage} />
                         </SelectTrigger>
                         <SelectContent side="top">
-                            {[10, 25, 50].map((pageSize) => (
+                            {[5, 20, 50, 100].map((pageSize) => (
                             <SelectItem key={pageSize} value={`${pageSize}`}>
                                 {pageSize}
                             </SelectItem>

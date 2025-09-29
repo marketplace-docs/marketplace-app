@@ -70,7 +70,7 @@ function MonitoringOrdersContent() {
     const [detailsSearchTerm, setDetailsSearchTerm] = useState('');
 
     const [currentPage, setCurrentPage] = useState(1);
-    const [rowsPerPage, setRowsPerPage] = useState(25);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
 
 
     const fetchWaves = useCallback(async () => {
@@ -390,7 +390,7 @@ function MonitoringOrdersContent() {
                                         <SelectValue placeholder={rowsPerPage} />
                                     </SelectTrigger>
                                     <SelectContent side="top">
-                                        {[25, 50, 100].map((pageSize) => (
+                                        {[5, 20, 50, 100].map((pageSize) => (
                                         <SelectItem key={pageSize} value={`${pageSize}`}>
                                             {pageSize}
                                         </SelectItem>

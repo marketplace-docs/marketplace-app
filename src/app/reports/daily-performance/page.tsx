@@ -675,7 +675,7 @@ export default function DailyPerformancePage() {
                                         <SelectValue placeholder={`${rowsPerPage}`} />
                                     </SelectTrigger>
                                     <SelectContent side="top">
-                                        {[10, 20, 50, 100, 150].map((pageSize) => (
+                                        {[5, 20, 50, 100].map((pageSize) => (
                                             <SelectItem key={pageSize} value={`${pageSize}`}>
                                                 {pageSize}
                                             </SelectItem>

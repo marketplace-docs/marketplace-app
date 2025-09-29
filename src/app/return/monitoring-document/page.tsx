@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
@@ -412,7 +413,7 @@ export default function MonitoringReturnPage() {
                             <SelectValue placeholder={rowsPerPage} />
                         </SelectTrigger>
                         <SelectContent side="top">
-                            {[5, 10, 25, 50, 100].map((pageSize) => (
+                            {[5, 20, 50, 100].map((pageSize) => (
                             <SelectItem key={pageSize} value={`${pageSize}`}>
                                 {pageSize}
                             </SelectItem>
