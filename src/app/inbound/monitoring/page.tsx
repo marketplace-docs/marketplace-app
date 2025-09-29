@@ -1,25 +1,33 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
-import { Eye, Check, Send, Search, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Eye, Check, Send, Search, X, ChevronDown, ChevronUp, Loader2, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-// Mock data - replace with actual data fetching in the future
-const mockInboundData = [
-    { id: 1, reference: 'INB-001', ean: '8997234221108', sku: 'CSO.FG-VREMH50ALL1', name: 'Product A', qty: 1, brand: 'Brand A', exp_date: '2028-08-01', received_by: 'User A', date: new Date().toISOString(), main_status: 'Assign', condition: 'normal' },
-    { id: 2, reference: 'INB-002', ean: '8991234567890', sku: 'SKU002', name: 'Product B', qty: 50, brand: 'Brand B', exp_date: '2026-06-30', received_by: 'User B', date: new Date().toISOString(), main_status: 'In Progress', condition: 'normal' },
-    { id: 3, reference: 'INB-003', ean: '8999876543210', sku: 'SKU003', name: 'Product C', qty: 200, brand: 'Brand C', exp_date: '2025-10-15', received_by: 'User A', date: new Date().toISOString(), main_status: 'Done', condition: 'normal' },
-];
+type InboundDocument = {
+    id: number;
+    reference: string;
+    sku: string;
+    barcode: string;
+    brand: string;
+    exp_date: string;
+    qty: number;
+    date: string;
+    received_by: string;
+    main_status: 'Assign' | 'In Progress' | 'Done';
+};
 
-const InboundDetailDialog = ({ document }: { document: typeof mockInboundData[0] }) => {
+
+const InboundDetailDialog = ({ document }: { document: InboundDocument }) => {
     const [isExpanded, setIsExpanded] = useState(true);
 
     return (
@@ -42,7 +50,7 @@ const InboundDetailDialog = ({ document }: { document: typeof mockInboundData[0]
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>EAN</TableHead>
+                                    <TableHead>Barcode</TableHead>
                                     <TableHead>SKU</TableHead>
                                     <TableHead>Assign to</TableHead>
                                     <TableHead>Status</TableHead>
@@ -54,7 +62,7 @@ const InboundDetailDialog = ({ document }: { document: typeof mockInboundData[0]
                             </TableHeader>
                             <TableBody>
                                 <TableRow>
-                                    <TableCell>{document.ean}</TableCell>
+                                    <TableCell>{document.barcode}</TableCell>
                                     <TableCell>{document.sku}</TableCell>
                                     <TableCell>{document.received_by}</TableCell>
                                     <TableCell>
@@ -73,11 +81,11 @@ const InboundDetailDialog = ({ document }: { document: typeof mockInboundData[0]
                                      <TableRow className="bg-muted/50">
                                         <TableCell colSpan={8} className="p-0">
                                             <div className="p-4 grid grid-cols-5 gap-4 text-sm">
-                                                <div><p className="font-semibold">Exp Date</p><p>{document.exp_date}</p></div>
-                                                <div><p className="font-semibold">Condition</p><p>{document.condition}</p></div>
+                                                <div><p className="font-semibold">Exp Date</p><p>{format(new Date(document.exp_date), 'yyyy-MM-dd')}</p></div>
+                                                <div><p className="font-semibold">Condition</p><p>Normal</p></div>
                                                 <div><p className="font-semibold">Received</p><p>{document.qty}</p></div>
                                                 <div><p className="font-semibold">Putaway</p><p>0</p></div>
-                                                <div><p className="font-semibold">Outstanding</p><p>0</p></div>
+                                                <div><p className="font-semibold">Outstanding</p><p>{document.qty}</p></div>
                                             </div>
                                         </TableCell>
                                     </TableRow>
@@ -93,7 +101,7 @@ const InboundDetailDialog = ({ document }: { document: typeof mockInboundData[0]
 };
 
 
-const InboundMonitoringTable = ({ data }: { data: typeof mockInboundData }) => (
+const InboundMonitoringTable = ({ data, loading }: { data: InboundDocument[], loading: boolean }) => (
     <div className="border rounded-lg">
         <Table>
             <TableHeader>
@@ -101,9 +109,8 @@ const InboundMonitoringTable = ({ data }: { data: typeof mockInboundData }) => (
                     <TableHead>Reference</TableHead>
                     <TableHead>SKU</TableHead>
                     <TableHead>Barcode</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Qty</TableHead>
                     <TableHead>Brand</TableHead>
+                    <TableHead>Qty</TableHead>
                     <TableHead>Exp Date</TableHead>
                     <TableHead>Received By</TableHead>
                     <TableHead>Date</TableHead>
@@ -112,15 +119,20 @@ const InboundMonitoringTable = ({ data }: { data: typeof mockInboundData }) => (
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {data.length > 0 ? data.map(item => (
+                {loading ? (
+                    <TableRow>
+                        <TableCell colSpan={10} className="h-24 text-center">
+                            <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+                        </TableCell>
+                    </TableRow>
+                ) : data.length > 0 ? data.map(item => (
                     <TableRow key={item.id}>
                         <TableCell>{item.reference}</TableCell>
                         <TableCell>{item.sku}</TableCell>
-                        <TableCell>{item.ean}</TableCell>
-                        <TableCell>{item.name}</TableCell>
-                        <TableCell>{item.qty}</TableCell>
+                        <TableCell>{item.barcode}</TableCell>
                         <TableCell>{item.brand}</TableCell>
-                        <TableCell>{item.exp_date}</TableCell>
+                        <TableCell>{item.qty}</TableCell>
+                        <TableCell>{format(new Date(item.exp_date), 'yyyy-MM-dd')}</TableCell>
                         <TableCell>{item.received_by}</TableCell>
                         <TableCell>{format(new Date(item.date), "eee, dd/MMM/yyyy HH:mm")}</TableCell>
                         <TableCell>
@@ -134,7 +146,7 @@ const InboundMonitoringTable = ({ data }: { data: typeof mockInboundData }) => (
                     </TableRow>
                 )) : (
                     <TableRow>
-                        <TableCell colSpan={11} className="h-24 text-center">No data available.</TableCell>
+                        <TableCell colSpan={10} className="h-24 text-center">No data available.</TableCell>
                     </TableRow>
                 )}
             </TableBody>
@@ -144,6 +156,29 @@ const InboundMonitoringTable = ({ data }: { data: typeof mockInboundData }) => (
 
 
 export default function InboundMonitoringPage() {
+    const [documents, setDocuments] = useState<InboundDocument[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    
+    const fetchDocuments = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const response = await fetch('/api/inbound-documents');
+            if (!response.ok) throw new Error('Failed to fetch inbound documents.');
+            const data = await response.json();
+            setDocuments(data);
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchDocuments();
+    }, [fetchDocuments]);
+
     return (
         <MainLayout>
             <div className="w-full space-y-6">
@@ -154,7 +189,14 @@ export default function InboundMonitoringPage() {
                         <CardDescription>Monitor the status and perform actions on inbound items.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <InboundMonitoringTable data={mockInboundData} />
+                        {error && (
+                            <Alert variant="destructive" className="mb-4">
+                                <AlertCircle className="h-4 w-4" />
+                                <AlertTitle>Error</AlertTitle>
+                                <AlertDescription>{error}</AlertDescription>
+                            </Alert>
+                        )}
+                        <InboundMonitoringTable data={documents} loading={loading} />
                     </CardContent>
                 </Card>
             </div>
