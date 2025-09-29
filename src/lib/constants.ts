@@ -41,6 +41,23 @@ export const NAV_LINKS: NavLink[] = [
         href: '/inbound',
         label: 'Inbound',
         icon: ArrowRightSquare,
+        children: [
+             {
+                href: '#',
+                label: 'Task',
+                icon: ListTodo,
+            },
+             {
+                href: '#',
+                label: 'Create',
+                icon: FilePlus,
+            },
+            {
+                href: '#',
+                label: 'Monitoring',
+                icon: Eye,
+            },
+        ]
     },
     {
         href: '/putaway',
