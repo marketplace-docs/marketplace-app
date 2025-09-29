@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
@@ -112,21 +111,38 @@ export default function CreateInboundPage() {
     }
     
     setIsSubmitting(true);
-    // This is a placeholder for the actual API call
-    // In a real scenario, you would send docDetails and stagedItems to your backend
     try {
-        await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API delay
-        toast({
-            title: 'Success (Simulation)',
-            description: `Document ${docDetails.reference} with ${stagedItems.length} items has been submitted.`,
-        });
-        router.push('/inbound/monitoring');
+      const payload = {
+        document: {
+          ...docDetails,
+          date: new Date().toISOString(),
+        },
+        items: stagedItems,
+        user
+      };
+
+      const response = await fetch('/api/inbound-documents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to submit document.');
+      }
+        
+      toast({
+          title: 'Success',
+          description: `Document ${docDetails.reference} with ${stagedItems.length} items has been submitted.`,
+      });
+      router.push('/inbound/monitoring');
 
     } catch (error: any) {
         toast({
             variant: 'destructive',
             title: 'Error',
-            description: 'Something went wrong while creating the document.',
+            description: error.message || 'Something went wrong while creating the document.',
         });
     } finally {
         setIsSubmitting(false);
