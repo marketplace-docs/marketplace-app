@@ -53,6 +53,24 @@ export default function CreateInboundPage() {
 
   const canCreate = user?.role && ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin'].includes(user.role);
   
+  const generateDocNumber = useCallback(async () => {
+    try {
+        const response = await fetch('/api/inbound-documents/generate-number');
+        if (!response.ok) throw new Error('Failed to generate document number.');
+        const data = await response.json();
+        setDocDetails(prev => ({ ...prev, reference: data.newDocNumber }));
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not generate document number.' });
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    if (canCreate) {
+        generateDocNumber();
+    }
+  }, [canCreate, generateDocNumber]);
+
+
   const handleItemInputChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setNewItem(prev => ({ ...prev, [name]: value }));
@@ -167,7 +185,7 @@ export default function CreateInboundPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                      <div className="space-y-2">
                         <Label htmlFor="reference">Reference</Label>
-                        <Input id="reference" placeholder="e.g., PO-12345" value={docDetails.reference} onChange={(e) => setDocDetails(prev => ({...prev, reference: e.target.value}))}/>
+                        <Input id="reference" value={docDetails.reference} readOnly className="bg-muted" />
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="date">Date</Label>
