@@ -1,439 +1,198 @@
+
 'use client';
 
-import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { MainLayout } from '@/components/layout/main-layout';
-import type { PutawayDocument } from '@/types/putaway-document';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { MainLayout } from "@/components/layout/main-layout";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Loader2, AlertCircle, ChevronUp, ChevronDown } from "lucide-react";
 import { format } from 'date-fns';
-import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Pencil, Trash2, Loader2, AlertCircle, Upload, Download, Check, X } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuth } from '@/hooks/use-auth';
-import { Checkbox } from '@/components/ui/checkbox';
+import type { PutawayDocument } from '@/types/putaway-document';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-const statusVariantMap: { [key in PutawayDocument['status']]: "default" | "secondary" | "destructive" | "outline" } = {
-    'Done': 'default',
-    'Pending': 'secondary',
+type DocumentGroup = {
+  documentNo: string;
+  workerName: string;
+  workerEmail: string;
+  startTime: string;
+  doneTime: string;
+  items: PutawayDocument[];
 };
 
-export default function MonitoringPutawayPage() {
-  const [documents, setDocuments] = useState<PutawayDocument[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+const ExpandedRow = ({ item }: { item: PutawayDocument }) => (
+    <TableRow className="bg-muted/50 hover:bg-muted/60">
+        <TableCell colSpan={6} className="p-0">
+            <div className="p-4">
+                 <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>From</TableHead>
+                            <TableHead>To</TableHead>
+                            <TableHead>Quantity</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead>At</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        <TableRow>
+                            <TableCell>{`DO-SRI-ONLCK-INT-${new Date(item.date).getFullYear()}-${item.no_document.slice(-6)}`}</TableCell>
+                            <TableCell>{item.location}</TableCell>
+                            <TableCell>{item.qty}</TableCell>
+                            <TableCell>marketplace</TableCell>
+                             <TableCell>{format(new Date(item.date), "eee, dd/MMM/yyyy HH:mm")}</TableCell>
+                        </TableRow>
+                    </TableBody>
+                </Table>
+            </div>
+        </TableCell>
+    </TableRow>
+);
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  
-  const [isEditDialogOpen, setEditDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [isUploadDialogOpen, setUploadDialogOpen] = useState(false);
-  const [selectedDoc, setSelectedDoc] = useState<PutawayDocument | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
-  const { user } = useAuth();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  const canUpdate = user?.role && ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin'].includes(user.role);
-  const canDelete = user?.role === 'Super Admin';
 
-  const [selection, setSelection] = useState<Record<string, boolean>>({});
-  const [searchDocument, setSearchDocument] = useState('');
-  const [searchBarcode, setSearchBarcode] = useState('');
+const DocumentCard = ({ group }: { group: DocumentGroup }) => {
+    const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
 
-  const fetchDocuments = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch('/api/putaway-documents');
-      if (!response.ok) {
-        throw new Error('Failed to fetch putaway documents');
-      }
-      const data = await response.json();
-      setDocuments(data);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+    const toggleRow = (id: string) => {
+        setExpandedRows(prev => ({...prev, [id]: !prev[id]}));
     }
-  }, []);
 
-  useEffect(() => {
-    fetchDocuments();
-  }, [fetchDocuments]);
-
-  const filteredDocuments = useMemo(() => {
-    return documents.filter(doc => 
-      doc.no_document.toLowerCase().includes(searchDocument.toLowerCase()) &&
-      doc.barcode.toLowerCase().includes(searchBarcode.toLowerCase())
-    );
-  }, [documents, searchDocument, searchBarcode]);
-
-  const selectedIds = useMemo(() => Object.keys(selection).filter(id => selection[id]), [selection]);
-
-  const totalPages = Math.ceil(filteredDocuments.length / rowsPerPage);
-  const paginatedDocs = filteredDocuments.slice(
-    (currentPage - 1) * rowsPerPage,
-    currentPage * rowsPerPage
-  );
-
-  const handleNextPage = () => {
-    setCurrentPage((prev) => (prev < totalPages ? prev + 1 : prev));
-  };
-
-  const handlePrevPage = () => {
-    setCurrentPage((prev) => (prev > 1 ? prev - 1 : prev));
-  };
-  
-  React.useEffect(() => {
-    setCurrentPage(1);
-  }, [rowsPerPage, searchDocument, searchBarcode]);
-
-  const handleOpenEditDialog = (doc: PutawayDocument) => {
-    setSelectedDoc({ ...doc });
-    setEditDialogOpen(true);
-  };
-
-  const handleOpenDeleteDialog = (doc: PutawayDocument) => {
-    setSelectedDoc(doc);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleSaveChanges = async () => {
-    if (!selectedDoc || !user) return;
-    setIsSubmitting(true);
-    try {
-      const response = await fetch(`/api/putaway-documents/${selectedDoc.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...selectedDoc, userRole: user.role, userName: user.name, userEmail: user.email })
-      });
-      if (!response.ok) throw new Error('Failed to update document');
-      
-      await fetchDocuments();
-      setEditDialogOpen(false);
-      setSelectedDoc(null);
-      toast({ title: "Success", description: "Document has been updated successfully." });
-    } catch (error) {
-      toast({ variant: 'destructive', title: "Error", description: "Could not update document." });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleDeleteDoc = async () => {
-    if (!selectedDoc || !user) return;
-    setIsSubmitting(true);
-    try {
-      const response = await fetch(`/api/putaway-documents/${selectedDoc.id}`, {
-        method: 'DELETE',
-        headers: { 'X-User-Name': user.name, 'X-User-Email': user.email, 'X-User-Role': user.role }
-      });
-      if (!response.ok) throw new Error('Failed to delete document');
-
-      await fetchDocuments();
-      setDeleteDialogOpen(false);
-      setSelectedDoc(null);
-      toast({ title: "Success", description: "Document has been deleted.", variant: "destructive" });
-    } catch (error) {
-      toast({ variant: 'destructive', title: "Error", description: "Could not delete document." });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleBulkAction = async (action: 'delete' | 'confirm' | 'pending') => {
-      if (selectedIds.length === 0) {
-        toast({ variant: 'destructive', title: 'No Selection', description: 'Please select at least one document.' });
-        return;
-      }
-      if (!user) return;
-      
-      setIsSubmitting(true);
-      try {
-        let response;
-        if (action === 'delete') {
-            response = await fetch('/api/putaway-documents/bulk-delete', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ids: selectedIds, userName: user.name, userEmail: user.email, userRole: user.role }),
-            });
-        } else {
-            response = await fetch('/api/putaway-documents/bulk-update', {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ids: selectedIds, status: action === 'confirm' ? 'Done' : 'Pending', userName: user.name, userEmail: user.email, userRole: user.role }),
-            });
-        }
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || `Failed to ${action} documents.`);
-        }
-
-        await fetchDocuments();
-        setSelection({});
-        toast({ title: 'Success', description: `${selectedIds.length} documents have been updated.` });
-
-      } catch (err: any) {
-         toast({ variant: 'destructive', title: 'Action Failed', description: err.message });
-      } finally {
-         setIsSubmitting(false);
-      }
-  };
-  
-  return (
-    <MainLayout>
-      <div className="w-full space-y-6">
-        <h1 className="text-2xl font-bold">Monitoring Putaway</h1>
-        {error && (
-            <Alert variant="destructive" className="mb-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-            </Alert>
-        )}
+    return (
         <Card>
-          <CardHeader className="p-6">
-            <CardTitle>Putaway Documents</CardTitle>
-            <CardDescription>A list of all completed putaway tasks.</CardDescription>
-            <div className="flex flex-col md:flex-row items-center gap-2 pt-4">
-              <Input 
-                  placeholder="Search document no..." 
-                  value={searchDocument}
-                  onChange={(e) => setSearchDocument(e.target.value)}
-                  className="w-full md:w-auto"
-              />
-              <Input 
-                  placeholder="Search barcode..." 
-                  value={searchBarcode}
-                  onChange={(e) => setSearchBarcode(e.target.value)}
-                  className="w-full md:w-auto"
-              />
-              <div className="flex-1" />
-               {canDelete && (
-                <Button variant="destructive" size="sm" onClick={() => handleBulkAction('delete')} disabled={isSubmitting || selectedIds.length === 0}><Trash2 className="mr-2 h-4 w-4"/>Delete Selected</Button>
-               )}
-               {canUpdate && (
-                <>
-                <Button variant="outline" size="sm" onClick={() => handleBulkAction('confirm')} disabled={isSubmitting || selectedIds.length === 0}><Check className="mr-2 h-4 w-4"/>Confirm</Button>
-                <Button variant="outline" size="sm" onClick={() => handleBulkAction('pending')} disabled={isSubmitting || selectedIds.length === 0}><X className="mr-2 h-4 w-4"/>Pending</Button>
-                </>
-               )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="border rounded-lg">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12">
-                        <Checkbox
-                            checked={selectedIds.length > 0 && selectedIds.length === paginatedDocs.length}
-                            onCheckedChange={(checked) => {
-                                const newSelection: Record<string, boolean> = {};
-                                if (checked) {
-                                    paginatedDocs.forEach(doc => newSelection[doc.id] = true);
-                                }
-                                setSelection(newSelection);
-                            }}
-                        />
-                    </TableHead>
-                    <TableHead>No. Document</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>SKU</TableHead>
-                    <TableHead>Barcode</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Brand</TableHead>
-                    <TableHead>QTY</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Check By</TableHead>
-                    {(canUpdate || canDelete) && <TableHead className="text-right">Actions</TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                     <TableRow>
-                        <TableCell colSpan={11} className="h-24 text-center">
-                            <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
-                        </TableCell>
-                    </TableRow>
-                  ) : paginatedDocs.length > 0 ? (
-                    paginatedDocs.map((doc) => (
-                      <TableRow key={doc.id} data-state={selection[doc.id] && "selected"}>
-                         <TableCell>
-                            <Checkbox checked={selection[doc.id] || false} onCheckedChange={(checked) => setSelection(prev => ({...prev, [doc.id]: !!checked}))} />
-                         </TableCell>
-                        <TableCell className="font-medium">{doc.no_document}</TableCell>
-                        <TableCell>{format(new Date(doc.date), "eee, dd/MMM/yyyy HH:mm")}</TableCell>
-                        <TableCell>{doc.sku}</TableCell>
-                        <TableCell>{doc.barcode}</TableCell>
-                        <TableCell>{doc.location}</TableCell>
-                        <TableCell>{doc.brand}</TableCell>
-                        <TableCell>{doc.qty}</TableCell>
-                        <TableCell>
-                          <Badge variant={statusVariantMap[doc.status] || 'default'}>{doc.status}</Badge>
-                        </TableCell>
-                        <TableCell>{doc.check_by}</TableCell>
-                        {(canUpdate || canDelete) && (
-                            <TableCell className="text-right">
-                                <div className="flex items-center justify-end gap-2">
-                                  {canUpdate && (
-                                    <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(doc)}>
-                                        <Pencil className="h-4 w-4" />
-                                        <span className="sr-only">Edit</span>
-                                    </Button>
-                                  )}
-                                  {canDelete && (
-                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" onClick={() => handleOpenDeleteDialog(doc)}>
-                                        <Trash2 className="h-4 w-4" />
-                                        <span className="sr-only">Delete</span>
-                                    </Button>
-                                  )}
-                                </div>
-                            </TableCell>
-                        )}
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell
-                        colSpan={11}
-                        className="h-24 text-center text-muted-foreground"
-                      >
-                        No documents found.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-             <div className="flex items-center justify-end space-x-2 py-4">
-                <div className="flex-1 text-sm text-muted-foreground">
-                    Page {filteredDocuments.length > 0 ? currentPage : 0} of {totalPages}
+            <CardHeader className="bg-green-100 p-4 rounded-t-lg border-b border-green-200">
+                <div className="flex justify-between items-center text-sm">
+                    <div>
+                        <p><span className="font-semibold">Document No:</span></p>
+                        <p><span className="font-semibold">Worker:</span> ({group.workerEmail}) {group.workerName}</p>
+                    </div>
+                     <Badge variant="destructive" className="bg-red-500 hover:bg-red-600">
+                        From Internal Transfer ({`DO-SRI-ONLCK-INT-${new Date(group.startTime).getFullYear()}-${group.documentNo.slice(-6)}`})
+                    </Badge>
+                    <div className="text-right">
+                        <p><span className="font-semibold">Start:</span> {format(new Date(group.startTime), "eee, dd/MMM/yyyy HH:mm")}</p>
+                        <p><span className="font-semibold">Done:</span> {format(new Date(group.doneTime), "eee, dd/MMM/yyyy HH:mm")}</p>
+                    </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                    <span className="text-sm text-muted-foreground">Rows per page:</span>
-                    <Select
-                        value={`${rowsPerPage}`}
-                        onValueChange={(value) => {
-                            setRowsPerPage(Number(value));
-                        }}
-                        >
-                        <SelectTrigger className="h-8 w-[70px]">
-                            <SelectValue placeholder={rowsPerPage} />
-                        </SelectTrigger>
-                        <SelectContent side="top">
-                            {[10, 25, 50, 100].map((pageSize) => (
-                            <SelectItem key={pageSize} value={`${pageSize}`}>
-                                {pageSize}
-                            </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handlePrevPage}
-                    disabled={currentPage === 1}
-                >
-                    <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleNextPage}
-                    disabled={currentPage === totalPages || totalPages === 0}
-                >
-                    <ChevronRight className="h-4 w-4" />
-                </Button>
-            </div>
-          </CardContent>
+            </CardHeader>
+            <CardContent className="p-0">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>NAME</TableHead>
+                            <TableHead>EAN</TableHead>
+                            <TableHead>QTY</TableHead>
+                            <TableHead>QTY MOVE</TableHead>
+                            <TableHead>QTY DONE</TableHead>
+                            <TableHead>DONE AT</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {group.items.map((item) => (
+                           <React.Fragment key={item.id}>
+                             <TableRow onClick={() => toggleRow(item.id)} className="cursor-pointer">
+                                <TableCell className="font-medium">[{item.sku}] {item.brand}</TableCell>
+                                <TableCell>{item.barcode}</TableCell>
+                                <TableCell>{item.qty}</TableCell>
+                                <TableCell>{item.qty}</TableCell>
+                                <TableCell>{item.qty}</TableCell>
+                                <TableCell>{format(new Date(item.date), "eee, dd/MMM/yyyy HH:mm")}</TableCell>
+                             </TableRow>
+                             {expandedRows[item.id] && <ExpandedRow item={item} />}
+                           </React.Fragment>
+                        ))}
+                    </TableBody>
+                </Table>
+            </CardContent>
         </Card>
-      </div>
+    );
+};
 
-       {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
-          <DialogContent className="sm:max-w-[600px]">
-              <DialogHeader>
-                  <DialogTitle>Edit Putaway Document</DialogTitle>
-              </DialogHeader>
-              {selectedDoc && (
-                  <div className="grid gap-4 py-4">
-                      <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="edit-nodocument" className="text-right">No. Document</Label>
-                          <Input id="edit-nodocument" value={selectedDoc.no_document} className="col-span-3" onChange={(e) => setSelectedDoc({ ...selectedDoc, no_document: e.target.value })} />
-                      </div>
-                       <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="edit-exp_date" className="text-right">Exp Date</Label>
-                            <Input id="edit-exp_date" type="date" value={format(new Date(selectedDoc.exp_date), 'yyyy-MM-dd')} className="col-span-3" onChange={(e) => setSelectedDoc({ ...selectedDoc, exp_date: e.target.value })} />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="edit-qty" className="text-right">QTY</Label>
-                            <Input id="edit-qty" type="number" value={selectedDoc.qty} className="col-span-3" onChange={(e) => setSelectedDoc({ ...selectedDoc, qty: parseInt(e.target.value, 10) || 0 })} />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="edit-status" className="text-right">Status</Label>
-                            <Select value={selectedDoc.status} onValueChange={(value: 'Done' | 'Pending') => setSelectedDoc({ ...selectedDoc, status: value })}>
-                                <SelectTrigger id="edit-status" className="col-span-3">
-                                    <SelectValue placeholder="Select Status" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Done">Done</SelectItem>
-                                    <SelectItem value="Pending">Pending</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                  </div>
-              )}
-              <DialogFooter>
-                  <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
-                  <Button onClick={handleSaveChanges} disabled={isSubmitting}>
-                     {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Save Changes
-                  </Button>
-              </DialogFooter>
-          </DialogContent>
-      </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <DialogContent>
-              <DialogHeader>
-                  <DialogTitle>Are you sure?</DialogTitle>
-                  <DialogDescription>
-                      This action cannot be undone. This will permanently delete the document <span className="font-semibold">{selectedDoc?.no_document}</span>.
-                  </DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                  <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-                  <Button variant="destructive" onClick={handleDeleteDoc} disabled={isSubmitting}>
-                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Delete
-                  </Button>
-              </DialogFooter>
-          </DialogContent>
-      </Dialog>
-    </MainLayout>
-  );
+export default function MonitoringPutawayPage() {
+    const [documents, setDocuments] = useState<PutawayDocument[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetchDocuments = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const response = await fetch('/api/putaway-documents');
+            if (!response.ok) {
+                throw new Error('Failed to fetch putaway documents');
+            }
+            const data = await response.json();
+            // Filter for only 'Done' tasks as per the design
+            setDocuments(data.filter((d: PutawayDocument) => d.status === 'Done'));
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchDocuments();
+    }, [fetchDocuments]);
+    
+    const groupedDocuments = useMemo(() => {
+        const groups: Record<string, DocumentGroup> = {};
+        documents.forEach(doc => {
+            const key = doc.no_document;
+            if (!groups[key]) {
+                groups[key] = {
+                    documentNo: doc.no_document,
+                    workerName: doc.check_by,
+                    workerEmail: `${doc.check_by.toLowerCase().replace(' ', '.')}@sociolla.com`,
+                    startTime: doc.date,
+                    doneTime: doc.date, // Simplification, in reality this might differ
+                    items: []
+                };
+            }
+            groups[key].items.push(doc);
+            // Update start/done times
+            if (new Date(doc.date) < new Date(groups[key].startTime)) {
+                groups[key].startTime = doc.date;
+            }
+            if (new Date(doc.date) > new Date(groups[key].doneTime)) {
+                groups[key].doneTime = doc.date;
+            }
+        });
+        return Object.values(groups).sort((a,b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
+    }, [documents]);
+
+
+    return (
+        <MainLayout>
+             <div className="w-full space-y-6">
+                <h1 className="text-2xl font-bold">Monitoring Putaway</h1>
+                 {error && (
+                    <Alert variant="destructive" className="mb-4">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Error</AlertTitle>
+                    <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                )}
+                
+                {loading ? (
+                    <div className="flex justify-center items-center h-64">
+                         <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
+                    </div>
+                ) : groupedDocuments.length > 0 ? (
+                    <div className="space-y-4">
+                        {groupedDocuments.map(group => (
+                            <DocumentCard key={group.documentNo} group={group} />
+                        ))}
+                    </div>
+                ) : (
+                    <Card>
+                        <CardContent className="h-48 flex flex-col items-center justify-center text-muted-foreground">
+                             <p>No completed putaway documents found.</p>
+                        </CardContent>
+                    </Card>
+                )}
+            </div>
+        </MainLayout>
+    );
 }
