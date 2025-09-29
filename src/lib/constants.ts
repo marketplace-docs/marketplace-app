@@ -43,19 +43,19 @@ export const NAV_LINKS: NavLink[] = [
         icon: ArrowRightSquare,
         children: [
              {
-                href: '#',
-                label: 'Task',
-                icon: ListTodo,
-            },
-             {
-                href: '#',
+                href: '/inbound/create',
                 label: 'Create',
                 icon: FilePlus,
             },
             {
-                href: '#',
+                href: '/inbound/monitoring',
                 label: 'Monitoring',
                 icon: Eye,
+            },
+             {
+                href: '/inbound/task',
+                label: 'Task',
+                icon: ListTodo,
             },
         ]
     },
@@ -306,5 +306,3 @@ export const NAV_LINKS: NavLink[] = [
         icon: Settings,
     }
 ];
-
-    
