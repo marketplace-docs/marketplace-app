@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from '@/components/ui/button';
 import { Eye, Check, Send } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { format } from 'date-fns';
 
 // Mock data - replace with actual data fetching in the future
 const mockInboundData = [
@@ -45,7 +46,7 @@ const InboundMonitoringTable = ({ data }: { data: typeof mockInboundData }) => (
                         <TableCell>{item.brand}</TableCell>
                         <TableCell>{item.exp_date}</TableCell>
                         <TableCell>{item.received_by}</TableCell>
-                        <TableCell>{new Date(item.date).toLocaleDateString()}</TableCell>
+                        <TableCell>{format(new Date(item.date), "eee, dd/MMM/yyyy HH:mm")}</TableCell>
                         <TableCell>
                             <Badge variant={item.main_status === 'Done' ? 'default' : 'secondary'}>{item.main_status}</Badge>
                         </TableCell>

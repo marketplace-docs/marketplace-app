@@ -5,6 +5,7 @@ import React from 'react';
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { format } from 'date-fns';
 
 // Mock data - replace with actual data fetching in the future
 const mockInboundData = [
@@ -41,7 +42,7 @@ const InboundTable = ({ data }: { data: typeof mockInboundData }) => (
                         <TableCell>{item.brand}</TableCell>
                         <TableCell>{item.exp_date}</TableCell>
                         <TableCell>{item.received_by}</TableCell>
-                        <TableCell>{new Date(item.date).toLocaleDateString()}</TableCell>
+                        <TableCell>{format(new Date(item.date), "eee, dd/MMM/yyyy HH:mm")}</TableCell>
                     </TableRow>
                 )) : (
                     <TableRow>
