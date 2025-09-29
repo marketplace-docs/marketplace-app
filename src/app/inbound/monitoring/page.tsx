@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -125,8 +126,10 @@ const InboundMonitoringTable = ({ data }: { data: typeof mockInboundData }) => (
                         <TableCell>
                             <Badge variant={item.main_status === 'Done' ? 'default' : 'secondary'}>{item.main_status}</Badge>
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right flex items-center justify-end">
                            <InboundDetailDialog document={item} />
+                            <Button variant="ghost" size="icon"><Check className="h-4 w-4 text-green-600" /></Button>
+                            <Button variant="ghost" size="icon"><Send className="h-4 w-4 text-blue-600" /></Button>
                         </TableCell>
                     </TableRow>
                 )) : (
