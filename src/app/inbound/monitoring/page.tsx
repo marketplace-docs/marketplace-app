@@ -140,8 +140,6 @@ const InboundMonitoringTable = ({ data, loading }: { data: InboundDocument[], lo
                         </TableCell>
                         <TableCell className="text-right flex items-center justify-end">
                            <InboundDetailDialog document={item} />
-                            <Button variant="ghost" size="icon"><Check className="h-4 w-4 text-green-600" /></Button>
-                            <Button variant="ghost" size="icon"><Send className="h-4 w-4 text-blue-600" /></Button>
                         </TableCell>
                     </TableRow>
                 )) : (
