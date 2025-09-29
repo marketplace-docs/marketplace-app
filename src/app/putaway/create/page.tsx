@@ -58,9 +58,9 @@ export default function AssignTaskPage() {
 
   return (
     <MainLayout>
-      <div className="w-full max-w-2xl mx-auto">
+      <div className="w-full flex-grow flex flex-col items-center justify-center">
         <h1 className="text-2xl font-bold mb-6 text-center">Assign Task</h1>
-        <Card>
+        <Card className="w-full">
           <CardContent className="p-0">
             <div className="relative">
               <Label htmlFor="putaway-code" className="sr-only">
