@@ -32,14 +32,23 @@ const featureDescriptions: FeatureDescription[] = [
         ]
     },
     {
+        label: "Inbound",
+        icon: NAV_LINKS.find(l => l.label === "Inbound")!.icon,
+        description: "Manajemen proses penerimaan barang dari supplier, memastikan data tercatat akurat sebelum masuk ke proses putaway.",
+        children: [
+            { label: "Create", description: "Membuat dokumen penerimaan (inbound) baru, mencari data produk via SKU/Barcode, dan menambahkan item ke dalam satu dokumen untuk diproses." },
+            { label: "Monitoring", description: "Memantau semua dokumen inbound dan melihat detail progres putaway untuk setiap item, termasuk durasi dan kuantitas yang sudah selesai." },
+            { label: "Task", description: "Menampilkan daftar tanggung jawab umum dan panduan kerja untuk tim Inbound." },
+        ]
+    },
+    {
         label: "Putaway",
         icon: NAV_LINKS.find(l => l.label === "Putaway")!.icon,
-        description: "Manajemen proses penerimaan dan penempatan barang ke lokasi penyimpanan di gudang.",
+        description: "Manajemen proses penempatan barang dari area penerimaan ke lokasi penyimpanan di gudang.",
         children: [
-            { label: "Create", description: "Mencatat dokumen penerimaan barang baru, mendukung input massal via CSV." },
-            { label: "Monitoring Document", description: "Melihat, mengedit, dan mengelola semua dokumen penerimaan barang." },
-            { label: "Go-Putaway", description: "Fitur untuk memindahkan stok antar lokasi gudang dengan cepat dan akurat." },
-            { label: "Update Expired", description: "Memperbarui lokasi, tanggal kedaluwarsa, atau memecah stok (split batch) untuk produk yang sudah ada." },
+            { label: "Go-Putaway", description: "Fitur untuk operator gudang. Scan dokumen inbound, verifikasi produk, lalu scan lokasi tujuan untuk menyelesaikan proses putaway secara akurat." },
+            { label: "Monitoring", description: "Melihat riwayat lengkap semua dokumen putaway yang telah selesai, termasuk detail pergerakan barang dari dokumen sumber ke lokasi tujuan." },
+            { label: "Update Expired", description: "Memperbarui lokasi, tanggal kedaluwarsa, atau memecah stok (split batch) untuk produk yang sudah ada di gudang." },
             { label: "Task", description: "Menampilkan daftar dokumen putaway yang statusnya masih 'Pending' dan memerlukan tindakan segera." },
         ]
     },
@@ -49,7 +58,7 @@ const featureDescriptions: FeatureDescription[] = [
         description: "Mengelola proses pengembalian barang dari pelanggan atau ekspedisi.",
         children: [
             { label: "Create", description: "Mencatat dokumen retur baru." },
-            { label: "Monitoring Document", description: "Melihat dan mengelola semua dokumen retur yang tercatat." },
+            { label: "Monitoring", description: "Melihat dan mengelola semua dokumen retur yang tercatat." },
             { label: "Task", description: "Menampilkan daftar tanggung jawab umum untuk proses penanganan retur." },
         ]
     },
@@ -86,7 +95,6 @@ const featureDescriptions: FeatureDescription[] = [
         description: "Pusat data untuk semua informasi terkait produk, stok, dan lokasi gudang.",
         children: [
             { label: "Batch Product", description: "Menampilkan data stok terkini yang diagregasi per batch (berdasarkan lokasi & tanggal kedaluwarsa)." },
-            { label: "Stock In", description: "Menampilkan riwayat lengkap semua barang yang masuk ke gudang (goods receipt)." },
             { label: "Stock Log", description: "Menampilkan riwayat lengkap semua pergerakan stok (masuk, keluar, dan pembaruan internal)." },
             { label: "Location", description: "Mengelola data master semua lokasi gudang. Mendukung penambahan massal via upload CSV." },
         ]

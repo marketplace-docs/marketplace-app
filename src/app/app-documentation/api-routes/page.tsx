@@ -25,10 +25,20 @@ const apiRoutes = [
         ]
     },
     {
+        category: "Dokumen Inbound (Goods Receipt)",
+        endpoints: [
+            { method: "GET", path: "/api/inbound-documents", description: "Mengambil semua dokumen inbound." },
+            { method: "POST", path: "/api/inbound-documents", description: "Membuat dokumen inbound baru beserta item-itemnya." },
+            { method: "PATCH", path: "/api/inbound-documents/[id]", description: "Memperbarui status utama dokumen inbound (misal: menjadi 'Done')." },
+            { method: "GET", path: "/api/inbound-documents/generate-number", description: "Membuat nomor dokumen baru untuk inbound." },
+        ]
+    },
+    {
         category: "e-Commerce (Pesanan Manual & Wave)",
         endpoints: [
             { method: "GET", path: "/api/manual-orders", description: "Mengambil semua data pesanan manual yang siap diproses. Gunakan ?status=Out of Stock untuk melihat pesanan OOS." },
             { method: "POST", path: "/api/manual-orders", description: "Membuat pesanan manual baru (tunggal atau massal via CSV dengan pengisian otomatis 'from' dan 'type')." },
+            { method: "POST", path: "/api/manual-orders/bulk-delete", description: "Menghapus beberapa pesanan manual sekaligus berdasarkan ID." },
             { method: "PATCH", path: "/api/manual-orders/[id]", description: "Mengubah status pesanan, misal dari OOS ke 'Payment Accepted'." },
             { method: "DELETE", path: "/api/manual-orders/[id]", description: "Menghapus pesanan manual (digunakan saat melaporkan OOS ke CS)." },
             { method: "GET", path: "/api/waves", description: "Mengambil semua 'wave' yang telah dibuat." },
@@ -74,7 +84,7 @@ const apiRoutes = [
         ]
     },
     {
-        category: "Dokumen Putaway (Goods Receipt)",
+        category: "Dokumen Putaway",
         endpoints: [
             { method: "GET", path: "/api/putaway-documents", description: "Mengambil semua dokumen putaway." },
             { method: "POST", path: "/api/putaway-documents", description: "Membuat dokumen putaway baru (tunggal atau massal)." },
@@ -193,5 +203,3 @@ export default function ApiRoutesPage() {
         </MainLayout>
     );
 }
-
-    

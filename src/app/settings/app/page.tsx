@@ -9,27 +9,32 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
-const techStack = ["Next.js", "React", "TypeScript", "Tailwind CSS", "ShadCN UI", "Genkit", "Firebase"];
+const techStack = ["Next.js", "React", "TypeScript", "Tailwind CSS", "ShadCN UI", "Genkit", "Supabase"];
 
 export default function AppSettingsPage() {
     const { toast } = useToast();
 
     const handleClearCache = () => {
         try {
+            // Clear local storage and session storage
             localStorage.clear();
             sessionStorage.clear();
+            
             toast({
                 title: "Cache Cleared",
-                description: "Local data has been cleared. The application will now reload.",
+                description: "Local data has been cleared. The application will now hard reload to fetch the latest data from the server.",
             });
+            
+            // Perform a hard reload to bypass the browser cache
             setTimeout(() => {
                 window.location.reload(true);
             }, 1500);
+
         } catch (error) {
             toast({
                 variant: "destructive",
                 title: "Error",
-                description: "Could not clear cache.",
+                description: "Could not clear cache. Please try clearing your browser data manually.",
             });
         }
     };
@@ -86,9 +91,9 @@ export default function AppSettingsPage() {
                     </CardHeader>
                     <CardContent>
                          <div>
-                            <h3 className="font-semibold text-lg mb-2">Clear Application Cache</h3>
+                            <h3 className="font-semibold text-lg mb-2">Clear Cache & Hard Reload</h3>
                             <p className="text-sm text-muted-foreground mb-4">
-                                This will clear all locally stored data, including your session, and force a hard reload of the application. Use this if you are experiencing data inconsistencies.
+                                This will clear all data stored in your browser (like your login session) and force the application to download the newest version from the server. Use this to solve data inconsistencies or display errors.
                             </p>
                             <Button variant="destructive" onClick={handleClearCache}>
                                 <Trash2 className="mr-2 h-4 w-4" />
