@@ -6,12 +6,14 @@ import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
-import { Eye, Check, Send, Search, X, ChevronDown, ChevronUp, Loader2, AlertCircle } from 'lucide-react';
+import { Eye, Search, ChevronDown, ChevronUp, Loader2, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { format } from 'date-fns';
+import { format, formatDistanceToNowStrict } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import type { PutawayDocument } from '@/types/putaway-document';
+import { useToast } from '@/hooks/use-toast';
 
 type InboundDocument = {
     id: number;
@@ -27,8 +29,54 @@ type InboundDocument = {
 };
 
 
-const InboundDetailDialog = ({ document }: { document: InboundDocument }) => {
+const InboundDetailDialog = ({ document: initialDoc }: { document: InboundDocument }) => {
     const [isExpanded, setIsExpanded] = useState(true);
+    const [putawayDocs, setPutawayDocs] = useState<PutawayDocument[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [duration, setDuration] = useState('00:00:00');
+    const { toast } = useToast();
+
+    const totalPutaway = useMemo(() => {
+        return putawayDocs.reduce((acc, doc) => acc + doc.qty, 0);
+    }, [putawayDocs]);
+    
+    const outstandingQty = initialDoc.qty - totalPutaway;
+    
+    const currentStatus = useMemo(() => {
+        if (outstandingQty <= 0) return 'Done';
+        if (totalPutaway > 0) return 'On Progress';
+        return 'Assign';
+    }, [outstandingQty, totalPutaway]);
+
+    useEffect(() => {
+        const fetchPutawayData = async () => {
+            setIsLoading(true);
+            try {
+                const response = await fetch('/api/putaway-documents');
+                if (!response.ok) throw new Error('Failed to fetch putaway history.');
+                const allDocs: PutawayDocument[] = await response.json();
+                
+                const relatedDocs = allDocs.filter(doc => doc.no_document === initialDoc.reference);
+                setPutawayDocs(relatedDocs);
+
+            } catch (error: any) {
+                toast({ variant: 'destructive', title: 'Error', description: error.message });
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchPutawayData();
+
+        const interval = setInterval(() => {
+           const newDuration = formatDistanceToNowStrict(new Date(initialDoc.date));
+           setDuration(newDuration);
+        }, 1000);
+
+        return () => clearInterval(interval);
+
+    }, [initialDoc, toast]);
+    
 
     return (
         <Dialog>
@@ -37,15 +85,9 @@ const InboundDetailDialog = ({ document }: { document: InboundDocument }) => {
             </DialogTrigger>
             <DialogContent className="max-w-4xl">
                 <DialogHeader>
-                    <DialogTitle>Putaway Task List of {document.reference}</DialogTitle>
+                    <DialogTitle>Putaway Task List of {initialDoc.reference}</DialogTitle>
                 </DialogHeader>
                 <div className="py-4">
-                    <div className="flex justify-end mb-4">
-                        <div className="relative w-64">
-                            <Input placeholder="Search..." />
-                            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        </div>
-                    </div>
                     <div className="border rounded-lg">
                         <Table>
                             <TableHeader>
@@ -61,16 +103,26 @@ const InboundDetailDialog = ({ document }: { document: InboundDocument }) => {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
+                                {isLoading ? (
+                                    <TableRow>
+                                        <TableCell colSpan={8} className="h-24 text-center">
+                                            <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                <>
                                 <TableRow>
-                                    <TableCell>{document.barcode}</TableCell>
-                                    <TableCell>{document.sku}</TableCell>
-                                    <TableCell>{document.received_by}</TableCell>
+                                    <TableCell>{initialDoc.barcode}</TableCell>
+                                    <TableCell>{initialDoc.sku}</TableCell>
+                                    <TableCell>{initialDoc.received_by}</TableCell>
                                     <TableCell>
-                                        <Badge className="bg-yellow-400 text-yellow-900 hover:bg-yellow-400/80">On Progress</Badge>
+                                        <Badge className={currentStatus === 'Done' ? 'bg-green-500' : 'bg-yellow-400 text-yellow-900'}>
+                                          {currentStatus}
+                                        </Badge>
                                     </TableCell>
-                                    <TableCell>00:00:00</TableCell>
-                                    <TableCell>{document.qty}</TableCell>
-                                    <TableCell>0</TableCell>
+                                    <TableCell>{duration}</TableCell>
+                                    <TableCell>{initialDoc.qty.toLocaleString()}</TableCell>
+                                    <TableCell>{totalPutaway.toLocaleString()}</TableCell>
                                     <TableCell className="text-right">
                                         <Button variant="ghost" size="icon" onClick={() => setIsExpanded(!isExpanded)}>
                                             {isExpanded ? <ChevronUp className="h-5 w-5 text-blue-600" /> : <ChevronDown className="h-5 w-5" />}
@@ -81,19 +133,20 @@ const InboundDetailDialog = ({ document }: { document: InboundDocument }) => {
                                      <TableRow className="bg-muted/50">
                                         <TableCell colSpan={8} className="p-0">
                                             <div className="p-4 grid grid-cols-5 gap-4 text-sm">
-                                                <div><p className="font-semibold">Exp Date</p><p>{format(new Date(document.exp_date), 'yyyy-MM-dd')}</p></div>
+                                                <div><p className="font-semibold">Exp Date</p><p>{format(new Date(initialDoc.exp_date), 'yyyy-MM-dd')}</p></div>
                                                 <div><p className="font-semibold">Condition</p><p>Normal</p></div>
-                                                <div><p className="font-semibold">Received</p><p>{document.qty}</p></div>
-                                                <div><p className="font-semibold">Putaway</p><p>0</p></div>
-                                                <div><p className="font-semibold">Outstanding</p><p>{document.qty}</p></div>
+                                                <div><p className="font-semibold">Received</p><p>{initialDoc.qty.toLocaleString()}</p></div>
+                                                <div><p className="font-semibold">Putaway</p><p>{totalPutaway.toLocaleString()}</p></div>
+                                                <div><p className="font-semibold text-red-600">Outstanding</p><p className="font-bold text-red-600">{outstandingQty.toLocaleString()}</p></div>
                                             </div>
                                         </TableCell>
                                     </TableRow>
                                 )}
+                                </>
+                                )}
                             </TableBody>
                         </Table>
                     </div>
-                    <div className="text-right text-sm text-muted-foreground mt-2">1-1 of 1</div>
                 </div>
             </DialogContent>
         </Dialog>
