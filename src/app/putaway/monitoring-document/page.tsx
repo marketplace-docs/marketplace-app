@@ -8,10 +8,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from '@/components/ui/button';
 import { Eye, Check, Send, Search, X, ChevronDown, ChevronUp, Loader2, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { format } from 'date-fns';
+import { format, formatDistanceToNowStrict } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import type { PutawayDocument } from '@/types/putaway-document';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
 
 type InboundDocument = {
     id: number;
@@ -26,9 +29,89 @@ type InboundDocument = {
     main_status: 'Assign' | 'In Progress' | 'Done';
 };
 
+const formatDuration = (milliseconds: number) => {
+    const totalSeconds = Math.floor(milliseconds / 1000);
+    const hours = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
+    const minutes = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
+    const seconds = (totalSeconds % 60).toString().padStart(2, '0');
+    return `${hours}:${minutes}:${seconds}`;
+};
 
-const InboundDetailDialog = ({ document }: { document: InboundDocument }) => {
+
+const InboundDetailDialog = ({ document: initialDoc }: { document: InboundDocument }) => {
     const [isExpanded, setIsExpanded] = useState(true);
+    const [document, setDocument] = useState(initialDoc);
+    const [totalPutaway, setTotalPutaway] = useState(0);
+    const [duration, setDuration] = useState('00:00:00');
+    const [isLoading, setIsLoading] = useState(false);
+    const { toast } = useToast();
+    const { user } = useAuth();
+    
+    const outstandingQty = document.qty - totalPutaway;
+
+    useEffect(() => {
+        setIsLoading(true);
+        const fetchPutawayData = async () => {
+            try {
+                const response = await fetch('/api/putaway-documents');
+                if (!response.ok) throw new Error('Failed to fetch putaway documents.');
+                const allPutawayDocs: PutawayDocument[] = await response.json();
+                
+                const relatedPutaway = allPutawayDocs.filter(p => p.no_document === document.reference && p.sku === document.sku);
+                const putawaySum = relatedPutaway.reduce((sum, current) => sum + current.qty, 0);
+                setTotalPutaway(putawaySum);
+            } catch (error: any) {
+                toast({ variant: 'destructive', title: 'Error', description: error.message });
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchPutawayData();
+    }, [document.reference, document.sku, toast]);
+    
+     useEffect(() => {
+        const calculateDuration = () => {
+            if (document.main_status === 'Done') {
+                // If you add an `updated_at` field for 'Done' status, you can calculate the final duration here.
+                // For now, we stop the timer.
+                return;
+            }
+            const startTime = new Date(document.date).getTime();
+            const now = new Date().getTime();
+            const diff = now - startTime;
+            setDuration(formatDuration(diff));
+        };
+
+        calculateDuration(); // Initial calculation
+        const intervalId = setInterval(calculateDuration, 1000);
+
+        return () => clearInterval(intervalId);
+    }, [document.date, document.main_status]);
+
+
+    const handleStatusUpdate = async (newStatus: 'In Progress' | 'Done') => {
+        if (!user) return;
+        setIsLoading(true);
+        try {
+            const response = await fetch(`/api/inbound-documents/${document.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ main_status: newStatus, user }),
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to update status.');
+            }
+            const updatedDoc = await response.json();
+            setDocument(updatedDoc); // Update local state to reflect change
+            toast({ title: "Status Updated", description: `Task status changed to ${newStatus}` });
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Update Failed', description: error.message });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
 
     return (
         <Dialog>
@@ -61,16 +144,31 @@ const InboundDetailDialog = ({ document }: { document: InboundDocument }) => {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
+                                 {isLoading ? (
+                                    <TableRow>
+                                        <TableCell colSpan={8} className="h-24 text-center">
+                                            <Loader2 className="animate-spin h-6 w-6 mx-auto" />
+                                        </TableCell>
+                                    </TableRow>
+                                 ) : (
+                                <>
                                 <TableRow>
                                     <TableCell>{document.barcode}</TableCell>
                                     <TableCell>{document.sku}</TableCell>
                                     <TableCell>{document.received_by}</TableCell>
                                     <TableCell>
-                                        <Badge className="bg-yellow-400 text-yellow-900 hover:bg-yellow-400/80">On Progress</Badge>
+                                        <Badge variant={document.main_status === 'Assign' ? 'secondary' : (document.main_status === 'In Progress' ? 'default' : 'default')}
+                                          className={
+                                            document.main_status === 'In Progress' ? 'bg-yellow-400 text-yellow-900 hover:bg-yellow-400/80' : 
+                                            document.main_status === 'Done' ? 'bg-green-500 hover:bg-green-600/80' : ''
+                                          }
+                                        >
+                                          {document.main_status}
+                                        </Badge>
                                     </TableCell>
-                                    <TableCell>00:00:00</TableCell>
+                                    <TableCell>{duration}</TableCell>
                                     <TableCell>{document.qty}</TableCell>
-                                    <TableCell>0</TableCell>
+                                    <TableCell>{totalPutaway}</TableCell>
                                     <TableCell className="text-right">
                                         <Button variant="ghost" size="icon" onClick={() => setIsExpanded(!isExpanded)}>
                                             {isExpanded ? <ChevronUp className="h-5 w-5 text-blue-600" /> : <ChevronDown className="h-5 w-5" />}
@@ -84,16 +182,26 @@ const InboundDetailDialog = ({ document }: { document: InboundDocument }) => {
                                                 <div><p className="font-semibold">Exp Date</p><p>{format(new Date(document.exp_date), 'yyyy-MM-dd')}</p></div>
                                                 <div><p className="font-semibold">Condition</p><p>Normal</p></div>
                                                 <div><p className="font-semibold">Received</p><p>{document.qty}</p></div>
-                                                <div><p className="font-semibold">Putaway</p><p>0</p></div>
-                                                <div><p className="font-semibold">Outstanding</p><p>{document.qty}</p></div>
+                                                <div><p className="font-semibold">Putaway</p><p>{totalPutaway}</p></div>
+                                                <div><p className="font-semibold">Outstanding</p><p>{outstandingQty}</p></div>
                                             </div>
                                         </TableCell>
                                     </TableRow>
+                                )}
+                                </>
                                 )}
                             </TableBody>
                         </Table>
                     </div>
                     <div className="text-right text-sm text-muted-foreground mt-2">1-1 of 1</div>
+                    <div className="flex justify-end gap-2 mt-4">
+                        <Button variant="outline" onClick={() => handleStatusUpdate('Done')} disabled={isLoading || document.main_status === 'Done'}>
+                           <Check className="h-4 w-4 mr-2"/> Mark as Done
+                        </Button>
+                         <Button variant="outline" onClick={() => handleStatusUpdate('In Progress')} disabled={isLoading || document.main_status !== 'Assign'}>
+                           <Send className="h-4 w-4 mr-2" /> Start Task
+                        </Button>
+                    </div>
                 </div>
             </DialogContent>
         </Dialog>
@@ -101,7 +209,8 @@ const InboundDetailDialog = ({ document }: { document: InboundDocument }) => {
 };
 
 
-const InboundMonitoringTable = ({ data, loading }: { data: InboundDocument[], loading: boolean }) => (
+const InboundMonitoringTable = ({ data, loading, onUpdate }: { data: InboundDocument[], loading: boolean, onUpdate: () => void }) => {
+    return (
     <div className="border rounded-lg">
         <Table>
             <TableHeader>
@@ -136,12 +245,14 @@ const InboundMonitoringTable = ({ data, loading }: { data: InboundDocument[], lo
                         <TableCell>{item.received_by}</TableCell>
                         <TableCell>{format(new Date(item.date), "eee, dd/MMM/yyyy HH:mm")}</TableCell>
                         <TableCell>
-                            <Badge variant={item.main_status === 'Done' ? 'default' : 'secondary'}>{item.main_status}</Badge>
+                            <Badge variant={item.main_status === 'Done' ? 'default' : (item.main_status === 'In Progress' ? 'default' : 'secondary')}
+                                className={item.main_status === 'In Progress' ? 'bg-yellow-400 text-yellow-900' : (item.main_status === 'Done' ? 'bg-green-500' : '')}
+                            >
+                                {item.main_status}
+                            </Badge>
                         </TableCell>
                         <TableCell className="text-right flex items-center justify-end">
                            <InboundDetailDialog document={item} />
-                            <Button variant="ghost" size="icon"><Check className="h-4 w-4 text-green-600" /></Button>
-                            <Button variant="ghost" size="icon"><Send className="h-4 w-4 text-blue-600" /></Button>
                         </TableCell>
                     </TableRow>
                 )) : (
@@ -152,7 +263,8 @@ const InboundMonitoringTable = ({ data, loading }: { data: InboundDocument[], lo
             </TableBody>
         </Table>
     </div>
-);
+    );
+};
 
 
 export default function InboundMonitoringPage() {
@@ -196,7 +308,7 @@ export default function InboundMonitoringPage() {
                                 <AlertDescription>{error}</AlertDescription>
                             </Alert>
                         )}
-                        <InboundMonitoringTable data={documents} loading={loading} />
+                        <InboundMonitoringTable data={documents} loading={loading} onUpdate={fetchDocuments} />
                     </CardContent>
                 </Card>
             </div>
