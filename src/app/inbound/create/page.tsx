@@ -24,7 +24,6 @@ type InboundItem = {
     sku: string;
     barcode: string;
     brand: string;
-    name: string;
     exp_date: string;
     qty: number;
 };
@@ -39,7 +38,7 @@ export default function CreateInboundPage() {
   const { user } = useAuth();
   const [stagedItems, setStagedItems] = useState<InboundItem[]>([]);
   const [newItem, setNewItem] = useState<Omit<InboundItem, 'qty'> & { qty: string }>({
-    sku: '', barcode: '', brand: '', name: '', exp_date: '', qty: ''
+    sku: '', barcode: '', brand: '', exp_date: '', qty: ''
   });
   const [docDetails, setDocDetails] = useState({
     reference: '',
@@ -101,13 +100,13 @@ export default function CreateInboundPage() {
 
   const handleAddItem = () => {
     const qty = parseInt(newItem.qty, 10);
-    if (!newItem.sku || !newItem.barcode || !newItem.name || !newItem.exp_date || isNaN(qty) || qty <= 0) {
+    if (!newItem.sku || !newItem.barcode || !newItem.exp_date || isNaN(qty) || qty <= 0) {
         toast({ variant: 'destructive', title: 'Error', description: 'Please fill all item fields with valid data.' });
         return;
     }
     
     setStagedItems(prev => [...prev, { ...newItem, qty }]);
-    setNewItem({ sku: '', barcode: '', brand: '', name: '', exp_date: '', qty: '' }); // Reset form
+    setNewItem({ sku: '', barcode: '', brand: '', exp_date: '', qty: '' }); // Reset form
   };
 
   const handleRemoveItem = (index: number) => {
@@ -214,11 +213,7 @@ export default function CreateInboundPage() {
                         <Input id="brand" name="brand" placeholder="Product brand" value={newItem.brand} className="bg-muted" readOnly />
                         {isProductLoading && <Loader2 className="absolute right-2 top-8 h-4 w-4 animate-spin" />}
                     </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="name">Name</Label>
-                        <Input id="name" name="name" placeholder="Product name" value={newItem.name} onChange={handleItemInputChange} />
-                    </div>
-                    <div className="space-y-2">
+                     <div className="space-y-2">
                         <Label htmlFor="exp_date">Exp Date</Label>
                         <Input id="exp_date" name="exp_date" type="date" value={newItem.exp_date} onChange={handleItemInputChange}/>
                     </div>
@@ -242,7 +237,7 @@ export default function CreateInboundPage() {
                             <TableRow>
                                 <TableHead>SKU</TableHead>
                                 <TableHead>Barcode</TableHead>
-                                <TableHead>Name</TableHead>
+                                <TableHead>Brand</TableHead>
                                 <TableHead>Exp Date</TableHead>
                                 <TableHead>QTY</TableHead>
                                 <TableHead className="text-right">Action</TableHead>
@@ -254,7 +249,7 @@ export default function CreateInboundPage() {
                                     <TableRow key={index}>
                                         <TableCell>{item.sku}</TableCell>
                                         <TableCell>{item.barcode}</TableCell>
-                                        <TableCell>{item.name}</TableCell>
+                                        <TableCell>{item.brand}</TableCell>
                                         <TableCell>{format(new Date(item.exp_date), 'dd/MM/yyyy')}</TableCell>
                                         <TableCell>{item.qty.toLocaleString()}</TableCell>
                                         <TableCell className="text-right">
@@ -289,5 +284,3 @@ export default function CreateInboundPage() {
     </MainLayout>
   );
 }
-
-    

@@ -39,7 +39,6 @@ export async function POST(request: Request) {
     received_by: document.received_by,
     sku: item.sku,
     barcode: item.barcode,
-    name: item.name,
     brand: item.brand,
     exp_date: item.exp_date,
     qty: item.qty,
