@@ -49,7 +49,7 @@ const DocumentCard = ({ document }: { document: CombinedDocument }) => {
                         <div>
                             <p className={cn("font-semibold", isDone ? "text-green-800" : "text-yellow-800")}>{document.reference}</p>
                             <p className={cn("text-xs", isDone ? "text-green-700" : "text-yellow-700")}>
-                                Inbound Document - Ready for Putaway
+                                Internal Transfer Document - Receipt Inbound
                             </p>
                         </div>
                     </div>
@@ -114,7 +114,7 @@ const DocumentCard = ({ document }: { document: CombinedDocument }) => {
                                     <TableBody>
                                         {putaway_docs.map(pd => (
                                             <TableRow key={pd.id}>
-                                                <TableCell>{document.reference}</TableCell>
+                                                <TableCell>{pd.no_document}</TableCell>
                                                 <TableCell>{pd.location}</TableCell>
                                                 <TableCell>{pd.qty}</TableCell>
                                                 <TableCell><Badge variant="outline">Marketplace</Badge></TableCell>
