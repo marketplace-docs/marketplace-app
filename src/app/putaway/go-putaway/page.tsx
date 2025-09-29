@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { MainLayout } from "@/components/layout/main-layout";
@@ -92,19 +93,36 @@ export default function GoPutawayPage() {
                 check_by: user.name,
             };
 
-            const response = await fetch('/api/putaway-documents', {
+            // 1. Create the putaway document (stock movement)
+            const putawayResponse = await fetch('/api/putaway-documents', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ documents: [putawayPayload], user }),
             });
 
-            if (!response.ok) {
-                 const errorData = await response.json();
+            if (!putawayResponse.ok) {
+                 const errorData = await putawayResponse.json();
                 throw new Error(errorData.error || 'Failed to create putaway document.');
             }
             
+            // 2. Update the original inbound document status to 'Done'
+            const updateStatusResponse = await fetch(`/api/inbound-documents/${foundDocument.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    main_status: 'Done',
+                    user,
+                 }),
+            });
+
+            if (!updateStatusResponse.ok) {
+                // Log this error, but the main operation succeeded so we don't throw an error to the user
+                console.error("Failed to update inbound document status, but putaway was successful.");
+            }
+
             toast({ title: 'Putaway Successful', description: `${qty} units of ${foundDocument.sku} have been placed at ${scannedLocation}.` });
             
+            // Reset state for next operation
             setDocRef('');
             setFoundDocument(null);
             setScannedBarcode('');
