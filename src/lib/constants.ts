@@ -65,11 +65,6 @@ export const NAV_LINKS: NavLink[] = [
         icon: Archive,
          children: [
             {
-                href: '/putaway/create',
-                label: 'Create',
-                icon: FilePlus,
-            },
-            {
                 href: '/putaway/monitoring-document',
                 label: 'Monitoring Document',
                 icon: Eye,
