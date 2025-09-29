@@ -1,317 +1,439 @@
-
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { MainLayout } from "@/components/layout/main-layout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from '@/components/ui/button';
-import { Eye, Check, Send, Search, X, ChevronDown, ChevronUp, Loader2, AlertCircle } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { format, formatDistanceToNowStrict } from 'date-fns';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { MainLayout } from '@/components/layout/main-layout';
 import type { PutawayDocument } from '@/types/putaway-document';
+import { format } from 'date-fns';
+import { Button } from '@/components/ui/button';
+import { ChevronLeft, ChevronRight, Pencil, Trash2, Loader2, AlertCircle, Upload, Download, Check, X } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuth } from '@/hooks/use-auth';
+import { Checkbox } from '@/components/ui/checkbox';
 
-type InboundDocument = {
-    id: number;
-    reference: string;
-    sku: string;
-    barcode: string;
-    brand: string;
-    exp_date: string;
-    qty: number;
-    date: string;
-    received_by: string;
-    main_status: 'Assign' | 'In Progress' | 'Done';
+const statusVariantMap: { [key in PutawayDocument['status']]: "default" | "secondary" | "destructive" | "outline" } = {
+    'Done': 'default',
+    'Pending': 'secondary',
 };
 
-const formatDuration = (milliseconds: number) => {
-    const totalSeconds = Math.floor(milliseconds / 1000);
-    const hours = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
-    const minutes = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
-    const seconds = (totalSeconds % 60).toString().padStart(2, '0');
-    return `${hours}:${minutes}:${seconds}`;
-};
+export default function MonitoringPutawayPage() {
+  const [documents, setDocuments] = useState<PutawayDocument[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  
+  const [isEditDialogOpen, setEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isUploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [selectedDoc, setSelectedDoc] = useState<PutawayDocument | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const canUpdate = user?.role && ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin'].includes(user.role);
+  const canDelete = user?.role === 'Super Admin';
 
-const InboundDetailDialog = ({ document: initialDoc }: { document: InboundDocument }) => {
-    const [isExpanded, setIsExpanded] = useState(true);
-    const [document, setDocument] = useState(initialDoc);
-    const [totalPutaway, setTotalPutaway] = useState(0);
-    const [duration, setDuration] = useState('00:00:00');
-    const [isLoading, setIsLoading] = useState(false);
-    const { toast } = useToast();
-    const { user } = useAuth();
-    
-    const outstandingQty = document.qty - totalPutaway;
+  const [selection, setSelection] = useState<Record<string, boolean>>({});
+  const [searchDocument, setSearchDocument] = useState('');
+  const [searchBarcode, setSearchBarcode] = useState('');
 
-    useEffect(() => {
-        setIsLoading(true);
-        const fetchPutawayData = async () => {
-            try {
-                const response = await fetch('/api/putaway-documents');
-                if (!response.ok) throw new Error('Failed to fetch putaway documents.');
-                const allPutawayDocs: PutawayDocument[] = await response.json();
-                
-                const relatedPutaway = allPutawayDocs.filter(p => p.no_document === document.reference && p.sku === document.sku);
-                const putawaySum = relatedPutaway.reduce((sum, current) => sum + current.qty, 0);
-                setTotalPutaway(putawaySum);
-            } catch (error: any) {
-                toast({ variant: 'destructive', title: 'Error', description: error.message });
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchPutawayData();
-    }, [document.reference, document.sku, toast]);
-    
-     useEffect(() => {
-        const calculateDuration = () => {
-            if (document.main_status === 'Done') {
-                // If you add an `updated_at` field for 'Done' status, you can calculate the final duration here.
-                // For now, we stop the timer.
-                return;
-            }
-            const startTime = new Date(document.date).getTime();
-            const now = new Date().getTime();
-            const diff = now - startTime;
-            setDuration(formatDuration(diff));
-        };
+  const fetchDocuments = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/putaway-documents');
+      if (!response.ok) {
+        throw new Error('Failed to fetch putaway documents');
+      }
+      const data = await response.json();
+      setDocuments(data);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-        calculateDuration(); // Initial calculation
-        const intervalId = setInterval(calculateDuration, 1000);
+  useEffect(() => {
+    fetchDocuments();
+  }, [fetchDocuments]);
 
-        return () => clearInterval(intervalId);
-    }, [document.date, document.main_status]);
+  const filteredDocuments = useMemo(() => {
+    return documents.filter(doc => 
+      doc.no_document.toLowerCase().includes(searchDocument.toLowerCase()) &&
+      doc.barcode.toLowerCase().includes(searchBarcode.toLowerCase())
+    );
+  }, [documents, searchDocument, searchBarcode]);
 
+  const selectedIds = useMemo(() => Object.keys(selection).filter(id => selection[id]), [selection]);
 
-    const handleStatusUpdate = async (newStatus: 'In Progress' | 'Done') => {
-        if (!user) return;
-        setIsLoading(true);
-        try {
-            const response = await fetch(`/api/inbound-documents/${document.id}`, {
+  const totalPages = Math.ceil(filteredDocuments.length / rowsPerPage);
+  const paginatedDocs = filteredDocuments.slice(
+    (currentPage - 1) * rowsPerPage,
+    currentPage * rowsPerPage
+  );
+
+  const handleNextPage = () => {
+    setCurrentPage((prev) => (prev < totalPages ? prev + 1 : prev));
+  };
+
+  const handlePrevPage = () => {
+    setCurrentPage((prev) => (prev > 1 ? prev - 1 : prev));
+  };
+  
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [rowsPerPage, searchDocument, searchBarcode]);
+
+  const handleOpenEditDialog = (doc: PutawayDocument) => {
+    setSelectedDoc({ ...doc });
+    setEditDialogOpen(true);
+  };
+
+  const handleOpenDeleteDialog = (doc: PutawayDocument) => {
+    setSelectedDoc(doc);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleSaveChanges = async () => {
+    if (!selectedDoc || !user) return;
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`/api/putaway-documents/${selectedDoc.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...selectedDoc, userRole: user.role, userName: user.name, userEmail: user.email })
+      });
+      if (!response.ok) throw new Error('Failed to update document');
+      
+      await fetchDocuments();
+      setEditDialogOpen(false);
+      setSelectedDoc(null);
+      toast({ title: "Success", description: "Document has been updated successfully." });
+    } catch (error) {
+      toast({ variant: 'destructive', title: "Error", description: "Could not update document." });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteDoc = async () => {
+    if (!selectedDoc || !user) return;
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`/api/putaway-documents/${selectedDoc.id}`, {
+        method: 'DELETE',
+        headers: { 'X-User-Name': user.name, 'X-User-Email': user.email, 'X-User-Role': user.role }
+      });
+      if (!response.ok) throw new Error('Failed to delete document');
+
+      await fetchDocuments();
+      setDeleteDialogOpen(false);
+      setSelectedDoc(null);
+      toast({ title: "Success", description: "Document has been deleted.", variant: "destructive" });
+    } catch (error) {
+      toast({ variant: 'destructive', title: "Error", description: "Could not delete document." });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleBulkAction = async (action: 'delete' | 'confirm' | 'pending') => {
+      if (selectedIds.length === 0) {
+        toast({ variant: 'destructive', title: 'No Selection', description: 'Please select at least one document.' });
+        return;
+      }
+      if (!user) return;
+      
+      setIsSubmitting(true);
+      try {
+        let response;
+        if (action === 'delete') {
+            response = await fetch('/api/putaway-documents/bulk-delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: selectedIds, userName: user.name, userEmail: user.email, userRole: user.role }),
+            });
+        } else {
+            response = await fetch('/api/putaway-documents/bulk-update', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ main_status: newStatus, user }),
+                body: JSON.stringify({ ids: selectedIds, status: action === 'confirm' ? 'Done' : 'Pending', userName: user.name, userEmail: user.email, userRole: user.role }),
             });
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to update status.');
-            }
-            const updatedDoc = await response.json();
-            setDocument(updatedDoc); // Update local state to reflect change
-            toast({ title: "Status Updated", description: `Task status changed to ${newStatus}` });
-        } catch (error: any) {
-            toast({ variant: 'destructive', title: 'Update Failed', description: error.message });
-        } finally {
-            setIsLoading(false);
         }
-    };
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || `Failed to ${action} documents.`);
+        }
 
+        await fetchDocuments();
+        setSelection({});
+        toast({ title: 'Success', description: `${selectedIds.length} documents have been updated.` });
 
-    return (
-        <Dialog>
-            <DialogTrigger asChild>
-                <Button variant="ghost" size="icon"><Eye className="h-4 w-4" /></Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-4xl">
-                <DialogHeader>
-                    <DialogTitle>Putaway Task List of {document.reference}</DialogTitle>
-                </DialogHeader>
-                <div className="py-4">
-                    <div className="flex justify-end mb-4">
-                        <div className="relative w-64">
-                            <Input placeholder="Search..." />
-                            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        </div>
-                    </div>
-                    <div className="border rounded-lg">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Barcode</TableHead>
-                                    <TableHead>SKU</TableHead>
-                                    <TableHead>Assign to</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead>Duration</TableHead>
-                                    <TableHead>Received Qty</TableHead>
-                                    <TableHead>Total Putaway</TableHead>
-                                    <TableHead className="text-right"></TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                 {isLoading ? (
-                                    <TableRow>
-                                        <TableCell colSpan={8} className="h-24 text-center">
-                                            <Loader2 className="animate-spin h-6 w-6 mx-auto" />
-                                        </TableCell>
-                                    </TableRow>
-                                 ) : (
-                                <>
-                                <TableRow>
-                                    <TableCell>{document.barcode}</TableCell>
-                                    <TableCell>{document.sku}</TableCell>
-                                    <TableCell>{document.received_by}</TableCell>
-                                    <TableCell>
-                                        <Badge variant={document.main_status === 'Assign' ? 'secondary' : (document.main_status === 'In Progress' ? 'default' : 'default')}
-                                          className={
-                                            document.main_status === 'In Progress' ? 'bg-yellow-400 text-yellow-900 hover:bg-yellow-400/80' : 
-                                            document.main_status === 'Done' ? 'bg-green-500 hover:bg-green-600/80' : ''
-                                          }
-                                        >
-                                          {document.main_status}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell>{duration}</TableCell>
-                                    <TableCell>{document.qty}</TableCell>
-                                    <TableCell>{totalPutaway}</TableCell>
-                                    <TableCell className="text-right">
-                                        <Button variant="ghost" size="icon" onClick={() => setIsExpanded(!isExpanded)}>
-                                            {isExpanded ? <ChevronUp className="h-5 w-5 text-blue-600" /> : <ChevronDown className="h-5 w-5" />}
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
-                                {isExpanded && (
-                                     <TableRow className="bg-muted/50">
-                                        <TableCell colSpan={8} className="p-0">
-                                            <div className="p-4 grid grid-cols-5 gap-4 text-sm">
-                                                <div><p className="font-semibold">Exp Date</p><p>{format(new Date(document.exp_date), 'yyyy-MM-dd')}</p></div>
-                                                <div><p className="font-semibold">Condition</p><p>Normal</p></div>
-                                                <div><p className="font-semibold">Received</p><p>{document.qty}</p></div>
-                                                <div><p className="font-semibold">Putaway</p><p>{totalPutaway}</p></div>
-                                                <div><p className="font-semibold">Outstanding</p><p>{outstandingQty}</p></div>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                                </>
-                                )}
-                            </TableBody>
-                        </Table>
-                    </div>
-                    <div className="text-right text-sm text-muted-foreground mt-2">1-1 of 1</div>
-                    <div className="flex justify-end gap-2 mt-4">
-                        <Button variant="outline" onClick={() => handleStatusUpdate('Done')} disabled={isLoading || document.main_status === 'Done'}>
-                           <Check className="h-4 w-4 mr-2"/> Mark as Done
-                        </Button>
-                         <Button variant="outline" onClick={() => handleStatusUpdate('In Progress')} disabled={isLoading || document.main_status !== 'Assign'}>
-                           <Send className="h-4 w-4 mr-2" /> Start Task
-                        </Button>
-                    </div>
-                </div>
-            </DialogContent>
-        </Dialog>
-    );
-};
-
-
-const InboundMonitoringTable = ({ data, loading, onUpdate }: { data: InboundDocument[], loading: boolean, onUpdate: () => void }) => {
-    return (
-    <div className="border rounded-lg">
-        <Table>
-            <TableHeader>
-                <TableRow>
-                    <TableHead>Reference</TableHead>
+      } catch (err: any) {
+         toast({ variant: 'destructive', title: 'Action Failed', description: err.message });
+      } finally {
+         setIsSubmitting(false);
+      }
+  };
+  
+  return (
+    <MainLayout>
+      <div className="w-full space-y-6">
+        <h1 className="text-2xl font-bold">Monitoring Putaway</h1>
+        {error && (
+            <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+            </Alert>
+        )}
+        <Card>
+          <CardHeader className="p-6">
+            <CardTitle>Putaway Documents</CardTitle>
+            <CardDescription>A list of all completed putaway tasks.</CardDescription>
+            <div className="flex flex-col md:flex-row items-center gap-2 pt-4">
+              <Input 
+                  placeholder="Search document no..." 
+                  value={searchDocument}
+                  onChange={(e) => setSearchDocument(e.target.value)}
+                  className="w-full md:w-auto"
+              />
+              <Input 
+                  placeholder="Search barcode..." 
+                  value={searchBarcode}
+                  onChange={(e) => setSearchBarcode(e.target.value)}
+                  className="w-full md:w-auto"
+              />
+              <div className="flex-1" />
+               {canDelete && (
+                <Button variant="destructive" size="sm" onClick={() => handleBulkAction('delete')} disabled={isSubmitting || selectedIds.length === 0}><Trash2 className="mr-2 h-4 w-4"/>Delete Selected</Button>
+               )}
+               {canUpdate && (
+                <>
+                <Button variant="outline" size="sm" onClick={() => handleBulkAction('confirm')} disabled={isSubmitting || selectedIds.length === 0}><Check className="mr-2 h-4 w-4"/>Confirm</Button>
+                <Button variant="outline" size="sm" onClick={() => handleBulkAction('pending')} disabled={isSubmitting || selectedIds.length === 0}><X className="mr-2 h-4 w-4"/>Pending</Button>
+                </>
+               )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="border rounded-lg">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">
+                        <Checkbox
+                            checked={selectedIds.length > 0 && selectedIds.length === paginatedDocs.length}
+                            onCheckedChange={(checked) => {
+                                const newSelection: Record<string, boolean> = {};
+                                if (checked) {
+                                    paginatedDocs.forEach(doc => newSelection[doc.id] = true);
+                                }
+                                setSelection(newSelection);
+                            }}
+                        />
+                    </TableHead>
+                    <TableHead>No. Document</TableHead>
+                    <TableHead>Date</TableHead>
                     <TableHead>SKU</TableHead>
                     <TableHead>Barcode</TableHead>
+                    <TableHead>Location</TableHead>
                     <TableHead>Brand</TableHead>
-                    <TableHead>Qty</TableHead>
-                    <TableHead>Exp Date</TableHead>
-                    <TableHead>Received By</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Main Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-            </TableHeader>
-            <TableBody>
-                {loading ? (
-                    <TableRow>
-                        <TableCell colSpan={10} className="h-24 text-center">
+                    <TableHead>QTY</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Check By</TableHead>
+                    {(canUpdate || canDelete) && <TableHead className="text-right">Actions</TableHead>}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                     <TableRow>
+                        <TableCell colSpan={11} className="h-24 text-center">
                             <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                         </TableCell>
                     </TableRow>
-                ) : data.length > 0 ? data.map(item => (
-                    <TableRow key={item.id}>
-                        <TableCell>{item.reference}</TableCell>
-                        <TableCell>{item.sku}</TableCell>
-                        <TableCell>{item.barcode}</TableCell>
-                        <TableCell>{item.brand}</TableCell>
-                        <TableCell>{item.qty}</TableCell>
-                        <TableCell>{format(new Date(item.exp_date), 'yyyy-MM-dd')}</TableCell>
-                        <TableCell>{item.received_by}</TableCell>
-                        <TableCell>{format(new Date(item.date), "eee, dd/MMM/yyyy HH:mm")}</TableCell>
+                  ) : paginatedDocs.length > 0 ? (
+                    paginatedDocs.map((doc) => (
+                      <TableRow key={doc.id} data-state={selection[doc.id] && "selected"}>
+                         <TableCell>
+                            <Checkbox checked={selection[doc.id] || false} onCheckedChange={(checked) => setSelection(prev => ({...prev, [doc.id]: !!checked}))} />
+                         </TableCell>
+                        <TableCell className="font-medium">{doc.no_document}</TableCell>
+                        <TableCell>{format(new Date(doc.date), "eee, dd/MMM/yyyy HH:mm")}</TableCell>
+                        <TableCell>{doc.sku}</TableCell>
+                        <TableCell>{doc.barcode}</TableCell>
+                        <TableCell>{doc.location}</TableCell>
+                        <TableCell>{doc.brand}</TableCell>
+                        <TableCell>{doc.qty}</TableCell>
                         <TableCell>
-                            <Badge variant={item.main_status === 'Done' ? 'default' : (item.main_status === 'In Progress' ? 'default' : 'secondary')}
-                                className={item.main_status === 'In Progress' ? 'bg-yellow-400 text-yellow-900' : (item.main_status === 'Done' ? 'bg-green-500' : '')}
-                            >
-                                {item.main_status}
-                            </Badge>
+                          <Badge variant={statusVariantMap[doc.status] || 'default'}>{doc.status}</Badge>
                         </TableCell>
-                        <TableCell className="text-right flex items-center justify-end">
-                           <InboundDetailDialog document={item} />
-                        </TableCell>
-                    </TableRow>
-                )) : (
-                    <TableRow>
-                        <TableCell colSpan={10} className="h-24 text-center">No data available.</TableCell>
-                    </TableRow>
-                )}
-            </TableBody>
-        </Table>
-    </div>
-    );
-};
-
-
-export default function InboundMonitoringPage() {
-    const [documents, setDocuments] = useState<InboundDocument[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    
-    const fetchDocuments = useCallback(async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const response = await fetch('/api/inbound-documents');
-            if (!response.ok) throw new Error('Failed to fetch inbound documents.');
-            const data = await response.json();
-            setDocuments(data);
-        } catch (err: any) {
-            setError(err.message);
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        fetchDocuments();
-    }, [fetchDocuments]);
-
-    return (
-        <MainLayout>
-            <div className="w-full space-y-6">
-                <h1 className="text-2xl font-bold">Inbound Monitoring</h1>
-                 <Card>
-                    <CardHeader>
-                        <CardTitle>Inbound Monitoring</CardTitle>
-                        <CardDescription>Monitor the status and perform actions on inbound items.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        {error && (
-                            <Alert variant="destructive" className="mb-4">
-                                <AlertCircle className="h-4 w-4" />
-                                <AlertTitle>Error</AlertTitle>
-                                <AlertDescription>{error}</AlertDescription>
-                            </Alert>
+                        <TableCell>{doc.check_by}</TableCell>
+                        {(canUpdate || canDelete) && (
+                            <TableCell className="text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  {canUpdate && (
+                                    <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(doc)}>
+                                        <Pencil className="h-4 w-4" />
+                                        <span className="sr-only">Edit</span>
+                                    </Button>
+                                  )}
+                                  {canDelete && (
+                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90" onClick={() => handleOpenDeleteDialog(doc)}>
+                                        <Trash2 className="h-4 w-4" />
+                                        <span className="sr-only">Delete</span>
+                                    </Button>
+                                  )}
+                                </div>
+                            </TableCell>
                         )}
-                        <InboundMonitoringTable data={documents} loading={loading} onUpdate={fetchDocuments} />
-                    </CardContent>
-                </Card>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={11}
+                        className="h-24 text-center text-muted-foreground"
+                      >
+                        No documents found.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </div>
-        </MainLayout>
-    );
+             <div className="flex items-center justify-end space-x-2 py-4">
+                <div className="flex-1 text-sm text-muted-foreground">
+                    Page {filteredDocuments.length > 0 ? currentPage : 0} of {totalPages}
+                </div>
+                <div className="flex items-center space-x-2">
+                    <span className="text-sm text-muted-foreground">Rows per page:</span>
+                    <Select
+                        value={`${rowsPerPage}`}
+                        onValueChange={(value) => {
+                            setRowsPerPage(Number(value));
+                        }}
+                        >
+                        <SelectTrigger className="h-8 w-[70px]">
+                            <SelectValue placeholder={rowsPerPage} />
+                        </SelectTrigger>
+                        <SelectContent side="top">
+                            {[10, 25, 50, 100].map((pageSize) => (
+                            <SelectItem key={pageSize} value={`${pageSize}`}>
+                                {pageSize}
+                            </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePrevPage}
+                    disabled={currentPage === 1}
+                >
+                    <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleNextPage}
+                    disabled={currentPage === totalPages || totalPages === 0}
+                >
+                    <ChevronRight className="h-4 w-4" />
+                </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+       {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent className="sm:max-w-[600px]">
+              <DialogHeader>
+                  <DialogTitle>Edit Putaway Document</DialogTitle>
+              </DialogHeader>
+              {selectedDoc && (
+                  <div className="grid gap-4 py-4">
+                      <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="edit-nodocument" className="text-right">No. Document</Label>
+                          <Input id="edit-nodocument" value={selectedDoc.no_document} className="col-span-3" onChange={(e) => setSelectedDoc({ ...selectedDoc, no_document: e.target.value })} />
+                      </div>
+                       <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="edit-exp_date" className="text-right">Exp Date</Label>
+                            <Input id="edit-exp_date" type="date" value={format(new Date(selectedDoc.exp_date), 'yyyy-MM-dd')} className="col-span-3" onChange={(e) => setSelectedDoc({ ...selectedDoc, exp_date: e.target.value })} />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="edit-qty" className="text-right">QTY</Label>
+                            <Input id="edit-qty" type="number" value={selectedDoc.qty} className="col-span-3" onChange={(e) => setSelectedDoc({ ...selectedDoc, qty: parseInt(e.target.value, 10) || 0 })} />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="edit-status" className="text-right">Status</Label>
+                            <Select value={selectedDoc.status} onValueChange={(value: 'Done' | 'Pending') => setSelectedDoc({ ...selectedDoc, status: value })}>
+                                <SelectTrigger id="edit-status" className="col-span-3">
+                                    <SelectValue placeholder="Select Status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Done">Done</SelectItem>
+                                    <SelectItem value="Pending">Pending</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                  </div>
+              )}
+              <DialogFooter>
+                  <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+                  <Button onClick={handleSaveChanges} disabled={isSubmitting}>
+                     {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Save Changes
+                  </Button>
+              </DialogFooter>
+          </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent>
+              <DialogHeader>
+                  <DialogTitle>Are you sure?</DialogTitle>
+                  <DialogDescription>
+                      This action cannot be undone. This will permanently delete the document <span className="font-semibold">{selectedDoc?.no_document}</span>.
+                  </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                  <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+                  <Button variant="destructive" onClick={handleDeleteDoc} disabled={isSubmitting}>
+                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Delete
+                  </Button>
+              </DialogFooter>
+          </DialogContent>
+      </Dialog>
+    </MainLayout>
+  );
 }
