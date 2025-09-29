@@ -71,7 +71,7 @@ export const NAV_LINKS: NavLink[] = [
             },
             {
                 href: '/putaway/monitoring-document',
-                label: 'Monitoring Document',
+                label: 'Monitoring',
                 icon: Eye,
             },
             {
@@ -98,7 +98,7 @@ export const NAV_LINKS: NavLink[] = [
             },
             {
                 href: '/return/monitoring-document',
-                label: 'Monitoring Document',
+                label: 'Monitoring',
                 icon: Eye,
             },
              {
