@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { MainLayout } from "@/components/layout/main-layout";
@@ -64,17 +63,24 @@ export default function GoPutawayPage() {
             toast({ variant: "destructive", title: "Error", description: "No document loaded or user not logged in." });
             return;
         }
+        
+        const qty = parseInt(putawayQty, 10);
+        if (isNaN(qty) || qty <= 0) {
+            toast({ variant: "destructive", title: "Invalid Quantity", description: `Please enter a valid quantity.` });
+            return;
+        }
+
+        if (qty > foundDocument.qty) {
+            toast({ variant: "destructive", title: "Invalid Quantity", description: `Putaway quantity (${qty}) cannot be greater than received quantity (${foundDocument.qty}).` });
+            return;
+        }
+
         if (scannedBarcode !== foundDocument.barcode) {
              toast({ variant: "destructive", title: "Verification Failed", description: "Scanned product barcode does not match the document." });
             return;
         }
         if (!scannedLocation.trim()) {
             toast({ variant: "destructive", title: "Verification Failed", description: "Destination location cannot be empty." });
-            return;
-        }
-        const qty = parseInt(putawayQty, 10);
-        if (isNaN(qty) || qty <= 0 || qty > foundDocument.qty) {
-            toast({ variant: "destructive", title: "Invalid Quantity", description: `Please enter a valid quantity up to ${foundDocument.qty}.` });
             return;
         }
         
@@ -140,8 +146,8 @@ export default function GoPutawayPage() {
 
     return (
         <MainLayout>
-             <div className="w-full flex-1 flex items-center justify-center">
-                <Card className="w-full">
+             <div className="flex-1 flex items-center justify-center">
+                <Card className="w-full max-w-2xl">
                     <CardHeader>
                         <CardTitle>Assign Task Putaway</CardTitle>
                         <CardDescription>Scan an inbound document to begin the putaway process.</CardDescription>
