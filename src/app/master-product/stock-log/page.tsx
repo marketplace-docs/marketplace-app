@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -19,6 +20,21 @@ type PutawayDocument = {
   id: string; no_document: string; date: string; qty: number; status: 'Done' | 'Pending'; sku: string; barcode: string; brand: string; exp_date: string; location: string; check_by: string;
 };
 
+type InboundDocument = {
+  id: string;
+  reference: string;
+  date: string;
+  received_by: string;
+  sku: string;
+  barcode: string;
+  name: string;
+  brand: string;
+  exp_date: string;
+  qty: number;
+  main_status: string;
+};
+
+
 type ProductOutDocument = {
   id: string; nodocument: string; sku: string; barcode: string; expdate: string; qty: number; status: ProductOutStatus; date: string; location: string; validatedby: string;
 };
@@ -36,7 +52,8 @@ type ProductOutStatus =
     | 'Issue - Update Expired'
     | 'Receipt - Update Expired'
     | 'Receipt - Outbound Return'
-    | 'Receipt';
+    | 'Receipt'
+    | 'Receipt - Inbound';
 
 type StockLogEntry = {
     id: string;
@@ -59,11 +76,13 @@ const REAL_STOCK_IN_STATUSES: string[] = [
     'Receipt - Putaway',
     'Receipt - Update Expired',
     'Receipt - Outbound Return',
-    'Receipt'
+    'Receipt',
+    'Receipt - Inbound'
 ];
 
 export default function StockLogPage() {
     const [putawayDocs, setPutawayDocs] = useState<PutawayDocument[]>([]);
+    const [inboundDocs, setInboundDocs] = useState<InboundDocument[]>([]);
     const [productOutDocs, setProductOutDocs] = useState<ProductOutDocument[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -78,17 +97,20 @@ export default function StockLogPage() {
         setLoading(true);
         setError(null);
         try {
-            const [putawayRes, productOutRes] = await Promise.all([
+            const [putawayRes, productOutRes, inboundRes] = await Promise.all([
                 fetch('/api/putaway-documents'),
-                fetch('/api/product-out-documents')
+                fetch('/api/product-out-documents'),
+                fetch('/api/inbound-documents')
             ]);
-            if (!putawayRes.ok || !productOutRes.ok) {
+            if (!putawayRes.ok || !productOutRes.ok || !inboundRes.ok) {
                 throw new Error('Failed to fetch stock data');
             }
             const putawayData = await putawayRes.json();
             const productOutData = await productOutRes.json();
+            const inboundData = await inboundRes.json();
             setPutawayDocs(putawayData);
             setProductOutDocs(productOutData);
+            setInboundDocs(inboundData);
         } catch (error: any) {
             setError(error.message);
         } finally {
@@ -102,7 +124,17 @@ export default function StockLogPage() {
 
     const stockLogData = useMemo(() => {
         const combinedDocs = [
-            // All original putaway documents are IN
+             ...inboundDocs.map(doc => ({ 
+                id: `inbound-${doc.id}`, 
+                date: doc.date,
+                no_document: doc.reference, 
+                barcode: doc.barcode, 
+                sku: doc.sku,
+                location: 'N/A', // Inbound doesn't have a final location yet
+                qty: doc.qty, 
+                status: 'Receipt - Inbound' as const,
+                validated_by: doc.received_by,
+            })),
             ...putawayDocs.map(doc => ({ 
                 id: `putaway-${doc.id}`, 
                 date: doc.date,
@@ -114,7 +146,6 @@ export default function StockLogPage() {
                 status: 'Putaway' as const,
                 validated_by: doc.check_by,
             })),
-            // Product Out documents can be IN or OUT based on status
             ...productOutDocs.map(doc => ({
                 id: `out-${doc.id}`,
                 date: doc.date,
@@ -157,7 +188,7 @@ export default function StockLogPage() {
 
         // Sort descending by date for display
         return logEntries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [putawayDocs, productOutDocs]);
+    }, [putawayDocs, productOutDocs, inboundDocs]);
 
     const filteredData = useMemo(() => {
         if (!searchTerm) return stockLogData;

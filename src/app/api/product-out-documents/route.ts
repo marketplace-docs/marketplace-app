@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { supabaseService } from '@/lib/supabase-service';
@@ -23,7 +24,7 @@ async function generateNewDocumentNumber(status: ProductOutStatus): Promise<stri
       prefix = `MP-UPD-EXP-${year}`;
   } else if (status.startsWith('Receipt - Outbound Return')) {
       prefix = `MP-OTR-${year}`;
-  } else if (status === 'Receipt') {
+  } else if (status === 'Receipt' || status === 'Receipt - Inbound') {
       prefix = `MP-RCP-${year}`;
   } else if (status.startsWith('Issue - Putaway') || status.startsWith('Receipt - Putaway')) {
     prefix = `MP-PTW-${year}`;
@@ -138,6 +139,7 @@ type ProductOutStatus =
     | 'Receipt - Update Expired'
     | 'Receipt - Outbound Return'
     | 'Receipt'
+    | 'Receipt - Inbound'
     | 'Adjusment - Loc'; // Keep for backwards compatibility if needed
     
 
