@@ -122,8 +122,8 @@ export default function GoPutawayPage() {
 
     return (
         <MainLayout>
-             <div className="w-full h-full flex items-center justify-center">
-                <Card className="w-full max-w-2xl">
+             <div className="w-full flex-1 flex items-center justify-center">
+                <Card className="w-full">
                     <CardHeader>
                         <CardTitle>Assign Task Putaway</CardTitle>
                         <CardDescription>Scan an inbound document to begin the putaway process.</CardDescription>
