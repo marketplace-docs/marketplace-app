@@ -13,6 +13,7 @@ import { useAuth } from "@/hooks/use-auth";
 import type { InboundDocument } from "@/types/inbound-document";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
 
 export default function GoPutawayPage() {
     const [docRef, setDocRef] = useState('');
@@ -40,13 +41,11 @@ export default function GoPutawayPage() {
             if (!response.ok) throw new Error('Failed to fetch inbound documents.');
             const allDocs: InboundDocument[] = await response.json();
             
-            // For simplicity, we find the first item matching the reference.
-            // A real-world scenario might need to handle multiple items in one document reference.
             const doc = allDocs.find(d => d.reference === docRef && d.main_status !== 'Done');
 
             if (doc) {
                 setFoundDocument(doc);
-                setPutawayQty(doc.qty.toString()); // Pre-fill qty
+                setPutawayQty(doc.qty.toString());
                 setPutawayDialogOpen(true);
             } else {
                 toast({ variant: "destructive", title: "Not Found", description: `No pending putaway task found for document ${docRef}.` });
@@ -96,7 +95,7 @@ export default function GoPutawayPage() {
             const response = await fetch('/api/putaway-documents', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ document: putawayPayload, user }),
+                body: JSON.stringify({ documents: [putawayPayload], user }),
             });
 
             if (!response.ok) {
@@ -104,13 +103,8 @@ export default function GoPutawayPage() {
                 throw new Error(errorData.error || 'Failed to create putaway document.');
             }
             
-            // Optionally, update the inbound document status
-            // This part needs a new API endpoint: PATCH /api/inbound-documents/[id]
-            // For now, we'll just show success.
-            
             toast({ title: 'Putaway Successful', description: `${qty} units of ${foundDocument.sku} have been placed at ${scannedLocation}.` });
             
-            // Reset for next task
             setDocRef('');
             setFoundDocument(null);
             setScannedBarcode('');
@@ -138,7 +132,7 @@ export default function GoPutawayPage() {
                          <div className="flex items-end gap-2">
                              <div className="flex-1 space-y-2">
                                 <Label htmlFor="docRef">Scan/Input Inbound Document</Label>
-                                <Input id="docRef" placeholder="e.g., DOC-INB-2024-00001" value={docRef} onChange={(e) => setDocRef(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSearchDocument()} disabled={isLoading}/>
+                                <Input id="docRef" placeholder="e.g., DOC-INB-2024-000001" value={docRef} onChange={(e) => setDocRef(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSearchDocument()} disabled={isLoading}/>
                              </div>
                              <Button onClick={handleSearchDocument} disabled={isLoading || !docRef}>
                                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Search className="mr-2 h-4 w-4"/>}
