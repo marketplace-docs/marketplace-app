@@ -7,7 +7,7 @@ import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
-import { Eye, Search, ChevronDown, ChevronUp, Loader2, AlertCircle } from 'lucide-react';
+import { Eye, Search, ChevronDown, ChevronUp, Loader2, AlertCircle, RefreshCcw } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format, formatDistanceStrict } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { PutawayDocument } from '@/types/putaway-document';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
 
 type InboundDocument = {
     id: number;
@@ -187,7 +188,16 @@ const InboundDetailDialog = ({ document: initialDoc }: { document: InboundDocume
 };
 
 
-const InboundMonitoringTable = ({ data, loading }: { data: InboundDocument[], loading: boolean }) => (
+const InboundMonitoringTable = ({ data, loading, onStatusChange }: { data: InboundDocument[], loading: boolean, onStatusChange: (doc: InboundDocument, newStatus: 'Assign') => Promise<void> }) => {
+    const [isSubmitting, setIsSubmitting] = useState<number | null>(null);
+    
+    const handleReassign = async (doc: InboundDocument) => {
+        setIsSubmitting(doc.id);
+        await onStatusChange(doc, 'Assign');
+        setIsSubmitting(null);
+    }
+    
+    return (
     <div className="border rounded-lg">
         <Table>
             <TableHeader>
@@ -226,6 +236,12 @@ const InboundMonitoringTable = ({ data, loading }: { data: InboundDocument[], lo
                         </TableCell>
                         <TableCell className="text-right flex items-center justify-end">
                            <InboundDetailDialog document={item} />
+                            {item.main_status === 'Done' && (
+                                <Button size="sm" variant="outline" onClick={() => handleReassign(item)} disabled={isSubmitting === item.id}>
+                                    {isSubmitting === item.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCcw className="mr-2 h-4 w-4" />}
+                                    Re-assign
+                                </Button>
+                            )}
                         </TableCell>
                     </TableRow>
                 )) : (
@@ -236,13 +252,16 @@ const InboundMonitoringTable = ({ data, loading }: { data: InboundDocument[], lo
             </TableBody>
         </Table>
     </div>
-);
+    );
+};
 
 
 export default function InboundMonitoringPage() {
     const [documents, setDocuments] = useState<InboundDocument[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const { user } = useAuth();
+    const { toast } = useToast();
     
     const fetchDocuments = useCallback(async () => {
         setLoading(true);
@@ -263,6 +282,32 @@ export default function InboundMonitoringPage() {
         fetchDocuments();
     }, [fetchDocuments]);
 
+    const handleStatusChange = async (doc: InboundDocument, newStatus: 'Assign') => {
+        if (!user) {
+            toast({ variant: "destructive", title: "Error", description: "You are not logged in." });
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/inbound-documents/${doc.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ main_status: newStatus, user })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || `Failed to update status.`);
+            }
+
+            toast({ title: 'Success', description: `Document ${doc.reference} has been re-assigned.` });
+            await fetchDocuments();
+
+        } catch (error: any) {
+            toast({ variant: "destructive", title: "Update Failed", description: error.message });
+        }
+    };
+
     return (
         <MainLayout>
             <div className="w-full space-y-6">
@@ -280,7 +325,7 @@ export default function InboundMonitoringPage() {
                                 <AlertDescription>{error}</AlertDescription>
                             </Alert>
                         )}
-                        <InboundMonitoringTable data={documents} loading={loading} />
+                        <InboundMonitoringTable data={documents} loading={loading} onStatusChange={handleStatusChange} />
                     </CardContent>
                 </Card>
             </div>
