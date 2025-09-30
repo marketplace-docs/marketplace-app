@@ -3,6 +3,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { logActivity } from '@/lib/logger';
+import { NAV_LINKS } from '@/lib/constants';
 
 type User = {
   id: number;
@@ -25,33 +26,61 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Helper to generate a flat list of all possible menu hrefs and group identifiers
+const getAllMenuHrefs = (links: typeof NAV_LINKS): string[] => {
+    const hrefs: string[] = [];
+    const traverse = (navLinks: typeof NAV_LINKS) => {
+        navLinks.forEach(link => {
+            const effectiveHref = link.children ? `group-${link.label}` : link.href;
+            hrefs.push(effectiveHref);
+            if (link.children) {
+                traverse(link.children);
+            }
+        });
+    };
+    traverse(links);
+    return hrefs;
+};
+const allMenuHrefs = getAllMenuHrefs(NAV_LINKS);
+
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [permissions, setPermissions] = useState<MenuPermissions | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchPermissions = async (userId: number) => {
+    // Default to all permissions granted
+    const defaultPermissions = allMenuHrefs.reduce((acc, href) => {
+        acc[href] = true;
+        return acc;
+    }, {} as MenuPermissions);
+
     try {
         const response = await fetch(`/api/menu-permissions/${userId}`);
         if (!response.ok) {
-            console.error("Failed to fetch permissions, using defaults.");
-            return null;
+            console.error("Failed to fetch permissions, using default (all allowed).");
+            return defaultPermissions;
         }
         const data: { menu_href: string, is_accessible: boolean }[] = await response.json();
-        const perms = data.reduce((acc, p) => {
-            acc[p.menu_href] = p.is_accessible;
-            return acc;
-        }, {} as MenuPermissions);
-
-        // If no permissions are returned from DB, default to all true
-        if (Object.keys(perms).length === 0) {
-            return null; // Let the app default all to true
+        
+        // If DB returns no specific rules for the user, they get full access.
+        if (data.length === 0) {
+            return defaultPermissions;
         }
 
-        return perms;
+        const userPermissions = { ...defaultPermissions };
+        data.forEach(p => {
+            if (p.menu_href in userPermissions) {
+                userPermissions[p.menu_href] = p.is_accessible;
+            }
+        });
+
+        return userPermissions;
+
     } catch (error) {
-        console.error("Error fetching permissions:", error);
-        return null;
+        console.error("Error fetching permissions, using default (all allowed):", error);
+        return defaultPermissions; // Fallback to all permissions on error
     }
   };
 
@@ -128,7 +157,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setPermissions(null);
     localStorage.removeItem('user');
-    localStorage.removeItem('permissions'); // Clean up old if any
   };
 
   const value = { user, permissions, login, logout, loading };

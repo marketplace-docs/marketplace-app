@@ -44,21 +44,25 @@ export function AppSidebar() {
   );
 
   const filteredNavLinks = useMemo(() => {
+    // If permissions are not yet loaded, return an empty array to prevent rendering.
     if (!permissions) return [];
 
     const filterLinks = (links: NavLink[]): NavLink[] => {
       return links.reduce((acc, link) => {
         const effectiveHref = link.children ? `group-${link.label}` : link.href;
 
+        // Check if the permission for this link/group is true
         if (permissions[effectiveHref]) {
           const newLink = { ...link };
           if (link.children) {
+            // Recursively filter children
             newLink.children = filterLinks(link.children);
-            // Only include parent menu if it has visible children
+            // Only include parent menu if it has any visible children
             if (newLink.children.length > 0) {
               acc.push(newLink);
             }
           } else {
+            // It's a single link, add it if it has permission
             acc.push(newLink);
           }
         }
