@@ -87,18 +87,26 @@ function MonitoringOrdersContent() {
             const wavesData: Wave[] = await wavesRes.json();
             const allProductOutDocs: ProductOutDocument[] = await productOutRes.json();
 
-            const wavesWithProgress = await Promise.all(wavesData.map(async (wave) => {
-                const waveDetailsRes = await fetch(`/api/waves/${wave.id}`);
-                if (!waveDetailsRes.ok) return { ...wave, picked_orders_count: 0 };
-                const waveDetails = await waveDetailsRes.json();
+            // Create a set of all picked order references for quick lookup
+            const allPickedOrderRefs = new Set(
+                allProductOutDocs
+                    .filter(doc => doc.status === 'Issue - Order')
+                    .map(doc => doc.order_reference)
+                    .filter((ref): ref is string => !!ref)
+            );
 
-                const pickedOrderRefs = new Set(
-                    allProductOutDocs
-                        .filter(doc => doc.status === 'Issue - Order' && waveDetails.orders.some((o: any) => o.order_reference === doc.order_reference))
-                        .map(doc => doc.order_reference)
-                );
-                
-                const pickedCount = pickedOrderRefs.size;
+            const wavesWithProgress = await Promise.all(wavesData.map(async (wave) => {
+                 // Fetch orders for this specific wave
+                const waveDetailsRes = await fetch(`/api/waves/${wave.id}`);
+                if (!waveDetailsRes.ok) {
+                    console.warn(`Could not fetch details for wave ${wave.id}`);
+                    return { ...wave, picked_orders_count: 0, status: wave.status };
+                }
+                const waveDetails = await waveDetailsRes.json();
+                const ordersInWaveRefs = new Set(waveDetails.orders.map((o: any) => o.order_reference));
+
+                // Count how many orders in this wave have been picked
+                const pickedCount = Array.from(ordersInWaveRefs).filter(ref => allPickedOrderRefs.has(ref)).length;
 
                 return {
                     ...wave,
