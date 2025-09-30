@@ -253,6 +253,7 @@ export default function TransferFromVendorPage() {
                                 <TableHead>Name</TableHead>
                                 <TableHead>Barcode</TableHead>
                                 <TableHead>Brand</TableHead>
+                                <TableHead>Vendor Name</TableHead>
                                 <TableHead>Exp Date</TableHead>
                                 <TableHead>QTY</TableHead>
                                 <TableHead className="text-right">Action</TableHead>
@@ -266,6 +267,7 @@ export default function TransferFromVendorPage() {
                                         <TableCell>{item.name}</TableCell>
                                         <TableCell>{item.barcode}</TableCell>
                                         <TableCell>{item.brand}</TableCell>
+                                        <TableCell>{docDetails.vendor_name}</TableCell>
                                         <TableCell>{format(new Date(item.exp_date), 'dd/MM/yyyy')}</TableCell>
                                         <TableCell>{item.qty.toLocaleString()}</TableCell>
                                         <TableCell className="text-right">
@@ -277,7 +279,7 @@ export default function TransferFromVendorPage() {
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">No items added yet.</TableCell>
+                                    <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">No items added yet.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>
