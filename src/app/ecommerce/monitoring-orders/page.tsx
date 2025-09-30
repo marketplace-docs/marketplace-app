@@ -103,7 +103,7 @@ function MonitoringOrdersContent() {
                 return {
                     ...wave,
                     picked_orders_count: pickedCount,
-                    status: pickedCount === wave.total_orders ? 'Wave Done' : 'Wave Progress',
+                    status: (wave.total_orders > 0 && pickedCount === wave.total_orders) ? 'Wave Done' : 'Wave Progress',
                 };
             }));
             

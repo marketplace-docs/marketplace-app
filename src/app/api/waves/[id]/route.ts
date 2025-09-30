@@ -295,10 +295,19 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     }
 
     // Decrement total_orders count in the wave
-    const { error: waveUpdateError } = await supabaseService.rpc('decrement_wave_orders', { wave_id_to_update: parseInt(id) });
-    if(waveUpdateError) {
-        console.error(`Failed to decrement order count for wave ${id}.`);
+    const { data: waveData, error: waveFetchError } = await supabaseService.from('waves').select('total_orders').eq('id', id).single();
+    if(waveFetchError || !waveData) {
+        console.error(`Failed to fetch wave ${id} to decrement order count.`);
+    } else {
+        const { error: waveUpdateError } = await supabaseService
+            .from('waves')
+            .update({ total_orders: waveData.total_orders - 1 })
+            .eq('id', id);
+        if (waveUpdateError) {
+             console.error(`Failed to decrement order count for wave ${id}.`);
+        }
     }
+
 
     await logActivity({
         userName: user.name,
