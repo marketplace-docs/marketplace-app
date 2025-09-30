@@ -70,23 +70,15 @@ export async function GET() {
         
         const productMap = new Map<string, string>();
         products.forEach(p => productMap.set(p.sku, p.name));
+        
+        // This is a simplified calculation for demonstration. A real-world scenario might need a more robust approach.
+        // We create a map to track running totals for each batch (barcode + location).
+        const runningTotals = new Map<string, number>();
+        const sortedDocuments = [...documents].sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-        const stockLog = documents.map((doc, index, allDocs) => {
-            const previousDocs = allDocs.filter(d => 
-                d.barcode === doc.barcode && 
-                d.location === doc.location && 
-                new Date(d.date) < new Date(doc.date)
-            );
-
-            const qty_before = previousDocs.reduce((acc, prevDoc) => {
-                let change = 0;
-                if (STOCK_IN_STATUSES.includes(prevDoc.status)) {
-                    change = prevDoc.qty;
-                } else if (STOCK_OUT_STATUSES.includes(prevDoc.status)) {
-                    change = -prevDoc.qty;
-                }
-                return acc + change;
-            }, 0);
+        const stockLog = sortedDocuments.map((doc) => {
+            const batchKey = `${doc.barcode}|${doc.location}`;
+            const qty_before = runningTotals.get(batchKey) || 0;
             
             let qty_change = 0;
              if (STOCK_IN_STATUSES.includes(doc.status)) {
@@ -96,6 +88,7 @@ export async function GET() {
             }
 
             const qty_after = qty_before + qty_change;
+            runningTotals.set(batchKey, qty_after);
             
             return {
                 ...doc,
@@ -106,7 +99,8 @@ export async function GET() {
                 qty_after,
                 validated_by: doc.validatedby
             };
-        });
+        }).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
 
         return NextResponse.json(stockLog);
 
