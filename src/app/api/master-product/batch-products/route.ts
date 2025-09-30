@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { supabaseService } from '@/lib/supabase-service';
@@ -168,17 +169,19 @@ export async function GET() {
             }
         }
 
-        // 4. Convert the map to an array, assign status, and a unique ID
-        const finalBatchProducts = Array.from(stockBatchMap.values()).map((batch, index) => {
-            const locationType = getLocationType(batch.location);
-            const status = getProductStatus(new Date(batch.exp_date), batch.stock, locationType);
+        // 4. Convert map to array, assign status, and FILTER OUT "Staging Area Inbound"
+        const finalBatchProducts = Array.from(stockBatchMap.values())
+            .filter(batch => batch.location.toLowerCase() !== 'staging area inbound') // Exclude staging area
+            .map((batch, index) => {
+                const locationType = getLocationType(batch.location);
+                const status = getProductStatus(new Date(batch.exp_date), batch.stock, locationType);
 
-            return {
-                ...batch,
-                id: `${batch.barcode}-${batch.location}-${batch.exp_date}`,
-                status: status,
-            };
-        });
+                return {
+                    ...batch,
+                    id: `${batch.barcode}-${batch.location}-${batch.exp_date}`,
+                    status: status,
+                };
+            });
 
 
         return NextResponse.json(finalBatchProducts);
