@@ -61,11 +61,11 @@ export async function POST(request: Request) {
     date: document.date,
     validatedby: document.received_by,
     sku: item.sku,
-    name: item.brand, // Assuming name is not available directly, using brand as placeholder
+    name: item.name,
     barcode: item.barcode,
     expdate: item.exp_date,
     qty: item.qty,
-    location: "Staging Area Inbound", // Default location for inbound
+    location: item.location || "Staging Area Inbound", // Use provided location or default
     status: 'Receipt - Inbound' as const
   }));
 

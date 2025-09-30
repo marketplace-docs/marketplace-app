@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
@@ -144,7 +145,7 @@ export default function TransferFromVendorPage() {
           notes: `Transfer from Vendor: ${docDetails.vendor_name}`,
           date: new Date().toISOString(),
         },
-        items: stagedItems,
+        items: stagedItems.map(item => ({...item, location: 'Staging Area Inbound'})),
         user
       };
 
@@ -184,7 +185,7 @@ export default function TransferFromVendorPage() {
           <CardHeader>
             <CardTitle>Create Vendor Transfer Document</CardTitle>
             <CardDescription>
-              Record items being transferred into the warehouse from an external vendor.
+              Record items being transferred into the warehouse from an external vendor. The stock will initially be placed in the 'Staging Area Inbound' and must be moved using the 'Go-Putaway' feature.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
