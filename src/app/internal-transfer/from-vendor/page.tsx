@@ -74,7 +74,7 @@ export default function TransferFromVendorPage() {
     const { name, value } = e.target;
     setNewItem(prev => ({ ...prev, [name]: value }));
 
-    if ((name === 'barcode' || name === 'sku') && value) {
+    if (name === 'barcode' && value) {
         setIsProductLoading(true);
         try {
             const response = await fetch(`/api/master-products/${value}`);
@@ -87,11 +87,11 @@ export default function TransferFromVendorPage() {
                     brand: product.brand,
                 }));
             } else {
-                 setNewItem(prev => ({ ...prev, brand: '' }));
+                 setNewItem(prev => ({ ...prev, sku: '', brand: '' }));
             }
         } catch (error) {
             console.error("Failed to fetch product data", error);
-            setNewItem(prev => ({ ...prev, brand: '' }));
+            setNewItem(prev => ({ ...prev, sku: '', brand: '' }));
         } finally {
             setIsProductLoading(false);
         }
@@ -207,18 +207,9 @@ export default function TransferFromVendorPage() {
                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                     <div className="space-y-2">
                         <Label htmlFor="barcode">Barcode</Label>
-                        <Input id="barcode" name="barcode" placeholder="Enter barcode" value={newItem.barcode} onChange={handleItemInputChange} />
+                        <Input id="barcode" name="barcode" placeholder="Scan or enter barcode" value={newItem.barcode} onChange={handleItemInputChange} />
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="sku">SKU</Label>
-                        <Input id="sku" name="sku" placeholder="Enter SKU" value={newItem.sku} onChange={handleItemInputChange} />
-                    </div>
-                    <div className="space-y-2 relative">
-                        <Label htmlFor="brand">Brand</Label>
-                        <Input id="brand" name="brand" placeholder="Product brand" value={newItem.brand} className="bg-muted" readOnly />
-                        {isProductLoading && <Loader2 className="absolute right-2 top-8 h-4 w-4 animate-spin" />}
-                    </div>
-                     <div className="space-y-2">
                         <Label htmlFor="exp_date">Exp Date</Label>
                         <Input id="exp_date" name="exp_date" type="date" value={newItem.exp_date} onChange={handleItemInputChange}/>
                     </div>
@@ -226,7 +217,16 @@ export default function TransferFromVendorPage() {
                         <Label htmlFor="qty">QTY</Label>
                         <Input id="qty" name="qty" type="number" placeholder="Enter quantity" value={newItem.qty} onChange={handleItemInputChange}/>
                     </div>
-                    <div className="flex">
+                    <div className="space-y-2 relative">
+                        <Label htmlFor="sku">SKU</Label>
+                        <Input id="sku" name="sku" placeholder="Auto-filled" value={newItem.sku} className="bg-muted" readOnly />
+                        {isProductLoading && <Loader2 className="absolute right-2 top-8 h-4 w-4 animate-spin" />}
+                    </div>
+                    <div className="space-y-2 relative">
+                        <Label htmlFor="brand">Brand</Label>
+                        <Input id="brand" name="brand" placeholder="Auto-filled" value={newItem.brand} className="bg-muted" readOnly />
+                    </div>
+                    <div className="flex items-end">
                       <Button type="button" onClick={handleAddItem} disabled={!canCreate} className="w-full">
                           <Plus className="mr-2 h-4 w-4" /> Add Item
                       </Button>
