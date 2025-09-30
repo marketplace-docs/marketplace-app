@@ -23,6 +23,7 @@ type ProductStatus = 'All' | 'Sellable' | 'Expiring' | 'Expired' | 'Out of Stock
 type BatchProduct = {
     id: string;
     sku: string;
+    name: string;
     barcode: string;
     brand: string;
     exp_date: string;
@@ -33,6 +34,7 @@ type BatchProduct = {
 
 type AggregatedBySku = {
     sku: string;
+    name: string;
     barcode: string;
     brand: string;
     totalStock: number;
@@ -111,6 +113,7 @@ export default function BatchProductPage() {
             if (!productMap.has(product.sku)) {
                 productMap.set(product.sku, {
                     sku: product.sku,
+                    name: product.name,
                     barcode: product.barcode,
                     brand: product.brand,
                     totalStock: 0,
@@ -126,6 +129,7 @@ export default function BatchProductPage() {
         
         return allAggregated.filter(product => {
              const matchesSearch = product.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 product.barcode.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 (product.brand && product.brand.toLowerCase().includes(searchTerm.toLowerCase()));
 
@@ -243,7 +247,7 @@ export default function BatchProductPage() {
                                     </SelectContent>
                                 </Select>
                                  <Input 
-                                    placeholder="Search SKU, Barcode, or Brand..." 
+                                    placeholder="Search SKU, Name, Barcode, or Brand..." 
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     className="w-full md:w-auto md:max-w-sm"
@@ -258,6 +262,7 @@ export default function BatchProductPage() {
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead>SKU</TableHead>
+                                            <TableHead>Name Product</TableHead>
                                             <TableHead>Barcode</TableHead>
                                             <TableHead>Brand</TableHead>
                                             <TableHead>Total Stock</TableHead>
@@ -267,7 +272,7 @@ export default function BatchProductPage() {
                                     <TableBody>
                                         {loading ? (
                                             <TableRow>
-                                                <TableCell colSpan={5} className="h-24 text-center">
+                                                <TableCell colSpan={6} className="h-24 text-center">
                                                     <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                                                 </TableCell>
                                             </TableRow>
@@ -277,6 +282,7 @@ export default function BatchProductPage() {
                                                 <>
                                                 <TableRow>
                                                     <TableCell className="font-medium">{product.sku}</TableCell>
+                                                    <TableCell>{product.name}</TableCell>
                                                     <TableCell>{product.barcode}</TableCell>
                                                     <TableCell>{product.brand}</TableCell>
                                                     <TableCell>
@@ -291,7 +297,7 @@ export default function BatchProductPage() {
                                                     </TableCell>
                                                 </TableRow>
                                                 <TableRow>
-                                                    <TableCell colSpan={5} className="p-0 border-0">
+                                                    <TableCell colSpan={6} className="p-0 border-0">
                                                         <AccordionContent>
                                                             <div className="p-4 bg-muted/50">
                                                                 <Table>
@@ -352,7 +358,7 @@ export default function BatchProductPage() {
                                             ))
                                         ) : (
                                             <TableRow>
-                                                <TableCell colSpan={5} className="h-24 text-center">
+                                                <TableCell colSpan={6} className="h-24 text-center">
                                                     <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
                                                          <PackageSearch className="h-8 w-8" />
                                                          <span>No inventory data found.</span>
