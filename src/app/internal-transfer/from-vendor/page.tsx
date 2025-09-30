@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
@@ -53,10 +52,9 @@ export default function TransferFromVendorPage() {
 
   const canCreate = user?.role && ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin'].includes(user.role);
   
-  // NOTE: This can be a new endpoint like /api/internal-transfer/generate-number if needed
   const generateDocNumber = useCallback(async () => {
     try {
-        const response = await fetch('/api/inbound-documents/generate-number');
+        const response = await fetch('/api/internal-transfer/generate-vendor-number');
         if (!response.ok) throw new Error('Failed to generate document number.');
         const data = await response.json();
         setDocDetails(prev => ({ ...prev, reference: data.newDocNumber }));
