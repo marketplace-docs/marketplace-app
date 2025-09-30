@@ -79,7 +79,6 @@ export async function GET() {
         // 2. Create a lookup map for master products for efficient access
         const productMap = new Map<string, MasterProduct>();
         allMasterProducts.forEach(p => {
-            // Prioritize SKU as the key
             if (p.sku) {
                  productMap.set(p.sku, p);
             }
@@ -107,13 +106,13 @@ export async function GET() {
             if (existingBatch) {
                 existingBatch.stock += qtyChange;
             } else {
-                 // Get product info from master data. The key is SKU.
+                 // Get product info from master data using SKU from the transaction.
                 const productInfo = productMap.get(doc.sku);
                 
                 stockBatchMap.set(key, {
-                    sku: doc.sku, // Use SKU from the transaction document
-                    name: productInfo?.name || '(No Master Data)', // Provide a placeholder
-                    brand: productInfo?.brand || '(No Master Data)', // Provide a placeholder
+                    sku: doc.sku,
+                    name: productInfo?.name || '(No Master Data)',
+                    brand: productInfo?.brand || '(No Master Data)',
                     barcode: doc.barcode,
                     location: doc.location,
                     exp_date: doc.expdate,
@@ -125,7 +124,7 @@ export async function GET() {
         // 4. Convert the map to an array and assign a unique ID
         const finalBatchProducts = Array.from(stockBatchMap.values()).map((batch, index) => ({
             ...batch,
-            id: `${batch.barcode}-${batch.location}-${batch.exp_date}`, // Create a stable unique ID
+            id: `${batch.barcode}-${batch.location}-${batch.exp_date}`,
         }));
 
 
