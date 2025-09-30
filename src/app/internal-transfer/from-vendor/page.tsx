@@ -21,6 +21,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 type TransferItem = {
     sku: string;
+    name: string;
     barcode: string;
     brand: string;
     exp_date: string;
@@ -29,6 +30,7 @@ type TransferItem = {
 
 type ProductMaster = {
     sku: string;
+    name: string;
     barcode: string;
     brand: string;
 };
@@ -37,7 +39,7 @@ export default function TransferFromVendorPage() {
   const { user } = useAuth();
   const [stagedItems, setStagedItems] = useState<TransferItem[]>([]);
   const [newItem, setNewItem] = useState<Omit<TransferItem, 'qty'> & { qty: string }>({
-    sku: '', barcode: '', brand: '', exp_date: '', qty: ''
+    sku: '', name: '', barcode: '', brand: '', exp_date: '', qty: ''
   });
   const [docDetails, setDocDetails] = useState({
     reference: '',
@@ -83,15 +85,16 @@ export default function TransferFromVendorPage() {
                 setNewItem(prev => ({
                     ...prev,
                     sku: product.sku,
+                    name: product.name,
                     barcode: product.barcode,
                     brand: product.brand,
                 }));
             } else {
-                 setNewItem(prev => ({ ...prev, sku: '', brand: '' }));
+                 setNewItem(prev => ({ ...prev, sku: '', name: '', brand: '' }));
             }
         } catch (error) {
             console.error("Failed to fetch product data", error);
-            setNewItem(prev => ({ ...prev, sku: '', brand: '' }));
+            setNewItem(prev => ({ ...prev, sku: '', name: '', brand: '' }));
         } finally {
             setIsProductLoading(false);
         }
@@ -106,7 +109,7 @@ export default function TransferFromVendorPage() {
     }
     
     setStagedItems(prev => [...prev, { ...newItem, qty }]);
-    setNewItem({ sku: '', barcode: '', brand: '', exp_date: '', qty: '' }); // Reset form
+    setNewItem({ sku: '', name: '', barcode: '', brand: '', exp_date: '', qty: '' }); // Reset form
   };
 
   const handleRemoveItem = (index: number) => {
@@ -184,7 +187,7 @@ export default function TransferFromVendorPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="space-y-4 p-4 border rounded-lg">
+            <div className="space-y-4 p-4 border-2 border-primary/20 rounded-lg">
                 <h3 className="text-lg font-medium">Document Details</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                      <div className="space-y-2">
@@ -202,9 +205,9 @@ export default function TransferFromVendorPage() {
                 </div>
             </div>
 
-            <div className="space-y-4 p-4 border rounded-lg">
+            <div className="space-y-4 p-4 border-2 border-primary/20 rounded-lg">
                 <h3 className="text-lg font-medium">Add Item to Document</h3>
-                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
                     <div className="space-y-2">
                         <Label htmlFor="barcode">Barcode</Label>
                         <Input id="barcode" name="barcode" placeholder="Scan or enter barcode" value={newItem.barcode} onChange={handleItemInputChange} />
@@ -217,14 +220,20 @@ export default function TransferFromVendorPage() {
                         <Label htmlFor="qty">QTY</Label>
                         <Input id="qty" name="qty" type="number" placeholder="Enter quantity" value={newItem.qty} onChange={handleItemInputChange}/>
                     </div>
-                    <div className="space-y-2 relative">
-                        <Label htmlFor="sku">SKU</Label>
-                        <Input id="sku" name="sku" placeholder="Auto-filled" value={newItem.sku} className="bg-muted" readOnly />
-                        {isProductLoading && <Loader2 className="absolute right-2 top-8 h-4 w-4 animate-spin" />}
-                    </div>
-                    <div className="space-y-2 relative">
-                        <Label htmlFor="brand">Brand</Label>
-                        <Input id="brand" name="brand" placeholder="Auto-filled" value={newItem.brand} className="bg-muted" readOnly />
+                    <div className="space-y-2 relative col-span-1 md:col-span-2 lg:col-span-3 grid grid-cols-1 lg:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="sku">SKU</Label>
+                            <Input id="sku" name="sku" placeholder="Auto-filled" value={newItem.sku} className="bg-muted" readOnly />
+                            {isProductLoading && <Loader2 className="absolute right-2 top-8 h-4 w-4 animate-spin" />}
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="name">Name</Label>
+                            <Input id="name" name="name" placeholder="Auto-filled" value={newItem.name} className="bg-muted" readOnly />
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="brand">Brand</Label>
+                            <Input id="brand" name="brand" placeholder="Auto-filled" value={newItem.brand} className="bg-muted" readOnly />
+                        </div>
                     </div>
                     <div className="flex items-end">
                       <Button type="button" onClick={handleAddItem} disabled={!canCreate} className="w-full">
@@ -236,11 +245,12 @@ export default function TransferFromVendorPage() {
             
             <div className="space-y-4">
                 <h3 className="text-lg font-medium">Document Items ({stagedItems.length})</h3>
-                <div className="border rounded-lg max-h-96 overflow-y-auto">
+                <div className="border-2 border-primary/20 rounded-lg max-h-96 overflow-y-auto">
                     <Table>
                         <TableHeader>
                             <TableRow>
                                 <TableHead>SKU</TableHead>
+                                <TableHead>Name</TableHead>
                                 <TableHead>Barcode</TableHead>
                                 <TableHead>Brand</TableHead>
                                 <TableHead>Exp Date</TableHead>
@@ -253,6 +263,7 @@ export default function TransferFromVendorPage() {
                                 stagedItems.map((item, index) => (
                                     <TableRow key={index}>
                                         <TableCell>{item.sku}</TableCell>
+                                        <TableCell>{item.name}</TableCell>
                                         <TableCell>{item.barcode}</TableCell>
                                         <TableCell>{item.brand}</TableCell>
                                         <TableCell>{format(new Date(item.exp_date), 'dd/MM/yyyy')}</TableCell>
@@ -266,7 +277,7 @@ export default function TransferFromVendorPage() {
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">No items added yet.</TableCell>
+                                    <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">No items added yet.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>

@@ -14,7 +14,7 @@ export async function GET(request: Request, { params }: { params: { query: strin
     // Using supabaseService to bypass RLS policies for this internal lookup
     const { data, error } = await supabaseService
       .from('master_products')
-      .select('sku, barcode, brand')
+      .select('sku, name, barcode, brand')
       .or(`sku.eq.${query},barcode.eq.${query}`)
       .limit(1)
       .single();
