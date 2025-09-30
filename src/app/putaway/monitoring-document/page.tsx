@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
@@ -161,8 +162,10 @@ export default function MonitoringPutawayPage() {
             const putawayDocs: PutawayDocument[] = await putawayRes.json();
             
             const combined = inboundDocs.map(inboundDoc => {
-                const relatedPutaways = putawayDocs.filter(pd => pd.no_document === inboundDoc.reference);
-                const totalPutawayQty = relatedPutaways.reduce((sum, current) => sum + current.qty, 0);
+                const relatedPutaways = putawayDocs.filter(pd => pd.no_document === inboundDoc.reference && (pd.status === 'Receipt - Putaway' || pd.status === 'Issue - Putaway'));
+                const totalPutawayQty = relatedPutaways
+                                        .filter(pd => pd.status === 'Receipt - Putaway')
+                                        .reduce((sum, current) => sum + current.qty, 0);
 
                 let status: 'Assign' | 'In Progress' | 'Done' = 'Assign';
                 if (totalPutawayQty >= inboundDoc.qty) {
