@@ -7,7 +7,7 @@ import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
-import { Eye, Search, ChevronDown, ChevronUp, Loader2, AlertCircle, RefreshCcw } from 'lucide-react';
+import { Eye, Search, ChevronDown, ChevronUp, Loader2, AlertCircle, RefreshCcw, Check } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format, formatDistanceStrict } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -46,7 +46,7 @@ const InboundDetailDialog = ({ document: initialDoc }: { document: InboundDocume
     
     const currentStatus = useMemo(() => {
         if (outstandingQty <= 0) return 'Done';
-        if (totalPutaway > 0) return 'On Progress';
+        if (totalPutaway > 0) return 'In Progress';
         return 'Assign';
     }, [outstandingQty, totalPutaway]);
 
@@ -188,12 +188,18 @@ const InboundDetailDialog = ({ document: initialDoc }: { document: InboundDocume
 };
 
 
-const InboundMonitoringTable = ({ data, loading, onStatusChange }: { data: InboundDocument[], loading: boolean, onStatusChange: (doc: InboundDocument, newStatus: 'Assign') => Promise<void> }) => {
+const InboundMonitoringTable = ({ data, loading, onStatusChange }: { data: InboundDocument[], loading: boolean, onStatusChange: (doc: InboundDocument, newStatus: 'Assign' | 'Done') => Promise<void> }) => {
     const [isSubmitting, setIsSubmitting] = useState<number | null>(null);
     
     const handleReassign = async (doc: InboundDocument) => {
         setIsSubmitting(doc.id);
         await onStatusChange(doc, 'Assign');
+        setIsSubmitting(null);
+    }
+
+    const handleMarkAsDone = async (doc: InboundDocument) => {
+        setIsSubmitting(doc.id);
+        await onStatusChange(doc, 'Done');
         setIsSubmitting(null);
     }
     
@@ -234,12 +240,17 @@ const InboundMonitoringTable = ({ data, loading, onStatusChange }: { data: Inbou
                         <TableCell>
                             <Badge variant={item.main_status === 'Done' ? 'default' : 'secondary'}>{item.main_status}</Badge>
                         </TableCell>
-                        <TableCell className="text-right flex items-center justify-end">
+                        <TableCell className="text-right flex items-center justify-end gap-1">
                            <InboundDetailDialog document={item} />
-                            {item.main_status === 'Done' && (
+                            {item.main_status === 'Done' ? (
                                 <Button size="sm" variant="outline" onClick={() => handleReassign(item)} disabled={isSubmitting === item.id}>
                                     {isSubmitting === item.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCcw className="mr-2 h-4 w-4" />}
                                     Re-assign
+                                </Button>
+                            ) : (
+                                <Button size="sm" variant="outline" onClick={() => handleMarkAsDone(item)} disabled={isSubmitting === item.id}>
+                                    {isSubmitting === item.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
+                                    Mark as Done
                                 </Button>
                             )}
                         </TableCell>
@@ -282,7 +293,7 @@ export default function InboundMonitoringPage() {
         fetchDocuments();
     }, [fetchDocuments]);
 
-    const handleStatusChange = async (doc: InboundDocument, newStatus: 'Assign') => {
+    const handleStatusChange = async (doc: InboundDocument, newStatus: 'Assign' | 'Done') => {
         if (!user) {
             toast({ variant: "destructive", title: "Error", description: "You are not logged in." });
             return;
@@ -300,7 +311,7 @@ export default function InboundMonitoringPage() {
                 throw new Error(errorData.error || `Failed to update status.`);
             }
 
-            toast({ title: 'Success', description: `Document ${doc.reference} has been re-assigned.` });
+            toast({ title: 'Success', description: `Document ${doc.reference} has been updated to ${newStatus}.` });
             await fetchDocuments();
 
         } catch (error: any) {
