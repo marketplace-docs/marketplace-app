@@ -33,7 +33,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid document or items data provided.' }, { status: 400 });
   }
 
-  const itemsToInsert = items.map((item: any) => ({
+  // 1. Insert into inbound_documents table
+  const inboundItemsToInsert = items.map((item: any) => ({
     reference: document.reference,
     date: document.date,
     received_by: document.received_by,
@@ -42,19 +43,42 @@ export async function POST(request: Request) {
     brand: item.brand,
     exp_date: item.exp_date,
     qty: item.qty,
-    main_status: 'Assign' // Default status
+    main_status: 'Assign' as const
   }));
 
-
-  const { data, error } = await supabaseService
+  const { error: inboundError } = await supabaseService
     .from('inbound_documents')
-    .insert(itemsToInsert)
-    .select();
+    .insert(inboundItemsToInsert);
 
-  if (error) {
-    console.error('Supabase insert error for inbound docs:', error);
-    return NextResponse.json({ error: 'Failed to save inbound document: ' + error.message }, { status: 500 });
+  if (inboundError) {
+    console.error('Supabase insert error for inbound docs:', inboundError);
+    return NextResponse.json({ error: 'Failed to save inbound document: ' + inboundError.message }, { status: 500 });
   }
+
+  // 2. Create corresponding 'Receipt - Inbound' transactions in product_out_documents
+  const transactionItemsToInsert = items.map((item: any) => ({
+    nodocument: document.reference,
+    date: document.date,
+    validatedby: document.received_by,
+    sku: item.sku,
+    name: item.brand, // Assuming name is not available directly, using brand as placeholder
+    barcode: item.barcode,
+    expdate: item.exp_date,
+    qty: item.qty,
+    location: "Staging Area Inbound", // Default location for inbound
+    status: 'Receipt - Inbound' as const
+  }));
+
+  const { error: transactionError } = await supabaseService
+    .from('product_out_documents')
+    .insert(transactionItemsToInsert);
+
+  if (transactionError) {
+      console.error('Supabase insert error for product_out_documents:', transactionError);
+      // Optional: Add rollback logic for the inbound_documents insert here if needed
+      return NextResponse.json({ error: 'Failed to create stock log transaction: ' + transactionError.message }, { status: 500 });
+  }
+
 
   await logActivity({
     userName: user.name,
@@ -63,5 +87,5 @@ export async function POST(request: Request) {
     details: `Created inbound document ${document.reference} with ${items.length} items.`,
   });
 
-  return NextResponse.json({ message: 'Document created successfully', data }, { status: 201 });
+  return NextResponse.json({ message: 'Document created successfully' }, { status: 201 });
 }

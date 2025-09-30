@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
@@ -26,6 +27,7 @@ type InboundItem = {
     brand: string;
     exp_date: string;
     qty: number;
+    location: string;
 };
 
 type ProductMaster = {
@@ -38,7 +40,7 @@ export default function CreateInboundPage() {
   const { user } = useAuth();
   const [stagedItems, setStagedItems] = useState<InboundItem[]>([]);
   const [newItem, setNewItem] = useState<Omit<InboundItem, 'qty'> & { qty: string }>({
-    sku: '', barcode: '', brand: '', exp_date: '', qty: ''
+    sku: '', barcode: '', brand: '', exp_date: '', qty: '', location: 'Staging Area Inbound'
   });
   const [docDetails, setDocDetails] = useState({
     reference: '',
@@ -106,7 +108,7 @@ export default function CreateInboundPage() {
     }
     
     setStagedItems(prev => [...prev, { ...newItem, qty }]);
-    setNewItem({ sku: '', barcode: '', brand: '', exp_date: '', qty: '' }); // Reset form
+    setNewItem({ sku: '', barcode: '', brand: '', exp_date: '', qty: '', location: 'Staging Area Inbound' }); // Reset form
   };
 
   const handleRemoveItem = (index: number) => {
@@ -221,7 +223,11 @@ export default function CreateInboundPage() {
                         <Label htmlFor="qty">QTY</Label>
                         <Input id="qty" name="qty" type="number" placeholder="Enter quantity" value={newItem.qty} onChange={handleItemInputChange}/>
                     </div>
-                    <div className="flex">
+                    <div className="space-y-2">
+                        <Label htmlFor="location">Location</Label>
+                        <Input id="location" name="location" value={newItem.location} readOnly className="bg-muted" />
+                    </div>
+                    <div className="flex items-end">
                       <Button type="button" onClick={handleAddItem} disabled={!canCreate} className="w-full">
                           <Plus className="mr-2 h-4 w-4" /> Add Item
                       </Button>
@@ -239,6 +245,7 @@ export default function CreateInboundPage() {
                                 <TableHead>Barcode</TableHead>
                                 <TableHead>Brand</TableHead>
                                 <TableHead>Exp Date</TableHead>
+                                <TableHead>Location</TableHead>
                                 <TableHead>QTY</TableHead>
                                 <TableHead className="text-right">Action</TableHead>
                             </TableRow>
@@ -251,6 +258,7 @@ export default function CreateInboundPage() {
                                         <TableCell>{item.barcode}</TableCell>
                                         <TableCell>{item.brand}</TableCell>
                                         <TableCell>{format(new Date(item.exp_date), 'dd/MM/yyyy')}</TableCell>
+                                        <TableCell>{item.location}</TableCell>
                                         <TableCell>{item.qty.toLocaleString()}</TableCell>
                                         <TableCell className="text-right">
                                             <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(index)}>
@@ -261,7 +269,7 @@ export default function CreateInboundPage() {
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">No items added yet.</TableCell>
+                                    <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">No items added yet.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>
