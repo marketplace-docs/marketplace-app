@@ -484,5 +484,3 @@ export default function DatabaseUserPage() {
       </MainLayout>
     )
 }
-
-    
