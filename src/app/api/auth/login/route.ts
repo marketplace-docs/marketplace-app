@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     // 2. Fetch user data from the database using the service client
     const { data: dbUser, error: dbError } = await supabaseService
       .from('users')
-      .select('name, email, role')
+      .select('id, name, email, role')
       .eq('email', lowercasedEmail)
       .single();
 
@@ -33,6 +33,7 @@ export async function POST(request: Request) {
 
     // 3. Return the user data on success
     const user = {
+      id: dbUser.id,
       name: dbUser.name,
       email: dbUser.email,
       role: dbUser.role,

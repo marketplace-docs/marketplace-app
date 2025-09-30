@@ -18,8 +18,9 @@ import { usePathname } from 'next/navigation';
 import { Button } from '../ui/button';
 import { MoreHorizontal, ChevronsLeft, ChevronDown, Store } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { SheetHeader, SheetTitle } from '../ui/sheet';
+import { useAuth } from '@/hooks/use-auth';
 
 function AppLogo() {
   return (
@@ -36,13 +37,40 @@ function AppLogo() {
 export function AppSidebar() {
   const pathname = usePathname();
   const { toggleSidebar, state } = useSidebar();
+  const { permissions } = useAuth();
+
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(
     NAV_LINKS.find(link => link.children?.some(child => pathname.startsWith(child.href)))?.label || null
   );
 
+  const filteredNavLinks = useMemo(() => {
+    if (!permissions) return [];
+
+    const filterLinks = (links: NavLink[]): NavLink[] => {
+      return links.reduce((acc, link) => {
+        const effectiveHref = link.children ? `group-${link.label}` : link.href;
+
+        if (permissions[effectiveHref]) {
+          const newLink = { ...link };
+          if (link.children) {
+            newLink.children = filterLinks(link.children);
+            // Only include parent menu if it has visible children
+            if (newLink.children.length > 0) {
+              acc.push(newLink);
+            }
+          } else {
+            acc.push(newLink);
+          }
+        }
+        return acc;
+      }, [] as NavLink[]);
+    };
+
+    return filterLinks(NAV_LINKS);
+  }, [permissions]);
+
   const isActive = (link: NavLink) => {
     if (link.href === '/') return pathname === '/';
-    // For parent links, check if the current path starts with the link's href.
     if (link.children) {
       return pathname.startsWith(link.href);
     }
@@ -74,7 +102,7 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
       <SidebarMenu className="flex-1 p-4">
-        {NAV_LINKS.map((link) => (
+        {filteredNavLinks.map((link) => (
           <SidebarMenuItem key={`${link.href}-${link.label}`}>
             {link.children ? (
               <Collapsible open={openSubmenu === link.label} onOpenChange={() => handleSubmenuToggle(link.label)}>
@@ -129,5 +157,3 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
-
-    
