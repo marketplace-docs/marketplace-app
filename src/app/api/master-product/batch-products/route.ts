@@ -3,7 +3,27 @@
 
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
-import { format } from 'date-fns';
+import { format, differenceInMonths, isBefore } from 'date-fns';
+
+type ProductOutStatus =
+    | 'Receipt - Inbound'
+    | 'Receipt - Putaway'
+    | 'Receipt - Internal Transfer In to Warehouse'
+    | 'Receipt - Update Expired'
+    | 'Receipt - Outbound Return'
+    | 'Receipt'
+    | 'Issue - Order'
+    | 'Issue - Internal Transfer'
+    | 'Issue - Internal Transfer Out From Warehouse'
+    | 'Issue - Internal Transfer out B2B'
+    | 'Issue - Internal Transfer out B2C'
+    | 'Issue - Adjustment Manual'
+    | 'Issue - Putaway'
+    | 'Issue - Return'
+    | 'Issue - Return Putaway'
+    | 'Issue - Update Expired'
+    | 'Adjustment - Loc'
+    | 'Adjusment - Loc';
 
 type ProductOutDocument = {
     id: string;
@@ -12,7 +32,7 @@ type ProductOutDocument = {
     barcode: string;
     expdate: string;
     qty: number;
-    status: string;
+    status: ProductOutStatus;
     date: string;
     location: string;
 };
@@ -25,6 +45,9 @@ type MasterProduct = {
 };
 
 type BatchKey = string;
+
+type ProductStatus = 'Sellable' | 'Expiring' | 'Expired' | 'Out of Stock' | 'Quarantine' | 'Damaged' | 'Marketplace' | 'Sensitive MP';
+
 type BatchDetails = {
     sku: string;
     name: string;
@@ -33,10 +56,12 @@ type BatchDetails = {
     location: string;
     exp_date: string;
     stock: number;
+    status: ProductStatus;
 };
 
+
 // Define statuses that represent an INCREASE in stock.
-const STOCK_IN_STATUSES = [
+const STOCK_IN_STATUSES: ProductOutStatus[] = [
     'Receipt - Inbound',
     'Receipt - Putaway',
     'Receipt - Internal Transfer In to Warehouse',
@@ -46,7 +71,7 @@ const STOCK_IN_STATUSES = [
 ];
 
 // Define statuses that represent a DECREASE in stock.
-const STOCK_OUT_STATUSES = [
+const STOCK_OUT_STATUSES: ProductOutStatus[] = [
     'Issue - Order',
     'Issue - Internal Transfer',
     'Issue - Internal Transfer Out From Warehouse',
@@ -60,6 +85,29 @@ const STOCK_OUT_STATUSES = [
     'Adjustment - Loc',
     'Adjusment - Loc'
 ];
+
+const getLocationType = (locationName: string): ProductStatus => {
+    const lowerCaseName = locationName.toLowerCase();
+    if (lowerCaseName.includes('quarantine')) return 'Quarantine';
+    if (lowerCaseName.includes('damaged')) return 'Damaged';
+    if (lowerCaseName.includes('sensitive')) return 'Sensitive MP';
+    if (lowerCaseName.includes('marketplace')) return 'Marketplace';
+    return 'Sellable'; // Default if no other type matches
+};
+
+const getProductStatus = (expDate: Date, stock: number, locationType: ProductStatus): ProductStatus => {
+    const today = new Date();
+
+    if (stock <= 0) return 'Out of Stock';
+    if (locationType !== 'Sellable') return locationType; // Quarantine, Damaged, etc. override date logic
+    if (isBefore(expDate, today)) return 'Expired';
+
+    const monthsUntilExpiry = differenceInMonths(expDate, today);
+    if (monthsUntilExpiry < 3) return 'Expired'; // Treat as expired if less than 3 months
+    if (monthsUntilExpiry < 9) return 'Expiring';
+    
+    return 'Sellable';
+};
 
 
 export async function GET() {
@@ -85,7 +133,7 @@ export async function GET() {
         });
         
         // 3. Process documents to calculate current stock for each batch
-        const stockBatchMap = new Map<BatchKey, BatchDetails>();
+        const stockBatchMap = new Map<BatchKey, Omit<BatchDetails, 'status'>>();
 
         for (const doc of allDocuments) {
             if (!doc.location || !doc.expdate) continue; // Skip docs without location or exp_date
@@ -106,7 +154,6 @@ export async function GET() {
             if (existingBatch) {
                 existingBatch.stock += qtyChange;
             } else {
-                 // Get product info from master data using SKU from the transaction.
                 const productInfo = productMap.get(doc.sku);
                 
                 stockBatchMap.set(key, {
@@ -121,11 +168,17 @@ export async function GET() {
             }
         }
 
-        // 4. Convert the map to an array and assign a unique ID
-        const finalBatchProducts = Array.from(stockBatchMap.values()).map((batch, index) => ({
-            ...batch,
-            id: `${batch.barcode}-${batch.location}-${batch.exp_date}`,
-        }));
+        // 4. Convert the map to an array, assign status, and a unique ID
+        const finalBatchProducts = Array.from(stockBatchMap.values()).map((batch, index) => {
+            const locationType = getLocationType(batch.location);
+            const status = getProductStatus(new Date(batch.exp_date), batch.stock, locationType);
+
+            return {
+                ...batch,
+                id: `${batch.barcode}-${batch.location}-${batch.exp_date}`,
+                status: status,
+            };
+        });
 
 
         return NextResponse.json(finalBatchProducts);
