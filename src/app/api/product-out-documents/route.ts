@@ -24,7 +24,7 @@ async function generateNewDocumentNumber(status: ProductOutStatus): Promise<stri
       prefix = `MP-UPD-EXP-${year}`;
   } else if (status.startsWith('Receipt - Outbound Return')) {
       prefix = `MP-OTR-${year}`;
-  } else if (status === 'Receipt' || status === 'Receipt - Inbound') {
+  } else if (status === 'Receipt' || status === 'Receipt - Inbound' || status === 'Receipt - Internal Transfer In to Warehouse') {
       prefix = `MP-RCP-${year}`;
   } else if (status.startsWith('Issue - Putaway') || status.startsWith('Receipt - Putaway')) {
     prefix = `MP-PTW-${year}`;
@@ -127,7 +127,10 @@ export async function POST(request: Request) {
 
 type ProductOutStatus = 
     | 'Issue - Order' 
-    | 'Issue - Internal Transfer' 
+    | 'Issue - Internal Transfer Out From Warehouse'
+    | 'Issue - Internal Transfer out B2B'
+    | 'Issue - Internal Transfer out B2C'
+    | 'Receipt - Internal Transfer In to Warehouse'
     | 'Issue - Adjustment Manual'
     | 'Adjustment - Loc'
     | 'Adjustment - SKU'

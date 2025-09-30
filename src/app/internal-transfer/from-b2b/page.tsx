@@ -70,7 +70,7 @@ export default function TransferFromB2BPage() {
     };
     
     const handleConfirmTransfer = async () => {
-         const qty = parseInt(transferQty, 10);
+        const qty = parseInt(transferQty, 10);
         if (!foundProduct || !destinationLocation || isNaN(qty) || qty <= 0) {
             toast({ variant: 'destructive', title: 'Invalid Details', description: 'Please fill all transfer details correctly.'});
             return;
@@ -81,18 +81,36 @@ export default function TransferFromB2BPage() {
         }
 
         setIsSubmitting(true);
-        // TODO: Implement API call for B2B stock transfer
-        console.log({
-            to: destinationLocation,
-            qty,
-            product: foundProduct,
-            user,
-        });
+        try {
+             // In a real scenario, this would have more complex logic, like calling a dedicated B2B stock API
+            // For now, we'll use the batch-upload endpoint for product_out which has FEFO logic
+            const payload = {
+                documents: [{
+                    barcode: foundProduct.barcode,
+                    qty: qty,
+                    status: 'Issue - Internal Transfer out B2B',
+                }],
+                user
+            };
+            
+            const response = await fetch('/api/product-out-documents/batch-upload', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
 
-        setTimeout(() => {
-            toast({ title: 'Transfer Submitted', description: `${qty} units of ${foundProduct.sku} will be moved from B2B stock to ${destinationLocation}.`});
+            if (!response.ok) {
+                 const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to create B2B transfer document.');
+            }
+
+            toast({ title: 'Transfer Submitted', description: `${qty} units of ${foundProduct.sku} will be moved from B2B stock.`});
             resetForm();
-        }, 1500);
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Transfer Failed', description: error.message });
+        } finally {
+             setIsSubmitting(false);
+        }
     };
 
     const resetForm = () => {

@@ -76,20 +76,51 @@ export default function TransferFromWarehousePage() {
         }
 
         setIsSubmitting(true);
-        // TODO: Implement API call to create product_out_documents
-        // One 'Issue - Internal Transfer' and one 'Receipt - Internal Transfer' (or similar)
-        console.log({
-            from: foundBatch.location,
-            to: destinationLocation,
-            qty,
-            product: foundBatch,
-            user,
-        });
+        try {
+            const transferDocuments = [
+                // Document for stock out from source
+                {
+                    sku: foundBatch.sku,
+                    barcode: foundBatch.barcode,
+                    location: foundBatch.location,
+                    expdate: foundBatch.exp_date,
+                    qty: qty,
+                    status: 'Issue - Internal Transfer Out From Warehouse' as const,
+                    date: new Date().toISOString(),
+                    validatedby: user!.name,
+                },
+                // Document for stock in to destination
+                {
+                    sku: foundBatch.sku,
+                    barcode: foundBatch.barcode,
+                    location: destinationLocation,
+                    expdate: foundBatch.exp_date,
+                    qty: qty,
+                    status: 'Receipt - Internal Transfer In to Warehouse' as const, // This needs to be a valid status for 'IN' type
+                    date: new Date().toISOString(),
+                    validatedby: user!.name,
+                }
+            ];
 
-        setTimeout(() => {
-            toast({ title: 'Transfer Submitted', description: `${qty} units of ${foundBatch.sku} are being moved from ${foundBatch.location} to ${destinationLocation}.`});
+            const response = await fetch('/api/product-out-documents', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ documents: transferDocuments, user }),
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to process transfer.');
+            }
+
+            toast({ title: 'Transfer Successful', description: `${qty} units of ${foundBatch.sku} moved from ${foundBatch.location} to ${destinationLocation}.`});
             resetForm();
-        }, 1500);
+
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Transfer Failed', description: error.message });
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const resetForm = () => {

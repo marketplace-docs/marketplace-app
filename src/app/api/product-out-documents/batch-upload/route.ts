@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { supabaseService } from '@/lib/supabase-service';
@@ -9,6 +10,10 @@ import { format } from 'date-fns';
 type ProductOutStatus =
     | 'Issue - Order'
     | 'Issue - Internal Transfer'
+    | 'Issue - Internal Transfer Out From Warehouse'
+    | 'Issue - Internal Transfer out B2B'
+    | 'Issue - Internal Transfer out B2C'
+    | 'Receipt - Internal Transfer In to Warehouse'
     | 'Issue - Adjustment Manual'
     | 'Adjustment - Loc'
     | 'Adjustment - SKU'
@@ -50,6 +55,9 @@ const createStockKey = (barcode: string, location: string, exp_date: string): st
 const REAL_STOCK_OUT_STATUSES = [
     'Issue - Order',
     'Issue - Internal Transfer',
+    'Issue - Internal Transfer Out From Warehouse',
+    'Issue - Internal Transfer out B2B',
+    'Issue - Internal Transfer out B2C',
     'Issue - Adjustment Manual',
     'Issue - Putaway',
     'Issue - Return',
@@ -96,105 +104,42 @@ async function generateNewDocumentNumber(status: ProductOutStatus): Promise<stri
 
 export async function POST(request: Request) {
     try {
-        const formData = await request.formData();
-        const file = formData.get('file') as File | null;
-        const userJson = formData.get('user') as string | null;
+        // This API now only handles JSON, not FormData
+        const { documents, user } = await request.json();
         
-        if (!file || !userJson) {
-            return NextResponse.json({ error: 'Missing file or user data' }, { status: 400 });
+        if (!documents || !Array.isArray(documents) || !user) {
+            return NextResponse.json({ error: 'Invalid request body. Expects { documents: [], user: {} }' }, { status: 400 });
         }
 
-        const user = JSON.parse(userJson);
-        const text = await file.text();
-
-        const lines = text.split('\n').filter(line => line.trim() !== '');
-        if (lines.length <= 1) {
-            return NextResponse.json({ error: 'CSV is empty or has only a header.' }, { status: 400 });
-        }
-        
-        const header = lines.shift()!.split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
-        const requiredHeaders = ['barcode', 'qty', 'status'];
-        if (!requiredHeaders.every(h => header.includes(h))) {
-            return NextResponse.json({ error: `Invalid CSV headers. Required: ${requiredHeaders.join(', ')}` }, { status: 400 });
-        }
-
-        const failedRows: { row: number, reason: string }[] = [];
+        const failedRows: { document: any, reason: string }[] = [];
         const validDocsToInsert = [];
 
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-            const values = line.split(',');
-            const entry: { [key: string]: string } = {};
-            header.forEach((h, j) => entry[h] = values[j]?.trim().replace(/"/g, ''));
+        for (const entry of documents) {
+            let requestedQty = entry.qty;
 
-            let requestedQty = parseInt(entry.qty, 10);
-
-            if (!entry.barcode || isNaN(requestedQty) || !entry.status) {
-                failedRows.push({ row: i + 2, reason: 'Missing required data (barcode, qty, or status).' });
+            if (!entry.barcode || !requestedQty || !entry.status) {
+                failedRows.push({ document: entry, reason: 'Missing required data (barcode, qty, or status).' });
                 continue;
             }
              if (requestedQty <= 0) {
-                failedRows.push({ row: i + 2, reason: 'Quantity must be greater than 0.' });
+                failedRows.push({ document: entry, reason: 'Quantity must be greater than 0.' });
                 continue;
             }
 
-
             try {
-                // Fetch all stock movements for the given barcode
-                const [
-                    { data: putawayData, error: putawayError },
-                    { data: productOutData, error: productOutError }
-                ] = await Promise.all([
-                    supabaseService.from('putaway_documents').select('sku, brand, exp_date, location, qty, date').eq('barcode', entry.barcode),
-                    supabaseService.from('product_out_documents').select('location, qty, expdate, date, status').eq('barcode', entry.barcode)
-                ]);
+                 const { data, error: rpcError } = await supabaseService.rpc('get_all_batch_products');
+                 if (rpcError) throw new Error('Failed to fetch stock data from database.');
+                 const allAvailableBatches: BatchProduct[] = data;
 
-                if (putawayError || productOutError) {
-                    throw new Error('Database error fetching stock data.');
-                }
-                
-                // Calculate current stock levels for each batch
-                const stockMap = new Map<string, number>();
+                const productBatches = allAvailableBatches.filter(b => b.barcode === entry.barcode && b.stock > 0);
 
-                putawayData.forEach(p => {
-                    const key = createStockKey(entry.barcode, p.location, p.exp_date);
-                    stockMap.set(key, (stockMap.get(key) || 0) + p.qty);
-                });
-
-                productOutData.forEach(p => {
-                    if (REAL_STOCK_OUT_STATUSES.includes(p.status)) {
-                        const key = createStockKey(entry.barcode, p.location, p.expdate);
-                        stockMap.set(key, (stockMap.get(key) || 0) - p.qty);
-                    }
-                });
-
-                const allAvailableBatches: BatchProduct[] = [];
-                putawayData.forEach(p => {
-                     const key = createStockKey(entry.barcode, p.location, p.exp_date);
-                     const stock = stockMap.get(key) || 0;
-                     if (stock > 0) {
-                        // Check if this exact batch is already in the list to avoid duplicates
-                        if (!allAvailableBatches.some(b => b.id === key)) {
-                            allAvailableBatches.push({
-                                id: key,
-                                sku: p.sku,
-                                barcode: entry.barcode,
-                                brand: p.brand || '',
-                                exp_date: p.exp_date,
-                                location: p.location,
-                                stock: stock,
-                            });
-                        }
-                     }
-                });
-                
                 // --- Cascading FEFO Logic ---
-                const sortedBatches = allAvailableBatches.sort((a, b) => new Date(a.exp_date).getTime() - new Date(b.exp_date).getTime());
+                const sortedBatches = productBatches.sort((a, b) => new Date(a.exp_date).getTime() - new Date(b.exp_date).getTime());
                 
                 const totalStockAvailable = sortedBatches.reduce((sum, batch) => sum + batch.stock, 0);
 
                 if (totalStockAvailable < requestedQty) {
-                    failedRows.push({ row: i + 2, reason: `Insufficient stock for barcode ${entry.barcode}. Required: ${requestedQty}, Available: ${totalStockAvailable}.` });
+                    failedRows.push({ document: entry, reason: `Insufficient stock for barcode ${entry.barcode}. Required: ${requestedQty}, Available: ${totalStockAvailable}.` });
                     continue;
                 }
                 
@@ -222,7 +167,7 @@ export async function POST(request: Request) {
                 }
 
             } catch (processingError: any) {
-                failedRows.push({ row: i + 2, reason: `Error processing barcode ${entry.barcode}: ${processingError.message}` });
+                failedRows.push({ document: entry, reason: `Error processing barcode ${entry.barcode}: ${processingError.message}` });
             }
         }
 
@@ -239,14 +184,23 @@ export async function POST(request: Request) {
                 userName: user.name,
                 userEmail: user.email,
                 action: 'CREATE_BULK',
-                details: `Bulk uploaded ${validDocsToInsert.length} product out documents via CSV.`,
+                details: `Bulk processed ${validDocsToInsert.length} product out documents via internal transfer.`,
             });
         }
+        
+        if (failedRows.length > 0) {
+            return NextResponse.json({ 
+                message: 'Upload processed with some failures.',
+                successfulUploads: validDocsToInsert.length,
+                failedRows: failedRows 
+            }, { status: 207 });
+        }
+
 
         return NextResponse.json({
-            message: 'Upload processed.',
+            message: 'Upload processed successfully.',
             successfulUploads: validDocsToInsert.length,
-            failedRows: failedRows,
+            failedRows: [],
         });
 
     } catch (error: any) {
