@@ -88,10 +88,10 @@ export async function GET() {
         const productMap = new Map<string, MasterProduct>();
         allMasterProducts.forEach(p => {
              // Prioritize SKU as the key, but also handle mapping by barcode if needed
-            if (!productMap.has(p.sku)) {
+            if (p.sku && !productMap.has(p.sku)) {
                  productMap.set(p.sku, p);
             }
-             if (!productMap.has(p.barcode)) {
+             if (p.barcode && !productMap.has(p.barcode)) {
                 productMap.set(p.barcode, p);
             }
         });
@@ -120,17 +120,16 @@ export async function GET() {
             } else {
                  // Get product info from master data. Fallback from SKU to Barcode.
                 const productInfo = productMap.get(doc.sku) || productMap.get(doc.barcode);
-                if (productInfo) {
-                    stockBatchMap.set(key, {
-                        sku: productInfo.sku,
-                        name: productInfo.name, // The crucial 'name' field
-                        brand: productInfo.brand,
-                        barcode: doc.barcode,
-                        location: doc.location,
-                        exp_date: doc.expdate,
-                        stock: qtyChange,
-                    });
-                }
+                
+                stockBatchMap.set(key, {
+                    sku: productInfo?.sku || doc.sku,
+                    name: productInfo?.name || '(No Master Data)', // Provide a placeholder
+                    brand: productInfo?.brand || '(No Master Data)', // Provide a placeholder
+                    barcode: doc.barcode,
+                    location: doc.location,
+                    exp_date: doc.expdate,
+                    stock: qtyChange,
+                });
             }
         }
 
