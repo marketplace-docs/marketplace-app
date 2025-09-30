@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect, useCallback, Suspense, useRef } from 'react';
@@ -7,8 +6,8 @@ import { useSearchParams } from 'next/navigation';
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, AlertCircle, PackageSearch, RefreshCw, Printer, List, X, Check, UserCheck, PackageCheck as PackageCheckIcon, Send, CheckCheck, Search, ChevronLeft, ChevronRight } from "lucide-react";
-import { format } from "date-fns";
+import { Loader2, AlertCircle, PackageSearch, RefreshCw, Printer, List, X, Check, UserCheck, PackageCheck as PackageCheckIcon, Send, CheckCheck, Search, ChevronLeft, ChevronRight, Clock } from "lucide-react";
+import { format, differenceInHours } from "date-fns";
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -34,7 +33,8 @@ type Wave = {
     status: WaveStatus;
     total_orders: number;
     created_by: string;
-}
+    picked_orders_count?: number; 
+};
 
 type WaveOrder = {
     id: number;
@@ -72,23 +72,50 @@ function MonitoringOrdersContent() {
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
 
-
     const fetchWaves = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch('/api/waves');
-            if (!response.ok) {
-                throw new Error("Failed to fetch waves.");
-            }
-            const data: Wave[] = await response.json();
-            setAllWaves(data);
+            const [wavesRes, productOutRes] = await Promise.all([
+                fetch('/api/waves'),
+                fetch('/api/product-out-documents')
+            ]);
+            
+            if (!wavesRes.ok) throw new Error("Failed to fetch waves.");
+            if (!productOutRes.ok) throw new Error("Failed to fetch product out documents.");
+            
+            const wavesData: Wave[] = await wavesRes.json();
+            const allProductOutDocs: ProductOutDocument[] = await productOutRes.json();
+
+            const wavesWithProgress = await Promise.all(wavesData.map(async (wave) => {
+                const waveDetailsRes = await fetch(`/api/waves/${wave.id}`);
+                if (!waveDetailsRes.ok) return { ...wave, picked_orders_count: 0 };
+                const waveDetails = await waveDetailsRes.json();
+
+                const pickedOrderRefs = new Set(
+                    allProductOutDocs
+                        .filter(doc => doc.status === 'Issue - Order' && waveDetails.orders.some((o: any) => o.order_reference === doc.order_reference))
+                        .map(doc => doc.order_reference)
+                );
+                
+                const pickedCount = pickedOrderRefs.size;
+
+                return {
+                    ...wave,
+                    picked_orders_count: pickedCount,
+                    status: pickedCount === wave.total_orders ? 'Wave Done' : 'Wave Progress',
+                };
+            }));
+            
+            setAllWaves(wavesWithProgress);
+
         } catch (err: any) {
             setError(err.message);
         } finally {
             setLoading(false);
         }
     }, []);
+
 
     useEffect(() => {
         if (statusFilter === 'All') {
@@ -327,7 +354,9 @@ function MonitoringOrdersContent() {
                                             </TableCell>
                                         </TableRow>
                                     ) : paginatedWaves.length > 0 ? (
-                                        paginatedWaves.map(wave => (
+                                        paginatedWaves.map(wave => {
+                                            const isDelayed = wave.status === 'Wave Progress' && differenceInHours(new Date(), new Date(wave.created_at)) > 5;
+                                            return (
                                             <TableRow key={wave.id}>
                                                 <TableCell className="font-medium">{wave.wave_document_number}</TableCell>
                                                 <TableCell>{wave.wave_type}</TableCell>
@@ -340,8 +369,16 @@ function MonitoringOrdersContent() {
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <div className="flex items-center justify-center h-8 w-8 rounded-full border-2 border-gray-300">
-                                                        <span className="text-xs font-semibold">{wave.status === 'Wave Done' ? `${wave.total_orders}/${wave.total_orders}` : `0/${wave.total_orders}`}</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="flex items-center justify-center h-8 w-8 rounded-full border-2 border-gray-300">
+                                                            <span className="text-xs font-semibold">{wave.picked_orders_count ?? 0}/{wave.total_orders}</span>
+                                                        </div>
+                                                        {isDelayed && (
+                                                            <Badge variant="destructive" className="gap-1">
+                                                                <Clock className="h-3 w-3" />
+                                                                Delayed
+                                                            </Badge>
+                                                        )}
                                                     </div>
                                                 </TableCell>
                                                 <TableCell></TableCell>
@@ -360,7 +397,7 @@ function MonitoringOrdersContent() {
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
-                                        ))
+                                        )})
                                     ) : (
                                         <TableRow>
                                             <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
