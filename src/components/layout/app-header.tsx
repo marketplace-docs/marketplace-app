@@ -26,6 +26,8 @@ import {
   Settings,
   User,
   BookText,
+  Moon,
+  Sun,
 } from "lucide-react"
 import { SidebarTrigger } from "../ui/sidebar"
 import { usePathname } from "next/navigation"
@@ -34,12 +36,15 @@ import React from "react"
 import { useAuth } from "@/hooks/use-auth"
 import { useRouter } from "next/navigation"
 import { Avatar, AvatarFallback } from "../ui/avatar"
+import { useTheme } from "@/hooks/use-theme"
 
 export function AppHeader() {
   const pathname = usePathname()
   const segments = pathname.split("/").filter(Boolean)
   const { user, logout } = useAuth();
   const router = useRouter();
+  const { theme, setTheme } = useTheme();
+
 
   const handleLogout = () => {
     logout();
@@ -122,6 +127,10 @@ export function AppHeader() {
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Settings</span>
               </Link>
+            </DropdownMenuItem>
+             <DropdownMenuItem onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>
+              {theme === 'light' ? <Moon className="mr-2 h-4 w-4" /> : <Sun className="mr-2 h-4 w-4" />}
+              <span>{theme === 'light' ? 'Dark Mode' : 'Light Mode'}</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout}>
