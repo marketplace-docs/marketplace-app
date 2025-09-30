@@ -48,12 +48,13 @@ export async function POST(request: Request) {
     }
 
     const header = lines.shift()!.split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
-    const requiredHeaders = ['sku', 'barcode', 'brand'];
+    const requiredHeaders = ['sku', 'name', 'barcode', 'brand'];
     if (!requiredHeaders.every(h => header.includes(h))) {
         return NextResponse.json({ error: `Invalid CSV headers. Required: ${requiredHeaders.join(', ')}` }, { status: 400 });
     }
     
     const skuIndex = header.indexOf('sku');
+    const nameIndex = header.indexOf('name');
     const barcodeIndex = header.indexOf('barcode');
     const brandIndex = header.indexOf('brand');
 
@@ -63,16 +64,17 @@ export async function POST(request: Request) {
     const allProducts = lines.map((line, index) => {
         const values = line.split(',');
         const sku = values[skuIndex]?.trim().replace(/"/g, '');
+        const name = values[nameIndex]?.trim().replace(/"/g, '');
         const barcode = values[barcodeIndex]?.trim().replace(/"/g, '');
         const brand = values[brandIndex]?.trim().replace(/"/g, '');
         
-        if (!sku || !barcode || !brand) {
-            allErrors.push({ row: index + 2, line, error: 'Missing required fields (sku, barcode, or brand).' });
+        if (!sku || !barcode || !brand || !name) {
+            allErrors.push({ row: index + 2, line, error: 'Missing required fields (sku, name, barcode, or brand).' });
             return null;
         }
 
-        return { sku, barcode, brand };
-    }).filter((p): p is { sku: string, barcode: string, brand: string } => p !== null);
+        return { sku, name, barcode, brand };
+    }).filter((p): p is { sku: string, name: string, barcode: string, brand: string } => p !== null);
 
 
     for (let i = 0; i < allProducts.length; i += BATCH_SIZE) {
@@ -107,7 +109,6 @@ export async function POST(request: Request) {
     return NextResponse.json({
         message: 'CSV processed.',
         successCount: totalSuccessCount,
-        errorCount: allErrors.length,
         errors: allErrors,
     });
 }

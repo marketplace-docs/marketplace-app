@@ -17,6 +17,7 @@ import { format } from 'date-fns';
 type MasterProduct = {
     id: number;
     sku: string;
+    name: string; // Assuming 'name' field exists
     barcode: string;
     brand: string;
     created_at: string;
@@ -58,6 +59,7 @@ export default function MasterProductManagementPage() {
     const filteredData = useMemo(() => {
         return products.filter(product =>
             product.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (product.name && product.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
             product.barcode.toLowerCase().includes(searchTerm.toLowerCase()) ||
             (product.brand && product.brand.toLowerCase().includes(searchTerm.toLowerCase()))
         );
@@ -86,11 +88,12 @@ export default function MasterProductManagementPage() {
           toast({ variant: "destructive", title: "No Data", description: "There is no data to export." });
           return;
         }
-        const headers = ["sku", "barcode", "brand"];
+        const headers = ["sku", "name", "barcode", "brand"];
         const csvContent = [
             headers.join(","),
             ...filteredData.map(item => [
                 `"${item.sku.replace(/"/g, '""')}"`,
+                `"${item.name.replace(/"/g, '""')}"`,
                 `"${item.barcode.replace(/"/g, '""')}"`,
                 `"${item.brand.replace(/"/g, '""')}"`
             ].join(","))
@@ -182,7 +185,7 @@ export default function MasterProductManagementPage() {
                                         <DialogHeader>
                                             <DialogTitle>Upload Master Product CSV</DialogTitle>
                                             <DialogDescription>
-                                                Pilih file CSV untuk mengunggah data produk secara massal. Header yang dibutuhkan: `sku`, `barcode`, `brand`.
+                                                Pilih file CSV untuk mengunggah data produk secara massal. Header yang dibutuhkan: `sku`, `name`, `barcode`, `brand`.
                                             </DialogDescription>
                                         </DialogHeader>
                                         <div className="py-4">
@@ -200,7 +203,7 @@ export default function MasterProductManagementPage() {
                                     <Download className="mr-2 h-4 w-4" /> Export
                                 </Button>
                                 <Input 
-                                    placeholder="Search SKU, Barcode, or Brand..." 
+                                    placeholder="Search SKU, Name, Barcode, or Brand..." 
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     className="w-full md:w-auto md:max-w-sm"
@@ -214,6 +217,7 @@ export default function MasterProductManagementPage() {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>SKU</TableHead>
+                                        <TableHead>Name Product</TableHead>
                                         <TableHead>Barcode</TableHead>
                                         <TableHead>Brand</TableHead>
                                     </TableRow>
@@ -221,7 +225,7 @@ export default function MasterProductManagementPage() {
                                 <TableBody>
                                     {loading ? (
                                         <TableRow>
-                                            <TableCell colSpan={3} className="h-24 text-center">
+                                            <TableCell colSpan={4} className="h-24 text-center">
                                                 <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                                             </TableCell>
                                         </TableRow>
@@ -229,13 +233,14 @@ export default function MasterProductManagementPage() {
                                         paginatedData.map((product, index) => (
                                             <TableRow key={product.id}>
                                                 <TableCell className="font-medium">{product.sku}</TableCell>
+                                                <TableCell>{product.name}</TableCell>
                                                 <TableCell>{product.barcode}</TableCell>
                                                 <TableCell>{product.brand}</TableCell>
                                             </TableRow>
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
+                                            <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
                                                 <div className="flex flex-col items-center justify-center gap-2">
                                                      <Package className="h-8 w-8" />
                                                      <span>No product data found.</span>
