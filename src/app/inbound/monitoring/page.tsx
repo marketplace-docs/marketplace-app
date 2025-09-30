@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -8,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from '@/components/ui/button';
 import { Eye, Search, ChevronDown, ChevronUp, Loader2, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { format, formatDistanceToNowStrict } from 'date-fns';
+import { format, formatDistanceStrict } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -33,7 +34,7 @@ const InboundDetailDialog = ({ document: initialDoc }: { document: InboundDocume
     const [isExpanded, setIsExpanded] = useState(true);
     const [putawayDocs, setPutawayDocs] = useState<PutawayDocument[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [duration, setDuration] = useState('00:00:00');
+    const [duration, setDuration] = useState('Calculating...');
     const { toast } = useToast();
 
     const totalPutaway = useMemo(() => {
@@ -68,14 +69,46 @@ const InboundDetailDialog = ({ document: initialDoc }: { document: InboundDocume
 
         fetchPutawayData();
 
-        const interval = setInterval(() => {
-           const newDuration = formatDistanceToNowStrict(new Date(initialDoc.date));
-           setDuration(newDuration);
-        }, 1000);
-
-        return () => clearInterval(interval);
-
     }, [initialDoc, toast]);
+    
+    useEffect(() => {
+        let interval: NodeJS.Timeout | undefined;
+
+        const calculateDuration = () => {
+            const startTime = new Date(initialDoc.date);
+            
+            if (currentStatus === 'Done' && putawayDocs.length > 0) {
+                 // Find the latest putaway document date
+                const lastPutawayDate = putawayDocs.reduce((latest, doc) => {
+                    const docDate = new Date(doc.date);
+                    return docDate > latest ? docDate : latest;
+                }, new Date(0));
+
+                if (lastPutawayDate > new Date(0)) {
+                    setDuration(formatDistanceStrict(lastPutawayDate, startTime));
+                } else {
+                     setDuration('N/A');
+                }
+                if(interval) clearInterval(interval);
+            } else {
+                // If not done, calculate from start time to now and update every second
+                 setDuration(formatDistanceStrict(new Date(), startTime));
+                 interval = setInterval(() => {
+                    setDuration(formatDistanceStrict(new Date(), startTime));
+                }, 1000);
+            }
+        };
+        
+        if (!isLoading) {
+            calculateDuration();
+        }
+
+        return () => {
+            if (interval) {
+                clearInterval(interval);
+            }
+        };
+    }, [initialDoc.date, currentStatus, putawayDocs, isLoading]);
     
 
     return (
@@ -254,4 +287,3 @@ export default function InboundMonitoringPage() {
         </MainLayout>
     );
 }
-
