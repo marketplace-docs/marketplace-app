@@ -1,10 +1,15 @@
 
-
 'use server';
 
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 import { logActivity } from '@/lib/logger';
+
+// This is no longer the main endpoint for creating putaway transactions, 
+// as that logic is now handled by the two-step process in Go-Putaway page 
+// which calls the /api/product-out-documents endpoint.
+
+// This endpoint is kept for historical data retrieval and potential manual adjustments by Super Admins.
 
 const ALLOWED_ROLES = ['Super Admin'];
 
@@ -24,6 +29,7 @@ export async function GET() {
   return NextResponse.json(data);
 }
 
+// POST is now primarily for manual overrides or legacy support.
 export async function POST(request: Request) {
   const body = await request.json();
   const { user, documents, ...singleDoc } = body;
@@ -32,7 +38,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
   }
 
-  // Handle bulk upload from CSV
+  // Handle bulk upload from CSV - maintained for admin purposes
   if (Array.isArray(documents)) {
     const docsToInsert = documents.map(doc => ({
       no_document: doc.no_document,
@@ -69,7 +75,7 @@ export async function POST(request: Request) {
   }
 
 
-  // Handle single document creation
+  // Handle single document creation - maintained for admin purposes
   const { no_document, qty, status, sku, barcode, brand, exp_date, location, check_by } = singleDoc;
 
   const { data, error } = await supabaseService

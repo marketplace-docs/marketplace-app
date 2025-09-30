@@ -86,30 +86,48 @@ export default function GoPutawayPage() {
         
         setIsSubmitting(true);
         try {
-            const putawayPayload = {
-                no_document: foundDocument.reference,
-                date: new Date().toISOString(),
-                qty: qty,
-                status: 'Done' as const,
-                sku: foundDocument.sku,
-                barcode: foundDocument.barcode,
-                brand: foundDocument.brand,
-                exp_date: foundDocument.exp_date,
-                location: scannedLocation,
-                check_by: user.name,
-            };
+            const now = new Date().toISOString();
 
-            const putawayResponse = await fetch('/api/putaway-documents', {
+            // Two-step transaction: Issue from Staging, Receipt to final location
+            const transactions = [
+                // 1. Issue from Staging Area
+                {
+                    nodocument: foundDocument.reference,
+                    date: now,
+                    validatedby: user.name,
+                    sku: foundDocument.sku,
+                    barcode: foundDocument.barcode,
+                    expdate: foundDocument.exp_date,
+                    qty: qty,
+                    location: "Staging Area Inbound", 
+                    status: 'Issue - Putaway' as const,
+                },
+                 // 2. Receipt into new Location
+                {
+                    nodocument: foundDocument.reference,
+                    date: now,
+                    validatedby: user.name,
+                    sku: foundDocument.sku,
+                    barcode: foundDocument.barcode,
+                    expdate: foundDocument.exp_date,
+                    qty: qty,
+                    location: scannedLocation.trim().toUpperCase(), 
+                    status: 'Receipt - Putaway' as const,
+                }
+            ];
+
+            const transactionResponse = await fetch('/api/product-out-documents', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ documents: [putawayPayload], user }),
+                body: JSON.stringify({ documents: transactions, user }),
             });
 
-            if (!putawayResponse.ok) {
-                 const errorData = await putawayResponse.json();
-                throw new Error(errorData.error || 'Failed to create putaway document.');
+            if (!transactionResponse.ok) {
+                 const errorData = await transactionResponse.json();
+                throw new Error(errorData.error || 'Failed to create putaway stock transactions.');
             }
             
+            // Finally, update the main inbound document status to Done
             const updateStatusResponse = await fetch(`/api/inbound-documents/${foundDocument.id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
@@ -120,7 +138,8 @@ export default function GoPutawayPage() {
             });
 
             if (!updateStatusResponse.ok) {
-                console.error("Failed to update inbound document status, but putaway was successful.");
+                // This is a secondary issue, log it but don't fail the whole process
+                console.error("Failed to update inbound document status, but putaway transactions were successful.");
             }
 
             toast({ title: 'Putaway Successful', description: `${qty} units of ${foundDocument.sku} have been placed at ${scannedLocation}.` });
@@ -214,4 +233,3 @@ export default function GoPutawayPage() {
     );
 }
 
-    
