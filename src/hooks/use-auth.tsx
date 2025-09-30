@@ -1,9 +1,9 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { logActivity } from '@/lib/logger';
-import { NAV_LINKS } from '@/lib/constants';
+import { NAV_LINKS, NavLink } from '@/lib/constants';
 
 type User = {
   id: number;
@@ -27,9 +27,9 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Helper to generate a flat list of all possible menu hrefs and group identifiers
-const getAllMenuHrefs = (links: typeof NAV_LINKS): string[] => {
+const getAllMenuHrefs = (links: NavLink[]): string[] => {
     const hrefs: string[] = [];
-    const traverse = (navLinks: typeof NAV_LINKS) => {
+    const traverse = (navLinks: NavLink[]) => {
         navLinks.forEach(link => {
             const effectiveHref = link.children ? `group-${link.label}` : link.href;
             hrefs.push(effectiveHref);
@@ -43,14 +43,33 @@ const getAllMenuHrefs = (links: typeof NAV_LINKS): string[] => {
 };
 const allMenuHrefs = getAllMenuHrefs(NAV_LINKS);
 
+const IDLE_TIMEOUT = 3600 * 1000; // 1 hour in milliseconds
+const LAST_ACTIVE_KEY = 'lastActiveTime';
+
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [permissions, setPermissions] = useState<MenuPermissions | null>(null);
   const [loading, setLoading] = useState(true);
+  const idleTimer = useRef<NodeJS.Timeout>();
+
+  const logout = useCallback(async (isIdle = false) => {
+    if (user) {
+        await logActivity({
+            userName: user.name,
+            userEmail: user.email,
+            action: 'LOGOUT',
+            details: isIdle ? 'User logged out due to inactivity.' : 'User logged out.',
+        });
+    }
+    setUser(null);
+    setPermissions(null);
+    localStorage.removeItem('user');
+    localStorage.removeItem(LAST_ACTIVE_KEY);
+  }, [user]);
+
 
   const fetchPermissions = useCallback(async (userId: number) => {
-    // Default to all permissions granted
     const defaultPermissions = allMenuHrefs.reduce((acc, href) => {
         acc[href] = true;
         return acc;
@@ -58,14 +77,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
         const response = await fetch(`/api/menu-permissions/${userId}`);
-        // If the fetch fails or returns no specific rules, default to full access.
         if (!response.ok) {
             console.error("Failed to fetch permissions, using default (all allowed).");
             return defaultPermissions;
         }
         const data: { menu_href: string, is_accessible: boolean }[] = await response.json();
         
-        // If DB returns no specific rules for the user, they get full access.
         if (data.length === 0) {
             return defaultPermissions;
         }
@@ -81,9 +98,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     } catch (error) {
         console.error("Error fetching permissions, using default (all allowed):", error);
-        return defaultPermissions; // Fallback to all permissions on error
+        return defaultPermissions;
     }
   }, []);
+
+  const resetIdleTimer = useCallback(() => {
+    if (idleTimer.current) {
+        clearTimeout(idleTimer.current);
+    }
+    idleTimer.current = setTimeout(() => {
+        logout(true); // Pass true to indicate it's an idle logout
+    }, IDLE_TIMEOUT);
+    localStorage.setItem(LAST_ACTIVE_KEY, Date.now().toString());
+  }, [logout]);
+
+
+  useEffect(() => {
+    const events = ['mousemove', 'keydown', 'scroll', 'click'];
+
+    const handleActivity = () => {
+        resetIdleTimer();
+    };
+
+    if (user) {
+      // Set up activity listeners
+      events.forEach(event => window.addEventListener(event, handleActivity));
+      // Initialize timer
+      resetIdleTimer();
+    }
+    
+    // Cleanup
+    return () => {
+      events.forEach(event => window.removeEventListener(event, handleActivity));
+      if (idleTimer.current) {
+        clearTimeout(idleTimer.current);
+      }
+    };
+  }, [user, resetIdleTimer]);
+
 
   useEffect(() => {
     const initializeAuth = async () => {
@@ -99,7 +151,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         if (storedUser?.id) {
-            // Re-validate the user session with the backend
             try {
                 const response = await fetch(`/api/users`);
                  if (!response.ok) {
@@ -109,20 +160,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 const validUser = allUsers.find(u => u.id === storedUser!.id);
 
                 if (validUser) {
-                    setUser(validUser); // Use fresh data from the server
+                    setUser(validUser);
                     const userPermissions = await fetchPermissions(validUser.id);
                     setPermissions(userPermissions);
                 } else {
-                    // User not found in DB, clear local session
-                    localStorage.removeItem('user');
                     setUser(null);
                     setPermissions(null);
+                    localStorage.removeItem('user');
                 }
             } catch(e) {
                  console.error("Session re-validation failed:", e);
-                 localStorage.removeItem('user');
                  setUser(null);
                  setPermissions(null);
+                 localStorage.removeItem('user');
             }
         }
         
@@ -170,20 +220,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
         setLoading(false);
     }
-  };
-
-  const logout = async () => {
-    if (user) {
-        await logActivity({
-            userName: user.name,
-            userEmail: user.email,
-            action: 'LOGOUT',
-            details: 'User logged out.',
-        });
-    }
-    setUser(null);
-    setPermissions(null);
-    localStorage.removeItem('user');
   };
 
   const value = { user, permissions, login, logout, loading };
