@@ -97,19 +97,14 @@ export async function POST(request: Request) {
         }
         const header = headerLine.split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
 
-        const requiredHeaders = ['reference', 'sku', 'qty', 'store_name', 'type', 'from'];
+        const requiredHeaders = ['reference', 'sku', 'qty'];
         if (!requiredHeaders.every(h => header.includes(h))) {
-            return NextResponse.json({ error: `Invalid CSV headers. Required headers include: ${requiredHeaders.join(', ')}` }, { status: 400 });
+            return NextResponse.json({ error: `Invalid CSV headers. Required headers: ${requiredHeaders.join(', ')}` }, { status: 400 });
         }
         
         const referenceIndex = header.indexOf('reference');
         const skuIndex = header.indexOf('sku');
         const qtyIndex = header.indexOf('qty');
-        const storeNameIndex = header.indexOf('store_name');
-        const typeIndex = header.indexOf('type');
-        const fromIndex = header.indexOf('from');
-        const addressIndex = header.indexOf('address');
-        const phoneIndex = header.indexOf('phone');
 
 
         const ordersToInsert = lines.map((line, index) => {
@@ -118,12 +113,9 @@ export async function POST(request: Request) {
             const reference = values[referenceIndex];
             const sku = values[skuIndex];
             const qty = parseInt(values[qtyIndex], 10);
-            const store_name = values[storeNameIndex];
-            const type = values[typeIndex];
-            const from = values[fromIndex];
 
-            if (!reference || !sku || isNaN(qty) || !store_name || !type || !from) {
-                console.warn(`Skipping row ${index + 2}: Missing or invalid required fields (reference, sku, qty, store_name, type, from).`);
+            if (!reference || !sku || isNaN(qty)) {
+                console.warn(`Skipping row ${index + 2}: Missing or invalid required fields (reference, sku, qty).`);
                 return null;
             }
             
@@ -134,10 +126,10 @@ export async function POST(request: Request) {
                 order_date: new Date().toISOString(),
                 customer: "Edit By Sociolla",
                 city: "Tangerang",
-                address: values[addressIndex] || 'Jln. Testing Order, No.Blok A 92, 28, Tangerang Selatan, 15677',
-                phone: values[phoneIndex] || '08956103267566',
-                type: type,
-                from: from,
+                address: 'Jln. Testing Order, No.Blok A 92, 28, Tangerang Selatan, 15677',
+                phone: '08956103267566',
+                type: "Shopee",
+                from: "Shopee",
                 delivery_type: "Regular",
                 status: 'Payment Accepted', // Default status
             };
@@ -145,7 +137,7 @@ export async function POST(request: Request) {
 
 
         if (ordersToInsert.length === 0) {
-            return NextResponse.json({ error: 'No valid orders found in the file. Check for missing fields or invalid store names.' }, { status: 400 });
+            return NextResponse.json({ error: 'No valid orders found in the file. Check for missing fields.' }, { status: 400 });
         }
         
         const { error } = await supabaseService

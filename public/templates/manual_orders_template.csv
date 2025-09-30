@@ -1,3 +1,1 @@
-reference,sku,qty,store_name,customer,city,delivery_type
-SOCO-123456,SC001,1,Soco by Sociolla,John Doe,Jakarta,REGULAR
-TIKTOK-789012,BT002,2,Beauty Journal,Jane Smith,Surabaya,EXPRESS
+reference,sku,qty
