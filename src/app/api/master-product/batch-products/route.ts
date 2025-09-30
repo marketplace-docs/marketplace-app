@@ -24,14 +24,6 @@ type MasterProduct = {
     brand: string;
 };
 
-type StockLogEntry = {
-    type: 'IN' | 'OUT';
-    barcode: string;
-    location: string;
-    exp_date: string;
-    qty: number;
-};
-
 type BatchKey = string;
 type BatchDetails = {
     sku: string;
@@ -87,12 +79,9 @@ export async function GET() {
         // 2. Create a lookup map for master products for efficient access
         const productMap = new Map<string, MasterProduct>();
         allMasterProducts.forEach(p => {
-             // Prioritize SKU as the key, but also handle mapping by barcode if needed
-            if (p.sku && !productMap.has(p.sku)) {
+            // Prioritize SKU as the key
+            if (p.sku) {
                  productMap.set(p.sku, p);
-            }
-             if (p.barcode && !productMap.has(p.barcode)) {
-                productMap.set(p.barcode, p);
             }
         });
         
@@ -118,11 +107,11 @@ export async function GET() {
             if (existingBatch) {
                 existingBatch.stock += qtyChange;
             } else {
-                 // Get product info from master data. Fallback from SKU to Barcode.
-                const productInfo = productMap.get(doc.sku) || productMap.get(doc.barcode);
+                 // Get product info from master data. The key is SKU.
+                const productInfo = productMap.get(doc.sku);
                 
                 stockBatchMap.set(key, {
-                    sku: productInfo?.sku || doc.sku,
+                    sku: doc.sku, // Use SKU from the transaction document
                     name: productInfo?.name || '(No Master Data)', // Provide a placeholder
                     brand: productInfo?.brand || '(No Master Data)', // Provide a placeholder
                     barcode: doc.barcode,
