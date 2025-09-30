@@ -1,17 +1,27 @@
-import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/use-auth';
+import { Loader2 } from 'lucide-react';
 
 export default function Home() {
-  const cookieStore = cookies();
-  const userCookie = cookieStore.get('user');
+  const router = useRouter();
+  const { user, loading } = useAuth();
 
-  if (userCookie) {
-    redirect('/dashboard');
-  } else {
-    redirect('/login');
-  }
+  useEffect(() => {
+    if (!loading) {
+      if (user) {
+        router.replace('/dashboard');
+      } else {
+        router.replace('/login');
+      }
+    }
+  }, [user, loading, router]);
 
-  // This part will not be rendered due to the redirects above,
-  // but it's good practice to have a fallback return.
-  return null;
+  return (
+    <div className="flex h-screen w-full items-center justify-center bg-background">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+    </div>
+  );
 }
