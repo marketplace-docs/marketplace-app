@@ -249,7 +249,7 @@ export default function GoPickerPage() {
         <MainLayout>
             <div className="w-full space-y-6">
                 <h1 className="text-2xl font-bold">Go-Picker</h1>
-                <Card className="max-w-2xl mx-auto">
+                <Card>
                     <CardHeader>
                         <div className="flex items-center justify-center mb-2">
                             <ScanLine className="h-10 w-10 text-primary" />
