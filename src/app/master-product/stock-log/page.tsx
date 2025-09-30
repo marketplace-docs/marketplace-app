@@ -16,45 +16,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 
-type PutawayDocument = {
-  id: string; no_document: string; date: string; qty: number; status: 'Done' | 'Pending'; sku: string; barcode: string; brand: string; exp_date: string; location: string; check_by: string;
-};
-
-type InboundDocument = {
-  id: string;
-  reference: string;
-  date: string;
-  received_by: string;
-  sku: string;
-  barcode: string;
-  name: string;
-  brand: string;
-  exp_date: string;
-  qty: number;
-  main_status: string;
-};
-
-
-type ProductOutDocument = {
-  id: string; nodocument: string; sku: string; barcode: string; expdate: string; qty: number; status: ProductOutStatus; date: string; location: string; validatedby: string;
-};
-
-type ProductOutStatus = 
-    | 'Issue - Order' 
-    | 'Issue - Internal Transfer' 
-    | 'Issue - Adjustment Manual'
-    | 'Adjustment - Loc'
-    | 'Adjustment - SKU'
-    | 'Issue - Putaway'
-    | 'Receipt - Putaway'
-    | 'Issue - Return'
-    | 'Issue - Return Putaway'
-    | 'Issue - Update Expired'
-    | 'Receipt - Update Expired'
-    | 'Receipt - Outbound Return'
-    | 'Receipt'
-    | 'Receipt - Inbound';
-
+// This type should align with the structure returned by the get_stock_log RPC function
 type StockLogEntry = {
     id: string;
     date: string;
@@ -70,20 +32,9 @@ type StockLogEntry = {
     type: 'IN' | 'OUT';
 };
 
-// Define statuses that represent an INCREASE in stock.
-const REAL_STOCK_IN_STATUSES: string[] = [
-    'Putaway', // from original putaway docs
-    'Receipt - Putaway',
-    'Receipt - Update Expired',
-    'Receipt - Outbound Return',
-    'Receipt',
-    'Receipt - Inbound'
-];
 
 export default function StockLogPage() {
-    const [putawayDocs, setPutawayDocs] = useState<PutawayDocument[]>([]);
-    const [inboundDocs, setInboundDocs] = useState<InboundDocument[]>([]);
-    const [productOutDocs, setProductOutDocs] = useState<ProductOutDocument[]>([]);
+    const [stockLog, setStockLog] = useState<StockLogEntry[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -93,24 +44,20 @@ export default function StockLogPage() {
     const { user } = useAuth();
     const isSuperAdmin = user?.role === 'Super Admin';
 
-    const fetchData = useCallback(async () => {
+    const fetchStockLog = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const [putawayRes, productOutRes, inboundRes] = await Promise.all([
-                fetch('/api/putaway-documents'),
-                fetch('/api/product-out-documents'),
-                fetch('/api/inbound-documents')
-            ]);
-            if (!putawayRes.ok || !productOutRes.ok || !inboundRes.ok) {
-                throw new Error('Failed to fetch stock data');
+            // Updated to call the new RPC endpoint if it exists, or modify the existing one
+            // Assuming the RPC function is named 'get_stock_log'
+            const response = await fetch('/api/master-product/stock-log');
+            if (!response.ok) {
+                 const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to fetch stock log data');
             }
-            const putawayData = await putawayRes.json();
-            const productOutData = await productOutRes.json();
-            const inboundData = await inboundRes.json();
-            setPutawayDocs(putawayData);
-            setProductOutDocs(productOutData);
-            setInboundDocs(inboundData);
+            const data: StockLogEntry[] = await response.json();
+            // The RPC function should return data already sorted by date descending.
+            setStockLog(data);
         } catch (error: any) {
             setError(error.message);
         } finally {
@@ -119,85 +66,17 @@ export default function StockLogPage() {
     }, []);
 
     useEffect(() => {
-        fetchData();
-    }, [fetchData]);
-
-    const stockLogData = useMemo(() => {
-        const combinedDocs = [
-             ...inboundDocs.map(doc => ({ 
-                id: `inbound-${doc.id}`, 
-                date: doc.date,
-                no_document: doc.reference, 
-                barcode: doc.barcode, 
-                sku: doc.sku,
-                location: 'N/A', // Inbound doesn't have a final location yet
-                qty: doc.qty, 
-                status: 'Receipt - Inbound' as const,
-                validated_by: doc.received_by,
-            })),
-            ...putawayDocs.map(doc => ({ 
-                id: `putaway-${doc.id}`, 
-                date: doc.date,
-                no_document: doc.no_document, 
-                barcode: doc.barcode, 
-                sku: doc.sku,
-                location: doc.location,
-                qty: doc.qty, 
-                status: 'Putaway' as const,
-                validated_by: doc.check_by,
-            })),
-            ...productOutDocs.map(doc => ({
-                id: `out-${doc.id}`,
-                date: doc.date,
-                no_document: doc.nodocument,
-                barcode: doc.barcode,
-                sku: doc.sku,
-                location: doc.location,
-                qty: doc.qty,
-                status: doc.status,
-                validated_by: doc.validatedby,
-            }))
-        ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-        const stockLevels = new Map<string, number>(); // Key: barcode|location
-        const logEntries: StockLogEntry[] = [];
-
-        combinedDocs.forEach(doc => {
-            const key = `${doc.barcode}|${doc.location}`;
-            const currentStock = stockLevels.get(key) || 0;
-            
-            const isStockIn = REAL_STOCK_IN_STATUSES.includes(doc.status);
-            const change = isStockIn ? doc.qty : -doc.qty;
-
-            logEntries.push({
-                id: doc.id,
-                date: doc.date,
-                no_document: doc.no_document,
-                barcode: doc.barcode,
-                sku: doc.sku,
-                location: doc.location,
-                qty_before: currentStock,
-                qty_change: change,
-                qty_after: currentStock + change,
-                status: doc.status,
-                validated_by: doc.validated_by,
-                type: isStockIn ? 'IN' : 'OUT',
-            });
-            stockLevels.set(key, currentStock + change);
-        });
-
-        // Sort descending by date for display
-        return logEntries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [putawayDocs, productOutDocs, inboundDocs]);
+        fetchStockLog();
+    }, [fetchStockLog]);
 
     const filteredData = useMemo(() => {
-        if (!searchTerm) return stockLogData;
-        return stockLogData.filter(log =>
+        if (!searchTerm) return stockLog;
+        return stockLog.filter(log =>
             log.barcode.toLowerCase().includes(searchTerm.toLowerCase()) ||
             log.no_document.toLowerCase().includes(searchTerm.toLowerCase()) ||
             log.sku.toLowerCase().includes(searchTerm.toLowerCase())
         );
-    }, [stockLogData, searchTerm]);
+    }, [stockLog, searchTerm]);
 
     useEffect(() => {
         setCurrentPage(1);
@@ -354,7 +233,7 @@ export default function StockLogPage() {
                                         <SelectValue placeholder={rowsPerPage} />
                                     </SelectTrigger>
                                     <SelectContent side="top">
-                                        {[5, 20, 50, 100].map((pageSize) => (
+                                        {[10, 25, 50, 100].map((pageSize) => (
                                         <SelectItem key={pageSize} value={`${pageSize}`}>
                                             {pageSize}
                                         </SelectItem>

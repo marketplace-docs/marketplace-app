@@ -122,6 +122,8 @@ export default function GoPickerPage() {
                 order_date: new Date().toISOString(),
                 total_stock_on_hand: availableBatch.stock,
                 status: 'Payment Accepted',
+                address: orderInWave.address || 'N/A',
+                phone: orderInWave.phone || 'N/A'
             };
             
             setFoundOrder(orderDetails);
