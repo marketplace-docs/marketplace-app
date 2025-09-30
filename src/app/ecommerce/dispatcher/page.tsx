@@ -144,7 +144,7 @@ export default function DispatcherPage() {
         <MainLayout>
             <div className="w-full space-y-6">
                 <h1 className="text-2xl font-bold">Dispatcher Logistic</h1>
-                <Card className="max-w-2xl mx-auto">
+                <Card>
                     <CardHeader>
                         <div className="flex items-center justify-center mb-4">
                             <Send className="h-16 w-16 text-primary" />
