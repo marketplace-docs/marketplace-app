@@ -1,6 +1,6 @@
 
 
-import { LayoutDashboard, ListTodo, Store, FileText, Settings, type LucideIcon, Briefcase, Users, Archive, BarChart3, AppWindow, BookText, Database, History, FilePlus, Eye, File, PieChart, Users2, Shield, Menu, Monitor, Undo2, Route, Package, PackagePlus, PackageMinus, Boxes, CalendarClock, Warehouse, Calculator, PackageX, ClipboardList, ScanLine, PackageCheck, ShoppingCart, Send, Handshake, ArrowRightSquare } from 'lucide-react';
+import { LayoutDashboard, ListTodo, Store, FileText, Settings, type LucideIcon, Briefcase, Users, Archive, BarChart3, AppWindow, BookText, Database, History, FilePlus, Eye, File, PieChart, Users2, Shield, Menu, Monitor, Undo2, Route, Package, PackagePlus, PackageMinus, Boxes, CalendarClock, Warehouse, Calculator, PackageX, ClipboardList, ScanLine, PackageCheck, ShoppingCart, Send, Handshake, ArrowRightSquare, ArrowLeftRight } from 'lucide-react';
 
 export type NavLink = {
     href: string;
@@ -206,6 +206,33 @@ export const NAV_LINKS: NavLink[] = [
                 href: '/master-product/location',
                 label: 'Location',
                 icon: Warehouse,
+            },
+        ]
+    },
+    {
+        href: '#',
+        label: 'Internal Transfer',
+        icon: ArrowLeftRight,
+        children: [
+            {
+                href: '/internal-transfer/from-warehouse',
+                label: 'Transfer From Warehouse',
+                icon: Warehouse,
+            },
+            {
+                href: '/internal-transfer/from-b2b',
+                label: 'Transfer From B2B',
+                icon: Briefcase,
+            },
+            {
+                href: '/internal-transfer/from-b2c',
+                label: 'Transfer From B2C',
+                icon: Users,
+            },
+            {
+                href: '/internal-transfer/from-vendor',
+                label: 'Transfer From Vendor',
+                icon: Store,
             },
         ]
     },
