@@ -115,7 +115,7 @@ const DocumentCard = ({ document }: { document: CombinedDocument }) => {
                                     <TableBody>
                                         {putaway_docs.map(pd => (
                                             <TableRow key={pd.id}>
-                                                <TableCell>{pd.status === 'Issue - Putaway' ? 'Staging Area' : pd.no_document}</TableCell>
+                                                <TableCell>{pd.status === 'Issue - Putaway' ? 'Staging Area Inbound' : pd.no_document}</TableCell>
                                                 <TableCell>{pd.location}</TableCell>
                                                 <TableCell>{pd.qty}</TableCell>
                                                 <TableCell><Badge variant="outline">{pd.status === 'Issue - Putaway' ? 'OUT' : 'IN'}</Badge></TableCell>
@@ -163,6 +163,7 @@ export default function MonitoringPutawayPage() {
             
             const combined = inboundDocs.map(inboundDoc => {
                 const relatedPutaways = putawayDocs.filter(pd => pd.no_document === inboundDoc.reference);
+                
                 const totalPutawayQty = relatedPutaways
                                         .filter(pd => pd.status === 'Receipt - Putaway')
                                         .reduce((sum, current) => sum + current.qty, 0);
@@ -275,3 +276,4 @@ export default function MonitoringPutawayPage() {
     );
 }
 
+    
