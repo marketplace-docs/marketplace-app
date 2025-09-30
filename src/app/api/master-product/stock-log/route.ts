@@ -1,9 +1,9 @@
 
+
 'use server';
 
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
-import { format } from 'date-fns';
 
 type ProductOutDocument = {
     id: string;
@@ -16,6 +16,14 @@ type ProductOutDocument = {
     status: string;
     validatedby: string;
 };
+
+type MasterProduct = {
+    sku: string;
+    name: string;
+    barcode: string;
+    brand: string;
+};
+
 
 // Define statuses that represent an INCREASE in stock.
 const STOCK_IN_STATUSES = [
@@ -46,14 +54,22 @@ const STOCK_OUT_STATUSES = [
 
 export async function GET() {
     try {
-        const { data: documents, error } = await supabaseService
-            .from('product_out_documents')
-            .select('id, date, nodocument, sku, barcode, location, qty, status, validatedby')
-            .order('date', { ascending: false });
+        const [docsRes, productsRes] = await Promise.all([
+            supabaseService
+                .from('product_out_documents')
+                .select('id, date, nodocument, sku, barcode, location, qty, status, validatedby')
+                .order('date', { ascending: false }),
+            supabaseService.from('master_products').select('sku, name')
+        ]);
+        
+        if (docsRes.error) throw new Error(docsRes.error.message);
+        if (productsRes.error) throw new Error(productsRes.error.message);
 
-        if (error) {
-            throw new Error(error.message);
-        }
+        const documents: ProductOutDocument[] = docsRes.data;
+        const products: { sku: string; name: string }[] = productsRes.data;
+        
+        const productMap = new Map<string, string>();
+        products.forEach(p => productMap.set(p.sku, p.name));
 
         const stockLog = documents.map((doc, index, allDocs) => {
             const previousDocs = allDocs.filter(d => 
@@ -83,10 +99,12 @@ export async function GET() {
             
             return {
                 ...doc,
-                type: qty_change > 0 ? 'IN' : 'OUT',
+                name: productMap.get(doc.sku) || '(No Master Data)',
+                type: qty_change >= 0 ? 'IN' : 'OUT',
                 qty_before,
                 qty_change,
-                qty_after
+                qty_after,
+                validated_by: doc.validatedby
             };
         });
 

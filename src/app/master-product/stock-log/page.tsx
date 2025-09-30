@@ -23,6 +23,7 @@ type StockLogEntry = {
     no_document: string;
     barcode: string;
     sku: string;
+    name: string;
     location: string;
     qty_before: number;
     qty_change: number;
@@ -172,6 +173,7 @@ export default function StockLogPage() {
                                     <TableRow>
                                         <TableHead>Date</TableHead>
                                         <TableHead>No. Document</TableHead>
+                                        <TableHead>Product Name</TableHead>
                                         <TableHead>Barcode</TableHead>
                                         <TableHead>Location</TableHead>
                                         <TableHead>Qty Before</TableHead>
@@ -184,7 +186,7 @@ export default function StockLogPage() {
                                 <TableBody>
                                     {loading ? (
                                         <TableRow>
-                                            <TableCell colSpan={9} className="h-24 text-center">
+                                            <TableCell colSpan={10} className="h-24 text-center">
                                                 <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                                             </TableCell>
                                         </TableRow>
@@ -193,6 +195,10 @@ export default function StockLogPage() {
                                             <TableRow key={log.id}>
                                                 <TableCell>{format(new Date(log.date), 'dd/MM/yyyy HH:mm')}</TableCell>
                                                 <TableCell>{log.no_document}</TableCell>
+                                                <TableCell>
+                                                    <div className="font-medium">{log.name}</div>
+                                                    <div className="text-sm text-muted-foreground">{log.sku}</div>
+                                                </TableCell>
                                                 <TableCell className="font-medium">{log.barcode}</TableCell>
                                                 <TableCell>{log.location}</TableCell>
                                                 <TableCell>{log.qty_before.toLocaleString()}</TableCell>
@@ -209,7 +215,7 @@ export default function StockLogPage() {
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
+                                            <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
                                                 No stock history.
                                             </TableCell>
                                         </TableRow>
