@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { logActivity } from '@/lib/logger';
 import { NAV_LINKS } from '@/lib/constants';
 
@@ -49,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [permissions, setPermissions] = useState<MenuPermissions | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchPermissions = async (userId: number) => {
+  const fetchPermissions = useCallback(async (userId: number) => {
     // Default to all permissions granted
     const defaultPermissions = allMenuHrefs.reduce((acc, href) => {
         acc[href] = true;
@@ -58,6 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
         const response = await fetch(`/api/menu-permissions/${userId}`);
+        // If the fetch fails or returns no specific rules, default to full access.
         if (!response.ok) {
             console.error("Failed to fetch permissions, using default (all allowed).");
             return defaultPermissions;
@@ -82,27 +83,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error("Error fetching permissions, using default (all allowed):", error);
         return defaultPermissions; // Fallback to all permissions on error
     }
-  };
+  }, []);
 
   useEffect(() => {
     const initializeAuth = async () => {
+        let storedUser: User | null = null;
         try {
-            const storedUser = localStorage.getItem('user');
-            if (storedUser) {
-                const parsedUser: User = JSON.parse(storedUser);
-                setUser(parsedUser);
-                const userPermissions = await fetchPermissions(parsedUser.id);
-                setPermissions(userPermissions);
+            const storedUserJSON = localStorage.getItem('user');
+            if (storedUserJSON) {
+                storedUser = JSON.parse(storedUserJSON);
             }
         } catch (error) {
             console.error("Failed to parse user from localStorage", error);
             localStorage.removeItem('user');
-        } finally {
-            setLoading(false);
         }
+
+        if (storedUser?.id) {
+            // Re-validate the user session with the backend
+            try {
+                const response = await fetch(`/api/users`);
+                 if (!response.ok) {
+                    throw new Error("Failed to re-validate session.");
+                }
+                const allUsers: User[] = await response.json();
+                const validUser = allUsers.find(u => u.id === storedUser!.id);
+
+                if (validUser) {
+                    setUser(validUser); // Use fresh data from the server
+                    const userPermissions = await fetchPermissions(validUser.id);
+                    setPermissions(userPermissions);
+                } else {
+                    // User not found in DB, clear local session
+                    localStorage.removeItem('user');
+                    setUser(null);
+                    setPermissions(null);
+                }
+            } catch(e) {
+                 console.error("Session re-validation failed:", e);
+                 localStorage.removeItem('user');
+                 setUser(null);
+                 setPermissions(null);
+            }
+        }
+        
+        setLoading(false);
     };
     initializeAuth();
-  }, []);
+  }, [fetchPermissions]);
 
   const login = async (credentials: { email: string; password?: string }): Promise<boolean> => {
     try {
