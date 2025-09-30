@@ -106,7 +106,7 @@ export default function TransferFromB2BPage() {
     return (
         <MainLayout>
             <h1 className="text-2xl font-bold mb-6">Transfer From B2B</h1>
-             <Card className="max-w-4xl mx-auto">
+             <Card>
                 <CardHeader>
                     <CardTitle>B2B Stock Transfer</CardTitle>
                     <CardDescription>Move stock from B2B inventory to a specific warehouse location.</CardDescription>

@@ -105,7 +105,7 @@ export default function TransferFromWarehousePage() {
     return (
         <MainLayout>
             <h1 className="text-2xl font-bold mb-6">Transfer From Warehouse</h1>
-            <Card className="max-w-4xl mx-auto">
+            <Card>
                 <CardHeader>
                     <CardTitle>Create Internal Transfer</CardTitle>
                     <CardDescription>Move stock from one warehouse location to another.</CardDescription>
