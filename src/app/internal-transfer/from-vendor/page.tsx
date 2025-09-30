@@ -43,7 +43,7 @@ export default function TransferFromVendorPage() {
   });
   const [docDetails, setDocDetails] = useState({
     reference: '',
-    received_by: '',
+    creator_by: '',
     vendor_name: '',
   });
   
@@ -68,8 +68,11 @@ export default function TransferFromVendorPage() {
   useEffect(() => {
     if (canCreate) {
         generateDocNumber();
+        if (user) {
+          setDocDetails(prev => ({...prev, creator_by: user.name}));
+        }
     }
-  }, [canCreate, generateDocNumber]);
+  }, [canCreate, generateDocNumber, user]);
 
 
   const handleItemInputChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -122,8 +125,8 @@ export default function TransferFromVendorPage() {
         toast({ variant: 'destructive', title: 'Error', description: 'Please add at least one item to the document.' });
         return;
     }
-    if (!docDetails.reference || !docDetails.received_by || !docDetails.vendor_name) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Please fill out Reference, Vendor Name, and Received By fields.' });
+    if (!docDetails.reference || !docDetails.creator_by || !docDetails.vendor_name) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Please fill out Reference, Vendor Name, and Creator By fields.' });
         return;
     }
     if (!user) {
@@ -137,9 +140,7 @@ export default function TransferFromVendorPage() {
       const payload = {
         document: {
           reference: docDetails.reference,
-          received_by: docDetails.received_by,
-          // We can use a field like 'notes' or a custom column for vendor name if DB supports it.
-          // For now, it's just for display and logging.
+          received_by: docDetails.creator_by, // API expects received_by, so we map creator_by to it.
           notes: `Transfer from Vendor: ${docDetails.vendor_name}`,
           date: new Date().toISOString(),
         },
@@ -199,8 +200,8 @@ export default function TransferFromVendorPage() {
                         <Input id="vendor_name" placeholder="Vendor's name" value={docDetails.vendor_name} onChange={(e) => setDocDetails(prev => ({ ...prev, vendor_name: e.target.value }))} />
                     </div>
                      <div className="space-y-2">
-                        <Label htmlFor="received_by">Received By</Label>
-                        <Input id="received_by" placeholder="Receiver's name" value={docDetails.received_by} onChange={(e) => setDocDetails(prev => ({ ...prev, received_by: e.target.value }))} />
+                        <Label htmlFor="creator_by">Creator By</Label>
+                        <Input id="creator_by" placeholder="Creator's name" value={docDetails.creator_by} onChange={(e) => setDocDetails(prev => ({ ...prev, creator_by: e.target.value }))} />
                     </div>
                 </div>
             </div>
@@ -302,3 +303,4 @@ export default function TransferFromVendorPage() {
     </MainLayout>
   );
 }
+    
