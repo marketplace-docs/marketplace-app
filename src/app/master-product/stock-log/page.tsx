@@ -20,7 +20,7 @@ import { useAuth } from '@/hooks/use-auth';
 type StockLogEntry = {
     id: string;
     date: string;
-    no_document: string;
+    nodocument: string;
     barcode: string;
     sku: string;
     name: string;
@@ -102,13 +102,14 @@ export default function StockLogPage() {
             toast({ variant: "destructive", title: "No Data", description: "There is no data to export." });
             return;
         }
-        const headers = ["Date", "No. Document", "SKU", "Barcode", "Location", "Qty Before", "Qty Change", "Qty After", "Status", "Validate By"];
+        const headers = ["Date", "No. Document", "SKU", "Name", "Barcode", "Location", "Qty Before", "Qty Change", "Qty After", "Status", "Validate By"];
         const csvContent = [
             headers.join(","),
             ...filteredData.map(log => [
                 `"${format(new Date(log.date), "yyyy-MM-dd HH:mm:ss")}"`,
                 `"${log.no_document}"`,
                 `"${log.sku}"`,
+                `"${log.name}"`,
                 `"${log.barcode}"`,
                 `"${log.location}"`,
                 log.qty_before,

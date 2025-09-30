@@ -30,6 +30,7 @@ type ProductOutStatus =
 type BatchProduct = {
     id: string;
     sku: string;
+    name: string;
     barcode: string;
     brand: string;
     exp_date: string;
@@ -154,6 +155,7 @@ export async function POST(request: Request) {
                     validDocsToInsert.push({
                         nodocument: docNumber,
                         sku: batch.sku,
+                        name: batch.name,
                         barcode: entry.barcode,
                         expdate: batch.exp_date,
                         location: batch.location,

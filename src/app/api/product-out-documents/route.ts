@@ -88,9 +88,18 @@ export async function POST(request: Request) {
         throw new Error(`Expiration date (expdate) is missing for SKU: ${doc.sku}`);
     }
     const newDocNumber = await generateNewDocumentNumber(doc.status);
+    
+    // Fetch master product name
+    const { data: productData } = await supabaseService
+        .from('master_products')
+        .select('name')
+        .eq('sku', doc.sku)
+        .single();
+
     return {
         nodocument: newDocNumber,
         sku: doc.sku,
+        name: productData?.name || '(No Master Data)',
         barcode: doc.barcode,
         location: doc.location,
         qty: doc.qty,
@@ -144,7 +153,4 @@ type ProductOutStatus =
     | 'Receipt'
     | 'Receipt - Inbound'
     | 'Adjusment - Loc'; // Keep for backwards compatibility if needed
-    
-
-
     

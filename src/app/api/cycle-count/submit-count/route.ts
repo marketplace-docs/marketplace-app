@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { supabaseService } from '@/lib/supabase-service';
@@ -60,9 +61,16 @@ export async function POST(request: Request) {
 
         const newDocNumber = await generateNewDocumentNumber(prefix);
         
+        const { data: productData } = await supabaseService
+            .from('master_products')
+            .select('name')
+            .eq('sku', adj.sku)
+            .single();
+
         return {
             nodocument: newDocNumber,
             sku: adj.sku,
+            name: productData?.name || '(No Master Data)',
             barcode: adj.barcode,
             expdate: adj.exp_date,
             location: adj.location,
