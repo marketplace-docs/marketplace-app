@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
 import { format, isWithinInterval } from 'date-fns';
-import { Loader2, AlertCircle, PackageMinus, Search, SlidersHorizontal, Calendar as CalendarIcon, Upload, Play, Plus, MessageSquareText, Pencil, Save, Phone, Home, Trash2 } from 'lucide-react';
+import { Loader2, AlertCircle, PackageMinus, Search, SlidersHorizontal, Calendar as CalendarIcon, Upload, Play, Plus, MessageSquareText, Pencil, Save, Phone, Home, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
@@ -70,6 +70,9 @@ export default function MyOrdersPage() {
     const [isUploadDialogOpen, setUploadDialogOpen] = useState(false);
     const [isAddDialogOpen, setAddDialogOpen] = useState(false);
     const [isBulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+    
+    const [currentPage, setCurrentPage] = useState(1);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
 
     const defaultNewOrderState: Partial<NewOrder> = {
       qty: 1,
@@ -419,6 +422,26 @@ export default function MyOrdersPage() {
             setBulkDeleteDialogOpen(false);
         }
     }
+    
+    const totalPages = Math.ceil(filteredOrders.length / rowsPerPage);
+    const paginatedOrders = useMemo(() => {
+        return filteredOrders.slice(
+            (currentPage - 1) * rowsPerPage,
+            currentPage * rowsPerPage
+        );
+    }, [filteredOrders, currentPage, rowsPerPage]);
+
+    const handleNextPage = () => {
+        setCurrentPage((prev) => (prev < totalPages ? prev + 1 : prev));
+    };
+
+    const handlePrevPage = () => {
+        setCurrentPage((prev) => (prev > 1 ? prev - 1 : prev));
+    };
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [rowsPerPage]);
 
 
     return (
@@ -641,11 +664,13 @@ export default function MyOrdersPage() {
                             <TableRow>
                                 <TableHead className="w-12">
                                     <Checkbox
-                                        checked={selectedCount === filteredOrders.length && filteredOrders.length > 0}
+                                        checked={selectedCount > 0 && selectedCount === paginatedOrders.length}
                                         onCheckedChange={(checked) => {
-                                            const newSelection: Record<string, boolean> = {};
+                                            const newSelection: Record<string, boolean> = {...selection};
                                             if (checked) {
-                                                filteredOrders.forEach(o => newSelection[o.reference] = true);
+                                                paginatedOrders.forEach(o => newSelection[o.reference] = true);
+                                            } else {
+                                                paginatedOrders.forEach(o => delete newSelection[o.reference]);
                                             }
                                             setSelection(newSelection);
                                         }}
@@ -678,8 +703,8 @@ export default function MyOrdersPage() {
                                         </Alert>
                                     </TableCell>
                                 </TableRow>
-                            ) : filteredOrders.length > 0 ? (
-                                filteredOrders.map(order => (
+                            ) : paginatedOrders.length > 0 ? (
+                                paginatedOrders.map(order => (
                                 <TableRow key={order.reference} data-state={selection[order.reference] && "selected"}>
                                     <TableCell>
                                         <Checkbox
@@ -798,6 +823,47 @@ export default function MyOrdersPage() {
                             )}
                         </TableBody>
                     </Table>
+                </div>
+                 <div className="flex items-center justify-end space-x-2 py-4">
+                    <div className="flex-1 text-sm text-muted-foreground">
+                        Page {filteredOrders.length > 0 ? currentPage : 0} of {totalPages}
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <span className="text-sm text-muted-foreground">Rows per page:</span>
+                        <Select
+                            value={`${rowsPerPage}`}
+                            onValueChange={(value) => {
+                                setRowsPerPage(Number(value));
+                            }}
+                            >
+                            <SelectTrigger className="h-8 w-[70px]">
+                                <SelectValue placeholder={rowsPerPage} />
+                            </SelectTrigger>
+                            <SelectContent side="top">
+                                {[10, 25, 50, 100].map((pageSize) => (
+                                <SelectItem key={pageSize} value={`${pageSize}`}>
+                                    {pageSize}
+                                </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handlePrevPage}
+                        disabled={currentPage === 1}
+                    >
+                        <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleNextPage}
+                        disabled={currentPage === totalPages || totalPages === 0}
+                    >
+                        <ChevronRight className="h-4 w-4" />
+                    </Button>
                 </div>
             </div>
         </MainLayout>
