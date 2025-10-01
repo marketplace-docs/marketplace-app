@@ -17,7 +17,6 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import type { PutawayDocument } from '@/types/putaway-document';
 import type { InboundDocument } from '@/types/inbound-document';
 import type { ProductOutDocument } from '@/types/product-out-document';
 import { format } from 'date-fns';
@@ -25,20 +24,16 @@ import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 
-type CombinedDocument = InboundDocument & {
-    putaway_docs: PutawayDocument[];
-};
-
-const DocumentCard = ({ document: inboundDoc, allPutawayDocs }: { document: InboundDocument; allPutawayDocs: ProductOutDocument[] }) => {
+const DocumentCard = ({ document: inboundDoc, allProductOutDocs }: { document: InboundDocument; allProductOutDocs: ProductOutDocument[] }) => {
     const [isExpanded, setIsExpanded] = useState(false);
 
     const relatedPutaways = useMemo(() => 
-        allPutawayDocs.filter(pd => pd.nodocument === inboundDoc.reference && (pd.status === 'Issue - Putaway' || pd.status === 'Receipt - Putaway'))
-    , [allPutawayDocs, inboundDoc.reference]);
+        allProductOutDocs.filter(pd => pd.nodocument === inboundDoc.reference && (pd.status === 'Issue - Putaway' || pd.status === 'Receipt - Putaway'))
+    , [allProductOutDocs, inboundDoc.reference]);
 
     const totalPutawayQty = useMemo(() => 
         relatedPutaways
-            .filter(pd => pd.status === 'Receipt - Putaway') // Only count receipts into final location
+            .filter(pd => pd.status === 'Receipt - Putaway')
             .reduce((sum, current) => sum + current.qty, 0)
     , [relatedPutaways]);
 
