@@ -85,34 +85,34 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Request body must be an array of documents.' }, { status: 400 });
   }
   
-  const docsToInsert = await Promise.all(documents.map(async (doc) => {
-    if (!doc.expdate) {
-        throw new Error(`Expiration date (expdate) is missing for SKU: ${doc.sku}`);
-    }
+  const docsToInsert = [];
+  for (const doc of documents) {
+      if (!doc.expdate) {
+          throw new Error(`Expiration date (expdate) is missing for SKU: ${doc.sku}`);
+      }
 
-    const finalDocNumber = doc.nodocument || await generateNewDocumentNumber(doc.status);
-    
-    // Fetch master product name
-    const { data: productData } = await supabaseService
-        .from('master_products')
-        .select('name')
-        .eq('sku', doc.sku)
-        .single();
+      const finalDocNumber = doc.nodocument || doc.order_reference || await generateNewDocumentNumber(doc.status);
+      
+      const { data: productData } = await supabaseService
+          .from('master_products')
+          .select('name')
+          .eq('sku', doc.sku)
+          .single();
 
-    return {
-        nodocument: finalDocNumber,
-        sku: doc.sku,
-        name: productData?.name || '(No Master Data)',
-        barcode: doc.barcode,
-        location: doc.location,
-        qty: doc.qty,
-        status: doc.status,
-        date: doc.date,
-        validatedby: doc.validatedby,
-        expdate: doc.expdate,
-        order_reference: doc.order_reference || finalDocNumber,
-    };
-  }));
+      docsToInsert.push({
+          nodocument: finalDocNumber,
+          sku: doc.sku,
+          name: productData?.name || '(No Master Data)',
+          barcode: doc.barcode,
+          location: doc.location,
+          qty: doc.qty,
+          status: doc.status,
+          date: doc.date,
+          validatedby: doc.validatedby,
+          expdate: doc.expdate,
+          order_reference: finalDocNumber, // Ensure this is always populated for traceability
+      });
+  }
 
 
   const { data, error } = await supabaseService
@@ -157,4 +157,3 @@ type ProductOutStatus =
     | 'Receipt - Inbound'
     | 'Adjusment - Loc'; // Keep for backwards compatibility if needed
     
-
