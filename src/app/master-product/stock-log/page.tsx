@@ -21,6 +21,7 @@ type StockLogEntry = {
     id: string;
     date: string;
     nodocument: string;
+    order_reference: string;
     barcode: string;
     sku: string;
     name: string;
@@ -74,7 +75,8 @@ export default function StockLogPage() {
         if (!searchTerm) return stockLog;
         return stockLog.filter(log =>
             log.barcode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            log.no_document.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            log.nodocument.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (log.order_reference && log.order_reference.toLowerCase().includes(searchTerm.toLowerCase())) ||
             log.sku.toLowerCase().includes(searchTerm.toLowerCase())
         );
     }, [stockLog, searchTerm]);
@@ -107,7 +109,7 @@ export default function StockLogPage() {
             headers.join(","),
             ...filteredData.map(log => [
                 `"${format(new Date(log.date), "yyyy-MM-dd HH:mm:ss")}"`,
-                `"${log.no_document}"`,
+                `"${log.order_reference || log.nodocument}"`,
                 `"${log.sku}"`,
                 `"${log.name}"`,
                 `"${log.barcode}"`,
@@ -195,7 +197,7 @@ export default function StockLogPage() {
                                         paginatedData.map((log) => (
                                             <TableRow key={log.id}>
                                                 <TableCell>{format(new Date(log.date), 'dd/MM/yyyy HH:mm')}</TableCell>
-                                                <TableCell>{log.no_document}</TableCell>
+                                                <TableCell>{log.order_reference || log.nodocument}</TableCell>
                                                 <TableCell>
                                                     <div className="font-medium">{log.name}</div>
                                                     <div className="text-sm text-muted-foreground">{log.sku}</div>
