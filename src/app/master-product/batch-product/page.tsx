@@ -248,7 +248,7 @@ export default function BatchProductPage() {
                                     </SelectContent>
                                 </Select>
                                  <Input 
-                                    placeholder="Search SKU, Name, Barcode, or Brand..." 
+                                    placeholder="Search SKU, Name, Barcode..." 
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     className="w-full md:w-auto md:max-w-sm"
@@ -262,7 +262,7 @@ export default function BatchProductPage() {
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>SKU</TableHead>
+                                            <TableHead className="w-1/3">SKU</TableHead>
                                             <TableHead>Name Product</TableHead>
                                             <TableHead>Barcode</TableHead>
                                             <TableHead>Brand</TableHead>
@@ -279,8 +279,8 @@ export default function BatchProductPage() {
                                             </TableRow>
                                         ) : paginatedData.length > 0 ? (
                                             paginatedData.map((product) => (
-                                            <AccordionItem value={product.sku} key={product.sku}>
-                                                <React.Fragment>
+                                            <AccordionItem value={product.sku} key={product.sku} asChild>
+                                                <>
                                                 <TableRow>
                                                     <TableCell className="font-medium">{product.sku}</TableCell>
                                                     <TableCell>{product.name}</TableCell>
@@ -354,7 +354,7 @@ export default function BatchProductPage() {
                                                         </AccordionContent>
                                                     </TableCell>
                                                 </TableRow>
-                                                </React.Fragment>
+                                                </>
                                             </AccordionItem>
                                             ))
                                         ) : (
