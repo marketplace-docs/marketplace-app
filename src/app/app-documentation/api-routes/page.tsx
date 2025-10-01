@@ -128,6 +128,7 @@ const apiRoutes = [
             { method: "GET", path: "/api/master-products/[query]", description: "Mencari produk berdasarkan SKU atau Barcode." },
             { method: "GET", path: "/api/master-product/batch-products", description: "Mengambil data stok agregat dari semua pergerakan barang (sumber data utama stok)." },
             { method: "POST", path: "/api/master-product/batch-products/delete-anomaly", description: "Menghapus transaksi anomali yang menyebabkan stok negatif (hanya Super Admin)." },
+            { method: "GET", path: "/api/master-product/stock-log", description: "Mengambil histori lengkap semua pergerakan masuk dan keluar barang." },
         ]
     },
     {

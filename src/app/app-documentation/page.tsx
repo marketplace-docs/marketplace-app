@@ -48,6 +48,7 @@ const featureDescriptions: FeatureDescription[] = [
         children: [
             { label: "Go-Putaway", description: "Fitur untuk operator gudang. Scan dokumen inbound, verifikasi produk, lalu scan lokasi tujuan untuk menyelesaikan proses putaway secara akurat." },
             { label: "Monitoring", description: "Melihat riwayat lengkap semua dokumen putaway yang telah selesai, termasuk detail pergerakan barang dari dokumen sumber ke lokasi tujuan." },
+            { label: "Update Expired", description: "Fitur khusus untuk memperbarui tanggal kedaluwarsa atau memindahkan sebagian stok (split) ke lokasi lain jika diperlukan." },
             { label: "Task", description: "Menampilkan daftar dokumen putaway yang statusnya masih 'Pending' dan memerlukan tindakan segera." },
         ]
     },
@@ -104,10 +105,10 @@ const featureDescriptions: FeatureDescription[] = [
         icon: NAV_LINKS.find(l => l.label === "Internal Transfer")!.icon,
         description: "Modul untuk memindahkan stok antar lokasi internal atau antara gudang dan entitas lain seperti B2B, B2C, dan Vendor.",
         children: [
-            { label: "From Warehouse", description: "Memindahkan stok dari satu lokasi penyimpanan ke lokasi lain di dalam gudang." },
-            { label: "From B2B", description: "Mentransfer stok yang dialokasikan untuk B2B ke lokasi lain." },
-            { label: "From B2C", description: "Mentransfer stok yang dialokasikan untuk B2C (jual umum) ke lokasi lain." },
-            { label: "From Vendor", description: "Mencatat pergerakan barang dua arah dengan vendor, baik barang masuk (IN) maupun barang keluar (OUT)." },
+            { label: "Transfer From Warehouse", description: "Memindahkan stok dari satu lokasi penyimpanan ke lokasi lain di dalam gudang." },
+            { label: "Transfer From B2B", description: "Mentransfer stok yang dialokasikan untuk B2B ke lokasi lain." },
+            { label: "Transfer From B2C", description: "Mentransfer stok yang dialokasikan untuk B2C (jual umum) ke lokasi lain." },
+            { label: "Transfer From Vendor", description: "Mencatat pergerakan barang dua arah dengan vendor, baik barang masuk (IN) maupun barang keluar (OUT)." },
             { label: "Monitoring", description: "Melihat riwayat lengkap semua transaksi internal transfer yang pernah terjadi." },
         ]
     },
