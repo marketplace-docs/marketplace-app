@@ -2,7 +2,8 @@
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 
-const validPassword = 'Marketplace@soco123!!!';
+const superAdminPassword = 'Marketplace^soco@123!!!';
+const standardUserPassword = 'Marketplace^^@socomp123!!!';
 
 export async function POST(request: Request) {
   try {
@@ -12,14 +13,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
     }
     
-    // 1. Check if the password is valid
-    if (password !== validPassword) {
-      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
-    }
-
     const lowercasedEmail = email.toLowerCase();
     
-    // 2. Fetch user data from the database using the service client
+    // 1. Fetch user data from the database first
     const { data: dbUser, error: dbError } = await supabaseService
       .from('users')
       .select('id, name, email, role')
@@ -28,6 +24,15 @@ export async function POST(request: Request) {
 
     if (dbError || !dbUser) {
       console.error('Login DB error or user not found:', dbError?.message);
+      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
+    }
+    
+    // 2. Check password based on user role
+    const isValidPassword = 
+      (dbUser.role === 'Super Admin' && password === superAdminPassword) ||
+      (dbUser.role !== 'Super Admin' && password === standardUserPassword);
+
+    if (!isValidPassword) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
