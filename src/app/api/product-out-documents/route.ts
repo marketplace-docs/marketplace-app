@@ -1,5 +1,4 @@
 
-
 'use server';
 
 import { supabaseService } from '@/lib/supabase-service';
@@ -108,7 +107,7 @@ export async function POST(request: Request) {
         date: doc.date,
         validatedby: doc.validatedby,
         expdate: doc.expdate,
-        order_reference: doc.order_reference, // Add order_reference
+        order_reference: finalDocNumber,
     };
   }));
 
@@ -155,4 +154,3 @@ type ProductOutStatus =
     | 'Receipt - Inbound'
     | 'Adjusment - Loc'; // Keep for backwards compatibility if needed
     
-
