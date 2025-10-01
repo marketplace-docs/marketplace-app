@@ -301,7 +301,8 @@ export default function DatabaseUserPage() {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Name</TableHead>
+                                <TableHead>Full Name</TableHead>
+                                <TableHead>Username</TableHead>
                                 <TableHead>Email</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead>Role</TableHead>
@@ -311,7 +312,7 @@ export default function DatabaseUserPage() {
                         <TableBody>
                             {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="h-24 text-center">
+                                    <TableCell colSpan={6} className="h-24 text-center">
                                         <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                                     </TableCell>
                                 </TableRow>
@@ -319,6 +320,7 @@ export default function DatabaseUserPage() {
                                 paginatedUsers.map((user) => (
                                     <TableRow key={user.id}>
                                         <TableCell className="font-medium">{user.name}</TableCell>
+                                        <TableCell>{user.name}</TableCell>
                                         <TableCell>{user.email}</TableCell>
                                         <TableCell>
                                             <Badge variant={statusVariantMap[user.status] || 'default'}>{user.status}</Badge>
@@ -346,7 +348,7 @@ export default function DatabaseUserPage() {
                                 ))
                             ) : (
                                  <TableRow>
-                                    <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                                         No users found.
                                     </TableCell>
                                 </TableRow>
