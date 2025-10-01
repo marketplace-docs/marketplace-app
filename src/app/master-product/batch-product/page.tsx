@@ -279,8 +279,8 @@ export default function BatchProductPage() {
                                             </TableRow>
                                         ) : paginatedData.length > 0 ? (
                                             paginatedData.map((product) => (
-                                            <AccordionItem value={product.sku} key={product.sku} asChild>
-                                                <>
+                                            <AccordionItem value={product.sku} key={product.sku}>
+                                                <React.Fragment>
                                                 <TableRow>
                                                     <TableCell className="font-medium">{product.sku}</TableCell>
                                                     <TableCell>{product.name}</TableCell>
@@ -354,7 +354,7 @@ export default function BatchProductPage() {
                                                         </AccordionContent>
                                                     </TableCell>
                                                 </TableRow>
-                                                </>
+                                                </React.Fragment>
                                             </AccordionItem>
                                             ))
                                         ) : (
