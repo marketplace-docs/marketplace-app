@@ -12,6 +12,7 @@ export default function DashboardPage() {
         const showToast = sessionStorage.getItem('showLoginSuccessToast');
         if (showToast) {
             toast({
+                variant: "success",
                 title: "Welcome To Fulfillment Marketplace",
                 description: "You have successfully logged in.",
             });
