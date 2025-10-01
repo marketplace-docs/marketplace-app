@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
@@ -28,15 +27,28 @@ import { cn } from '@/lib/utils';
 
 type CombinedDocument = InboundDocument & {
     putaway_docs: PutawayDocument[];
-    total_putaway_qty: number;
-    current_status: 'Assign' | 'In Progress' | 'Done';
 };
 
-const DocumentCard = ({ document }: { document: CombinedDocument }) => {
+const DocumentCard = ({ document, allPutawayDocs }: { document: InboundDocument; allPutawayDocs: PutawayDocument[] }) => {
     const [isExpanded, setIsExpanded] = useState(false);
-    const { current_status, total_putaway_qty, putaway_docs } = document;
-    
-    const isDone = current_status === 'Done';
+
+    const relatedPutaways = useMemo(() => 
+        allPutawayDocs.filter(pd => pd.no_document === document.reference)
+    , [allPutawayDocs, document.reference]);
+
+    const totalPutawayQty = useMemo(() => 
+        relatedPutaways
+            .filter(pd => pd.status === 'Receipt - Putaway')
+            .reduce((sum, current) => sum + current.qty, 0)
+    , [relatedPutaways]);
+
+    const currentStatus: 'Assign' | 'In Progress' | 'Done' = useMemo(() => {
+        if (totalPutawayQty >= document.qty) return 'Done';
+        if (totalPutawayQty > 0) return 'In Progress';
+        return 'Assign';
+    }, [totalPutawayQty, document.qty]);
+
+    const isDone = currentStatus === 'Done';
 
     return (
         <Card className="overflow-hidden">
@@ -82,11 +94,11 @@ const DocumentCard = ({ document }: { document: CombinedDocument }) => {
                                 </TableCell>
                                 <TableCell>{document.barcode}</TableCell>
                                 <TableCell>{document.qty}</TableCell>
-                                <TableCell>{total_putaway_qty}</TableCell>
-                                <TableCell>{total_putaway_qty}</TableCell>
+                                <TableCell>{totalPutawayQty}</TableCell>
+                                <TableCell>{totalPutawayQty}</TableCell>
                                 <TableCell>
                                     <Badge variant={isDone ? 'default' : 'secondary'} className={cn(isDone && 'bg-green-600')}>
-                                        {current_status}
+                                        {currentStatus}
                                     </Badge>
                                 </TableCell>
                                 <TableCell className="text-right">
@@ -101,7 +113,7 @@ const DocumentCard = ({ document }: { document: CombinedDocument }) => {
                     </Table>
                      <CollapsibleContent>
                         <div className="bg-gray-50 px-4 py-2 border-t">
-                             {putaway_docs.length > 0 ? (
+                             {relatedPutaways.length > 0 ? (
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
@@ -113,7 +125,7 @@ const DocumentCard = ({ document }: { document: CombinedDocument }) => {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {putaway_docs.map(pd => (
+                                        {relatedPutaways.map(pd => (
                                             <TableRow key={pd.id}>
                                                 <TableCell>{pd.status === 'Issue - Putaway' ? 'Staging Area Inbound' : pd.no_document}</TableCell>
                                                 <TableCell>{pd.location}</TableCell>
@@ -138,7 +150,8 @@ const DocumentCard = ({ document }: { document: CombinedDocument }) => {
 };
 
 export default function MonitoringPutawayPage() {
-    const [documents, setDocuments] = useState<CombinedDocument[]>([]);
+    const [inboundDocuments, setInboundDocuments] = useState<InboundDocument[]>([]);
+    const [allPutawayDocs, setAllPutawayDocs] = useState<PutawayDocument[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -161,30 +174,9 @@ export default function MonitoringPutawayPage() {
             const inboundDocs: InboundDocument[] = await inboundRes.json();
             const putawayDocs: PutawayDocument[] = await putawayRes.json();
             
-            const combined = inboundDocs.map(inboundDoc => {
-                const relatedPutaways = putawayDocs.filter(pd => pd.no_document === inboundDoc.reference);
-                
-                const totalPutawayQty = relatedPutaways
-                                        .filter(pd => pd.status === 'Receipt - Putaway')
-                                        .reduce((sum, current) => sum + current.qty, 0);
+            setInboundDocuments(inboundDocs.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+            setAllPutawayDocs(putawayDocs);
 
-                let status: 'Assign' | 'In Progress' | 'Done' = 'Assign';
-                if (totalPutawayQty >= inboundDoc.qty) {
-                    status = 'Done';
-                } else if (totalPutawayQty > 0) {
-                    status = 'In Progress';
-                }
-
-                return {
-                    ...inboundDoc,
-                    putaway_docs: relatedPutaways,
-                    total_putaway_qty: totalPutawayQty,
-                    current_status: status,
-                };
-            }).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-
-            setDocuments(combined);
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -197,12 +189,12 @@ export default function MonitoringPutawayPage() {
     }, [fetchDocuments]);
     
     const filteredDocuments = useMemo(() => {
-        return documents.filter(doc =>
+        return inboundDocuments.filter(doc =>
             doc.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
             doc.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
             doc.barcode.toLowerCase().includes(searchTerm.toLowerCase())
         );
-    }, [documents, searchTerm]);
+    }, [inboundDocuments, searchTerm]);
 
     const totalPages = Math.ceil(filteredDocuments.length / rowsPerPage);
     const paginatedDocs = filteredDocuments.slice(
@@ -235,7 +227,7 @@ export default function MonitoringPutawayPage() {
                            <div className="flex justify-center items-center h-64"><Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" /></div>
                        ) : paginatedDocs.length > 0 ? (
                             paginatedDocs.map((doc) => (
-                               <DocumentCard key={doc.id} document={doc} />
+                               <DocumentCard key={doc.id} document={doc} allPutawayDocs={allPutawayDocs} />
                             ))
                        ) : (
                            <div className="text-center py-16 text-muted-foreground">No putaway documents found.</div>
@@ -275,5 +267,3 @@ export default function MonitoringPutawayPage() {
         </MainLayout>
     );
 }
-
-    
