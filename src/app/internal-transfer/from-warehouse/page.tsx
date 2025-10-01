@@ -10,50 +10,51 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Search, Warehouse, Package, ArrowRight, CheckCircle, MoveRight } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import type { BatchProduct } from '@/types/batch-product';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { format } from 'date-fns';
 
-type TransferStep = 'findSource' | 'specifyDetails';
+type TransferStep = 'findProduct' | 'selectSource' | 'specifyDetails';
 
 export default function TransferFromWarehousePage() {
     const { user } = useAuth();
     const { toast } = useToast();
     
-    const [step, setStep] = useState<TransferStep>('findSource');
+    const [step, setStep] = useState<TransferStep>('findProduct');
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     
-    const [sourceLocation, setSourceLocation] = useState('');
     const [barcode, setBarcode] = useState('');
-    const [foundBatch, setFoundBatch] = useState<BatchProduct | null>(null);
+    const [foundBatches, setFoundBatches] = useState<BatchProduct[]>([]);
+    const [selectedBatch, setSelectedBatch] = useState<BatchProduct | null>(null);
 
     const [destinationLocation, setDestinationLocation] = useState('');
     const [transferQty, setTransferQty] = useState('');
 
     const handleSearch = async () => {
-        if (!sourceLocation || !barcode) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Please provide both source location and product barcode.' });
+        if (!barcode) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Please provide a product barcode.' });
             return;
         }
         setIsLoading(true);
-        setFoundBatch(null);
+        setFoundBatches([]);
         try {
             const res = await fetch('/api/master-product/batch-products');
             if (!res.ok) throw new Error('Failed to fetch stock data.');
             const allBatches: BatchProduct[] = await res.json();
             
-            const batch = allBatches.find(b => 
-                b.location.toLowerCase() === sourceLocation.toLowerCase() && 
-                b.barcode === barcode &&
-                b.stock > 0
+            const batches = allBatches.filter(b => 
+                b.barcode === barcode && b.stock > 0
             );
 
-            if (!batch) {
-                toast({ variant: 'destructive', title: 'Not Found', description: `No available stock for barcode ${barcode} found at location ${sourceLocation}.` });
+            if (batches.length === 0) {
+                toast({ variant: 'destructive', title: 'Not Found', description: `No available stock for barcode ${barcode} found in any location.` });
                 setIsLoading(false);
                 return;
             }
 
-            setFoundBatch(batch);
-            setStep('specifyDetails');
+            setFoundBatches(batches);
+            setStep('selectSource');
 
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Error', description: error.message });
@@ -61,18 +62,24 @@ export default function TransferFromWarehousePage() {
             setIsLoading(false);
         }
     };
+    
+    const handleSelectBatch = (batch: BatchProduct) => {
+        setSelectedBatch(batch);
+        setStep('specifyDetails');
+    };
+
 
     const handleConfirmTransfer = async () => {
         const qty = parseInt(transferQty, 10);
-        if (!foundBatch || !destinationLocation || isNaN(qty) || qty <= 0) {
+        if (!selectedBatch || !destinationLocation || isNaN(qty) || qty <= 0) {
             toast({ variant: 'destructive', title: 'Invalid Details', description: 'Please fill all transfer details correctly.'});
             return;
         }
-        if (qty > foundBatch.stock) {
-             toast({ variant: 'destructive', title: 'Insufficient Stock', description: `Transfer quantity (${qty}) exceeds available stock (${foundBatch.stock}).`});
+        if (qty > selectedBatch.stock) {
+             toast({ variant: 'destructive', title: 'Insufficient Stock', description: `Transfer quantity (${qty}) exceeds available stock (${selectedBatch.stock}).`});
             return;
         }
-        if (destinationLocation.toLowerCase() === foundBatch.location.toLowerCase()) {
+        if (destinationLocation.toLowerCase() === selectedBatch.location.toLowerCase()) {
              toast({ variant: 'destructive', title: 'Invalid Location', description: `Destination location cannot be the same as the source location.`});
             return;
         }
@@ -82,10 +89,10 @@ export default function TransferFromWarehousePage() {
             const transferDocuments = [
                 // Document for stock out from source
                 {
-                    sku: foundBatch.sku,
-                    barcode: foundBatch.barcode,
-                    location: foundBatch.location,
-                    expdate: foundBatch.exp_date,
+                    sku: selectedBatch.sku,
+                    barcode: selectedBatch.barcode,
+                    location: selectedBatch.location,
+                    expdate: selectedBatch.exp_date,
                     qty: qty,
                     status: 'Issue - Internal Transfer Out From Warehouse' as const,
                     date: new Date().toISOString(),
@@ -93,12 +100,12 @@ export default function TransferFromWarehousePage() {
                 },
                 // Document for stock in to destination
                 {
-                    sku: foundBatch.sku,
-                    barcode: foundBatch.barcode,
+                    sku: selectedBatch.sku,
+                    barcode: selectedBatch.barcode,
                     location: destinationLocation,
-                    expdate: foundBatch.exp_date,
+                    expdate: selectedBatch.exp_date,
                     qty: qty,
-                    status: 'Receipt - Internal Transfer In to Warehouse' as const, // This needs to be a valid status for 'IN' type
+                    status: 'Receipt - Internal Transfer In to Warehouse' as const,
                     date: new Date().toISOString(),
                     validatedby: user!.name,
                 }
@@ -115,7 +122,7 @@ export default function TransferFromWarehousePage() {
                 throw new Error(errorData.error || 'Failed to process transfer.');
             }
 
-            toast({ title: 'Transfer Successful', description: `${qty} units of ${foundBatch.sku} moved from ${foundBatch.location} to ${destinationLocation}.`});
+            toast({ title: 'Transfer Successful', description: `${qty} units of ${selectedBatch.sku} moved from ${selectedBatch.location} to ${destinationLocation}.`});
             resetForm();
 
         } catch (error: any) {
@@ -126,12 +133,12 @@ export default function TransferFromWarehousePage() {
     };
 
     const resetForm = () => {
-        setSourceLocation('');
         setBarcode('');
-        setFoundBatch(null);
+        setFoundBatches([]);
+        setSelectedBatch(null);
         setDestinationLocation('');
         setTransferQty('');
-        setStep('findSource');
+        setStep('findProduct');
         setIsSubmitting(false);
     };
 
@@ -144,43 +151,70 @@ export default function TransferFromWarehousePage() {
                     <CardDescription>Move stock from one warehouse location to another.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                    {/* Step 1: Find Source */}
-                    {step === 'findSource' && (
+                    {/* Step 1: Find Product */}
+                    {step === 'findProduct' && (
                         <div className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-                                <div className="space-y-2">
-                                    <Label htmlFor="sourceLocation"><Warehouse className="inline-block h-4 w-4 mr-2" />Source Location</Label>
-                                    <Input id="sourceLocation" placeholder="Scan or enter location" value={sourceLocation} onChange={e => setSourceLocation(e.target.value)} disabled={isLoading}/>
-                                </div>
-                                 <div className="space-y-2">
-                                    <Label htmlFor="barcode"><Package className="inline-block h-4 w-4 mr-2" />Product Barcode</Label>
-                                    <Input id="barcode" placeholder="Scan or enter barcode" value={barcode} onChange={e => setBarcode(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()} disabled={isLoading}/>
-                                </div>
+                             <div className="space-y-2">
+                                <Label htmlFor="barcode"><Package className="inline-block h-4 w-4 mr-2" />Product Barcode</Label>
+                                <Input id="barcode" placeholder="Scan or enter barcode" value={barcode} onChange={e => setBarcode(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()} disabled={isLoading}/>
                             </div>
                              <div className="text-right">
-                                <Button onClick={handleSearch} disabled={isLoading || !sourceLocation || !barcode}>
+                                <Button onClick={handleSearch} disabled={isLoading || !barcode}>
                                     {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Search className="mr-2 h-4 w-4"/>}
-                                    Find Stock
+                                    Find Product
                                 </Button>
                             </div>
                         </div>
                     )}
+                    
+                    {/* Step 2: Select Source Batch */}
+                    {step === 'selectSource' && (
+                        <div className="space-y-4">
+                            <h3 className="font-semibold text-lg">Select Source Location for <span className="text-primary">{foundBatches[0].name}</span></h3>
+                             <div className="border rounded-lg max-h-96 overflow-y-auto">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Location</TableHead>
+                                            <TableHead>Stock</TableHead>
+                                            <TableHead>Exp Date</TableHead>
+                                            <TableHead className="text-right">Action</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {foundBatches.map(batch => (
+                                            <TableRow key={batch.id}>
+                                                <TableCell className="font-medium">{batch.location}</TableCell>
+                                                <TableCell><Badge variant="secondary">{batch.stock}</Badge></TableCell>
+                                                <TableCell>{format(new Date(batch.exp_date), 'dd/MM/yyyy')}</TableCell>
+                                                <TableCell className="text-right">
+                                                    <Button size="sm" onClick={() => handleSelectBatch(batch)}>Select</Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                            <Button variant="outline" onClick={resetForm}>Back</Button>
+                        </div>
+                    )}
 
-                    {/* Step 2: Specify Details */}
-                    {step === 'specifyDetails' && foundBatch && (
+
+                    {/* Step 3: Specify Details */}
+                    {step === 'specifyDetails' && selectedBatch && (
                         <div className="space-y-6">
                             <Card className="bg-green-50 border-green-200">
                                 <CardHeader className="flex flex-row items-center gap-4 space-y-0 p-4">
                                      <CheckCircle className="h-6 w-6 text-green-600"/>
                                     <div>
-                                        <CardTitle className="text-lg">Stock Found</CardTitle>
+                                        <CardTitle className="text-lg">Source Location Selected</CardTitle>
                                         <CardDescription className="text-green-700">Ready to transfer.</CardDescription>
                                     </div>
                                 </CardHeader>
                                 <CardContent className="grid grid-cols-3 gap-4 text-sm p-4 pt-0">
-                                    <div><p className="font-medium text-muted-foreground">SKU</p><p className="font-semibold">{foundBatch.sku}</p></div>
-                                    <div><p className="font-medium text-muted-foreground">Location</p><p className="font-semibold">{foundBatch.location}</p></div>
-                                    <div><p className="font-medium text-muted-foreground">Available Stock</p><p className="font-semibold">{foundBatch.stock.toLocaleString()}</p></div>
+                                    <div><p className="font-medium text-muted-foreground">SKU</p><p className="font-semibold">{selectedBatch.sku}</p></div>
+                                    <div><p className="font-medium text-muted-foreground">From Location</p><p className="font-semibold">{selectedBatch.location}</p></div>
+                                    <div><p className="font-medium text-muted-foreground">Available Stock</p><p className="font-semibold">{selectedBatch.stock.toLocaleString()}</p></div>
                                 </CardContent>
                             </Card>
 
