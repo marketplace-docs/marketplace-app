@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { NAV_LINKS } from "@/lib/constants";
 import Link from "next/link";
-import { Route, type LucideIcon } from "lucide-react";
+import { Route, type LucideIcon, ArrowLeftRight } from "lucide-react";
 
 const techStack = ["Next.js", "React", "TypeScript", "Tailwind CSS", "ShadCN UI", "Genkit", "Supabase"];
 
@@ -44,11 +44,10 @@ const featureDescriptions: FeatureDescription[] = [
     {
         label: "Putaway",
         icon: NAV_LINKS.find(l => l.label === "Putaway")!.icon,
-        description: "Manajemen proses penempatan barang dari area penerimaan ke lokasi penyimpanan di gudang.",
+        description: "Manajemen proses penempatan barang dari area penerimaan (staging) ke lokasi penyimpanan definitif di gudang.",
         children: [
             { label: "Go-Putaway", description: "Fitur untuk operator gudang. Scan dokumen inbound, verifikasi produk, lalu scan lokasi tujuan untuk menyelesaikan proses putaway secara akurat." },
             { label: "Monitoring", description: "Melihat riwayat lengkap semua dokumen putaway yang telah selesai, termasuk detail pergerakan barang dari dokumen sumber ke lokasi tujuan." },
-            { label: "Update Expired", description: "Memperbarui lokasi, tanggal kedaluwarsa, atau memecah stok (split batch) untuk produk yang sudah ada di gudang." },
             { label: "Task", description: "Menampilkan daftar dokumen putaway yang statusnya masih 'Pending' dan memerlukan tindakan segera." },
         ]
     },
@@ -80,16 +79,16 @@ const featureDescriptions: FeatureDescription[] = [
         children: [
             { label: "My Orders", description: "Mengelola pesanan manual, mengunggah pesanan via CSV, dan membuat 'wave' (maks. 150 order) untuk diproses tim picker." },
             { label: "Monitoring Orders", description: "Memantau status semua 'wave', melihat detail pesanan di dalamnya, membatalkan wave, dan mencetak picklist per-wave." },
-            { label: "Go-Picker", description: "Fitur untuk tim picker dengan alur scan: scan order, scan lokasi, scan produk, dan input kuantitas untuk akurasi maksimal." },
+            { label: "Go-Picker", description: "Alur kerja terpemandu untuk picker dengan validasi scan (order, lokasi, produk) untuk akurasi maksimal." },
             { label: "Out of Stock", description: "Pusat manajemen untuk pesanan yang tidak dapat dipenuhi (OOS). Memungkinkan admin mengirim kembali pesanan ke antrian atau menghapusnya." },
-            { label: "Outbound", description: "Stasiun kerja untuk tim packer. Memindai pesanan dan produk untuk validasi akhir sebelum dikemas dan mencetak label pengiriman." },
+            { label: "Outbound", description: "Stasiun kerja untuk tim packer dengan validasi scan produk dan kemasan sebelum mencetak label pengiriman." },
             { label: "Outbound Monitoring", description: "Melihat riwayat lengkap semua pesanan yang telah di-pick dan di-pack, termasuk siapa yang mengerjakan dan kapan." },
             { label: "Dispatcher", description: "Stasiun kerja tim logistik. Memindai paket, menimbang berat, dan mengubah status menjadi 'Shipped' atau 'Delivered'." },
             { label: "Shipment Monitoring", description: "Melihat riwayat semua paket yang telah dikirim (Shipped) atau telah sampai (Delivered)." },
             { label: "Handover 3PL", description: "Fitur serah terima massal ke kurir (3PL). Scan banyak paket sekaligus untuk mengubah statusnya menjadi 'Delivered'." },
         ]
     },
-    {
+     {
         label: "Master Product",
         icon: NAV_LINKS.find(l => l.label === "Master Product")!.icon,
         description: "Pusat data untuk semua informasi terkait produk, stok, dan lokasi gudang.",
@@ -97,6 +96,18 @@ const featureDescriptions: FeatureDescription[] = [
             { label: "Batch Product", description: "Menampilkan data stok terkini yang diagregasi per batch (berdasarkan lokasi & tanggal kedaluwarsa)." },
             { label: "Stock Log", description: "Menampilkan riwayat lengkap semua pergerakan stok (masuk, keluar, dan pembaruan internal)." },
             { label: "Location", description: "Mengelola data master semua lokasi gudang. Mendukung penambahan massal via upload CSV." },
+        ]
+    },
+     {
+        label: "Internal Transfer",
+        icon: NAV_LINKS.find(l => l.label === "Internal Transfer")!.icon,
+        description: "Modul untuk memindahkan stok antar lokasi internal atau antara gudang dan entitas lain seperti B2B, B2C, dan Vendor.",
+        children: [
+            { label: "From Warehouse", description: "Memindahkan stok dari satu lokasi penyimpanan ke lokasi lain di dalam gudang." },
+            { label: "From B2B", description: "Mentransfer stok yang dialokasikan untuk B2B ke lokasi lain." },
+            { label: "From B2C", description: "Mentransfer stok yang dialokasikan untuk B2C (jual umum) ke lokasi lain." },
+            { label: "From Vendor", description: "Mencatat pergerakan barang dua arah dengan vendor, baik barang masuk (IN) maupun barang keluar (OUT)." },
+            { label: "Monitoring", description: "Melihat riwayat lengkap semua transaksi internal transfer yang pernah terjadi." },
         ]
     },
     {
@@ -129,6 +140,7 @@ const featureDescriptions: FeatureDescription[] = [
             { label: "Role", description: "Menampilkan daftar peran (role) yang ada di dalam sistem." },
             { label: "Menu Permission", description: "Mengatur hak akses setiap pengguna terhadap menu-menu di aplikasi (hanya Super Admin)." },
             { label: "Log Activity", description: "Melihat jejak audit dari semua aktivitas penting yang terjadi di sistem." },
+            { label: "DB Function", description: "Menampilkan daftar fungsi (RPC) yang ada di database untuk pemeliharaan." },
         ]
     }
 ];

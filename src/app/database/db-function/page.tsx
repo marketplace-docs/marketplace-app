@@ -9,9 +9,9 @@ import { Server, CheckCircle, AlertTriangle } from "lucide-react";
 const dbFunctions = [
     {
         name: 'get_all_batch_products',
-        description: 'Menghitung dan mengagregasi semua stok produk per batch (lokasi, barcode, exp_date). Ini adalah sumber data utama untuk halaman Batch Product dan semua perhitungan stok di seluruh aplikasi.',
+        description: 'Menghitung dan mengagregasi semua stok produk per batch (lokasi, barcode, exp_date). Ini adalah sumber data utama untuk halaman Batch Product dan semua perhitungan stok di seluruh aplikasi. Fungsi ini sudah diamankan dengan SET search_path.',
         status: 'Active',
-        version: '1.0.0'
+        version: '2.0.0'
     },
     // Add other functions here as they are created
 ];

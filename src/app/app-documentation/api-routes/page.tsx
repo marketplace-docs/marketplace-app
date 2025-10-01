@@ -34,6 +34,12 @@ const apiRoutes = [
         ]
     },
     {
+        category: "Internal Transfer",
+        endpoints: [
+            { method: "GET", path: "/api/internal-transfer/generate-vendor-number", description: "Membuat nomor dokumen baru untuk transfer dari/ke vendor." },
+        ]
+    },
+    {
         category: "e-Commerce (Pesanan Manual & Wave)",
         endpoints: [
             { method: "GET", path: "/api/manual-orders", description: "Mengambil semua data pesanan manual yang siap diproses. Gunakan ?status=Out of Stock untuk melihat pesanan OOS." },
@@ -121,7 +127,6 @@ const apiRoutes = [
             { method: "POST", path: "/api/master-products", description: "Upload massal data master produk via CSV." },
             { method: "GET", path: "/api/master-products/[query]", description: "Mencari produk berdasarkan SKU atau Barcode." },
             { method: "GET", path: "/api/master-product/batch-products", description: "Mengambil data stok agregat dari semua pergerakan barang (sumber data utama stok)." },
-            { method: "GET", path: "/api/master-product/batch-products/[barcode]", description: "Mengambil data stok untuk barcode tertentu." },
             { method: "POST", path: "/api/master-product/batch-products/delete-anomaly", description: "Menghapus transaksi anomali yang menyebabkan stok negatif (hanya Super Admin)." },
         ]
     },
