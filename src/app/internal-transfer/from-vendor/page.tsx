@@ -16,7 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { MainLayout } from '@/components/layout/main-layout';
 import { useRouter } from 'next/navigation';
 import { Loader2, Plus, Trash2 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, addYears } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
@@ -40,7 +40,9 @@ export default function TransferFromVendorPage() {
   const { user } = useAuth();
   const [stagedItems, setStagedItems] = useState<TransferItem[]>([]);
   const [newItem, setNewItem] = useState<Omit<TransferItem, 'qty'> & { qty: string }>({
-    sku: '', name: '', barcode: '', brand: '', exp_date: '', qty: ''
+    sku: '', name: '', barcode: '', brand: '', 
+    exp_date: format(addYears(new Date(), 5), 'yyyy-MM-dd'), 
+    qty: ''
   });
   const [docDetails, setDocDetails] = useState({
     reference: '',
@@ -113,7 +115,11 @@ export default function TransferFromVendorPage() {
     }
     
     setStagedItems(prev => [...prev, { ...newItem, qty }]);
-    setNewItem({ sku: '', name: '', barcode: '', brand: '', exp_date: '', qty: '' }); // Reset form
+    setNewItem({ 
+        sku: '', name: '', barcode: '', brand: '', 
+        exp_date: format(addYears(new Date(), 5), 'yyyy-MM-dd'), 
+        qty: '' 
+    });
   };
 
   const handleRemoveItem = (index: number) => {
@@ -216,7 +222,7 @@ export default function TransferFromVendorPage() {
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="exp_date">Exp Date</Label>
-                        <Input id="exp_date" name="exp_date" type="date" value={newItem.exp_date} onChange={handleItemInputChange}/>
+                        <Input id="exp_date" name="exp_date" type="date" value={newItem.exp_date} onChange={handleItemInputChange} disabled readOnly/>
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="qty">QTY</Label>
