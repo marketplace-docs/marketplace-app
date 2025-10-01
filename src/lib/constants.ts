@@ -1,6 +1,5 @@
 
-
-import { LayoutDashboard, ListTodo, Store, FileText, Settings, type LucideIcon, Briefcase, Users, Archive, BarChart3, AppWindow, BookText, Database, History, FilePlus, Eye, File, PieChart, Users2, Shield, Menu, Monitor, Undo2, Route, Package, PackagePlus, PackageMinus, Boxes, CalendarClock, Warehouse, Calculator, PackageX, ClipboardList, ScanLine, PackageCheck, ShoppingCart, Send, Handshake, ArrowRightSquare, ArrowLeftRight } from 'lucide-react';
+import { LayoutDashboard, ListTodo, Store, FileText, Settings, type LucideIcon, Briefcase, Users, Archive, BarChart3, AppWindow, BookText, Database, History, FilePlus, Eye, File, PieChart, Users2, Shield, Menu, Monitor, Undo2, Route, Package, PackagePlus, PackageMinus, Boxes, CalendarClock, Warehouse, Calculator, PackageX, ClipboardList, ScanLine, PackageCheck, ShoppingCart, Send, Handshake, ArrowRightSquare, ArrowLeftRight, Server } from 'lucide-react';
 
 export type NavLink = {
     href: string;
@@ -309,6 +308,11 @@ export const NAV_LINKS: NavLink[] = [
                 href: '/database/log-activity',
                 label: 'Log Activity',
                 icon: History,
+            },
+            {
+                href: '/database/db-function',
+                label: 'DB Function',
+                icon: Server,
             },
         ]
     },
