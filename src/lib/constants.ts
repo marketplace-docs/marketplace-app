@@ -315,11 +315,6 @@ export const NAV_LINKS: NavLink[] = [
                 label: 'Log Activity',
                 icon: History,
             },
-             {
-                href: '/database/db-function',
-                label: 'DB Function',
-                icon: Server,
-            },
         ]
     },
     {
