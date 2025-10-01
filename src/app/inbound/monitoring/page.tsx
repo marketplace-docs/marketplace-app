@@ -13,7 +13,7 @@ import { format, formatDistanceStrict } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import type { PutawayDocument } from '@/types/putaway-document';
+import type { ProductOutDocument } from '@/types/product-out-document';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 
@@ -33,13 +33,15 @@ type InboundDocument = {
 
 const InboundDetailDialog = ({ document: initialDoc }: { document: InboundDocument }) => {
     const [isExpanded, setIsExpanded] = useState(true);
-    const [putawayDocs, setPutawayDocs] = useState<PutawayDocument[]>([]);
+    const [putawayDocs, setPutawayDocs] = useState<ProductOutDocument[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [duration, setDuration] = useState('Calculating...');
     const { toast } = useToast();
 
     const totalPutaway = useMemo(() => {
-        return putawayDocs.reduce((acc, doc) => acc + doc.qty, 0);
+        return putawayDocs
+            .filter(doc => doc.status === 'Receipt - Putaway') // Only count receipts into final location
+            .reduce((acc, doc) => acc + doc.qty, 0);
     }, [putawayDocs]);
     
     const outstandingQty = initialDoc.qty - totalPutaway;
@@ -54,11 +56,15 @@ const InboundDetailDialog = ({ document: initialDoc }: { document: InboundDocume
         const fetchPutawayData = async () => {
             setIsLoading(true);
             try {
-                const response = await fetch('/api/putaway-documents');
-                if (!response.ok) throw new Error('Failed to fetch putaway history.');
-                const allDocs: PutawayDocument[] = await response.json();
+                // Fetch from the correct source: product_out_documents
+                const response = await fetch('/api/product-out-documents');
+                if (!response.ok) throw new Error('Failed to fetch putaway transaction history.');
+                const allDocs: ProductOutDocument[] = await response.json();
                 
-                const relatedDocs = allDocs.filter(doc => doc.no_document === initialDoc.reference);
+                // Filter for both Issue and Receipt related to this inbound document reference
+                const relatedDocs = allDocs.filter(
+                    doc => doc.nodocument === initialDoc.reference && (doc.status === 'Issue - Putaway' || doc.status === 'Receipt - Putaway')
+                );
                 setPutawayDocs(relatedDocs);
 
             } catch (error: any) {
