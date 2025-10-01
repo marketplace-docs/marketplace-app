@@ -15,10 +15,12 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { MainLayout } from '@/components/layout/main-layout';
 import { useRouter } from 'next/navigation';
-import { Loader2, Plus, Trash2 } from 'lucide-react';
-import { format, addYears } from 'date-fns';
+import { Loader2, Plus, Search, Trash2 } from 'lucide-react';
+import { format } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import type { BatchProduct } from '@/types/batch-product';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type TransferItem = {
     sku: string;
@@ -26,6 +28,7 @@ type TransferItem = {
     barcode: string;
     brand: string;
     exp_date: string;
+    location: string;
     qty: number;
 };
 
@@ -39,17 +42,18 @@ type ProductMaster = {
 export default function TransferFromVendorPage() {
   const { user } = useAuth();
   const [stagedItems, setStagedItems] = useState<TransferItem[]>([]);
-  const [newItem, setNewItem] = useState<Omit<TransferItem, 'qty'> & { qty: string }>({
-    sku: '', name: '', barcode: '', brand: '', 
-    exp_date: format(addYears(new Date(), 5), 'yyyy-MM-dd'), 
-    qty: ''
-  });
   const [docDetails, setDocDetails] = useState({
     reference: '',
     creator_by: '',
     vendor_name: '',
   });
-  
+
+  // State for the item adding process
+  const [barcode, setBarcode] = useState('');
+  const [foundBatches, setFoundBatches] = useState<BatchProduct[]>([]);
+  const [selectedLocation, setSelectedLocation] = useState('');
+  const [quantity, setQuantity] = useState('');
+
   const [isProductLoading, setIsProductLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
@@ -78,48 +82,68 @@ export default function TransferFromVendorPage() {
   }, [canCreate, generateDocNumber, user]);
 
 
-  const handleItemInputChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setNewItem(prev => ({ ...prev, [name]: value }));
-
-    if (name === 'barcode' && value) {
-        setIsProductLoading(true);
-        try {
-            const response = await fetch(`/api/master-products/${value}`);
-            if (response.ok) {
-                const product: ProductMaster = await response.json();
-                setNewItem(prev => ({
-                    ...prev,
-                    sku: product.sku,
-                    name: product.name,
-                    barcode: product.barcode,
-                    brand: product.brand,
-                }));
-            } else {
-                 setNewItem(prev => ({ ...prev, sku: '', name: '', brand: '' }));
-            }
-        } catch (error) {
-            console.error("Failed to fetch product data", error);
-            setNewItem(prev => ({ ...prev, sku: '', name: '', brand: '' }));
-        } finally {
-            setIsProductLoading(false);
-        }
+ const handleSearchProduct = useCallback(async () => {
+    if (!barcode) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Please enter a barcode to search.' });
+        return;
     }
-  }, []);
+    setIsProductLoading(true);
+    setFoundBatches([]);
+    setSelectedLocation('');
+    setQuantity('');
+    try {
+        const res = await fetch('/api/master-product/batch-products');
+        if (!res.ok) throw new Error('Failed to fetch stock data.');
+        const allBatches: BatchProduct[] = await res.json();
+        
+        const matchingBatches = allBatches.filter(b => b.barcode === barcode && b.stock > 0);
+
+        if (matchingBatches.length === 0) {
+            toast({ variant: 'destructive', title: 'Not Found', description: `No available stock found for barcode ${barcode}.` });
+            return;
+        }
+
+        setFoundBatches(matchingBatches);
+        toast({ title: 'Product Found', description: `Found ${matchingBatches.length} location(s) with stock.` });
+
+    } catch (error: any) {
+        toast({ variant: 'destructive', title: 'Error', description: error.message });
+    } finally {
+        setIsProductLoading(false);
+    }
+ }, [barcode, toast]);
+
 
   const handleAddItem = () => {
-    const qty = parseInt(newItem.qty, 10);
-    if (!newItem.sku || !newItem.barcode || !newItem.exp_date || isNaN(qty) || qty <= 0) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Please fill all item fields with valid data.' });
+    const qty = parseInt(quantity, 10);
+    const selectedBatch = foundBatches.find(b => b.location === selectedLocation);
+
+    if (!selectedBatch || !selectedLocation || isNaN(qty) || qty <= 0) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Please select a location and enter a valid quantity.' });
+        return;
+    }
+     if (qty > selectedBatch.stock) {
+        toast({ variant: 'destructive', title: 'Error', description: `Quantity (${qty}) exceeds available stock (${selectedBatch.stock}) at this location.` });
         return;
     }
     
-    setStagedItems(prev => [...prev, { ...newItem, qty }]);
-    setNewItem({ 
-        sku: '', name: '', barcode: '', brand: '', 
-        exp_date: format(addYears(new Date(), 5), 'yyyy-MM-dd'), 
-        qty: '' 
-    });
+    const newItem: TransferItem = {
+        sku: selectedBatch.sku,
+        name: selectedBatch.name,
+        barcode: selectedBatch.barcode,
+        brand: selectedBatch.brand,
+        exp_date: selectedBatch.exp_date,
+        location: selectedBatch.location,
+        qty: qty,
+    };
+
+    setStagedItems(prev => [...prev, newItem]);
+    
+    // Reset item form
+    setBarcode('');
+    setFoundBatches([]);
+    setSelectedLocation('');
+    setQuantity('');
   };
 
   const handleRemoveItem = (index: number) => {
@@ -143,11 +167,10 @@ export default function TransferFromVendorPage() {
     
     setIsSubmitting(true);
     try {
-      // Re-using inbound API as the process is identical
       const payload = {
         document: {
           reference: docDetails.reference,
-          received_by: docDetails.creator_by, // API expects received_by, so we map creator_by to it.
+          received_by: docDetails.creator_by,
           notes: `Transfer from Vendor: ${docDetails.vendor_name}`,
           date: new Date().toISOString(),
         },
@@ -183,6 +206,8 @@ export default function TransferFromVendorPage() {
     }
   };
 
+  const selectedBatchInfo = foundBatches.find(b => b.location === selectedLocation);
+
   return (
     <MainLayout>
       <div className="w-full space-y-6">
@@ -215,39 +240,51 @@ export default function TransferFromVendorPage() {
 
             <div className="space-y-4 p-4 border-2 border-primary/20 rounded-lg">
                 <h3 className="text-lg font-medium">Add Item to Document</h3>
-                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                     <div className="space-y-2">
-                        <Label htmlFor="barcode">Barcode</Label>
-                        <Input id="barcode" name="barcode" placeholder="Scan or enter barcode" value={newItem.barcode} onChange={handleItemInputChange} />
+                        <Label htmlFor="barcode">1. Barcode</Label>
+                        <Input id="barcode" name="barcode" placeholder="Scan or enter barcode" value={barcode} onChange={(e) => setBarcode(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearchProduct()} />
                     </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="exp_date">Exp Date</Label>
-                        <Input id="exp_date" name="exp_date" type="date" value={newItem.exp_date} onChange={handleItemInputChange} disabled readOnly/>
+                     <div className="flex items-end">
+                        <Button onClick={handleSearchProduct} disabled={isProductLoading || !barcode} className="w-full">
+                           {isProductLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                            Find Product
+                        </Button>
                     </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="qty">QTY</Label>
-                        <Input id="qty" name="qty" type="number" placeholder="Enter quantity" value={newItem.qty} onChange={handleItemInputChange}/>
-                    </div>
-                    <div className="space-y-2 relative col-span-1 md:col-span-2 lg:col-span-3 grid grid-cols-1 lg:grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="sku">SKU</Label>
-                            <Input id="sku" name="sku" placeholder="Auto-filled" value={newItem.sku} className="bg-muted" readOnly />
-                            {isProductLoading && <Loader2 className="absolute right-2 top-8 h-4 w-4 animate-spin" />}
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="name">Name</Label>
-                            <Input id="name" name="name" placeholder="Auto-filled" value={newItem.name} className="bg-muted" readOnly />
-                        </div>
-                         <div className="space-y-2">
-                            <Label htmlFor="brand">Brand</Label>
-                            <Input id="brand" name="brand" placeholder="Auto-filled" value={newItem.brand} className="bg-muted" readOnly />
-                        </div>
-                    </div>
-                    <div className="flex items-end">
-                      <Button type="button" onClick={handleAddItem} disabled={!canCreate} className="w-full">
-                          <Plus className="mr-2 h-4 w-4" /> Add Item
-                      </Button>
-                    </div>
+
+                    {foundBatches.length > 0 && (
+                        <>
+                            <div className="space-y-2 lg:col-span-2">
+                                <Label htmlFor="location">2. Select Location</Label>
+                                <Select value={selectedLocation} onValueChange={setSelectedLocation}>
+                                    <SelectTrigger id="location">
+                                        <SelectValue placeholder="Select location to take stock from..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {foundBatches.map(batch => (
+                                            <SelectItem key={batch.id} value={batch.location}>
+                                                {batch.location} (Stock: {batch.stock}, Exp: {format(new Date(batch.exp_date), 'dd/MM/yyyy')})
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                           
+                            <div className="space-y-2">
+                                <Label htmlFor="exp_date">Exp Date</Label>
+                                <Input id="exp_date" name="exp_date" value={selectedBatchInfo ? format(new Date(selectedBatchInfo.exp_date), 'yyyy-MM-dd') : ''} readOnly disabled className="bg-muted"/>
+                            </div>
+                             <div className="space-y-2">
+                                <Label htmlFor="qty">3. QTY</Label>
+                                <Input id="qty" name="qty" type="number" placeholder="Enter quantity" value={quantity} onChange={e => setQuantity(e.target.value)} />
+                            </div>
+                            <div className="flex items-end">
+                              <Button type="button" onClick={handleAddItem} disabled={!canCreate} className="w-full">
+                                  <Plus className="mr-2 h-4 w-4" /> Add Item
+                              </Button>
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
             
@@ -261,7 +298,7 @@ export default function TransferFromVendorPage() {
                                 <TableHead>Name</TableHead>
                                 <TableHead>Barcode</TableHead>
                                 <TableHead>Brand</TableHead>
-                                <TableHead>Vendor Name</TableHead>
+                                <TableHead>Location</TableHead>
                                 <TableHead>Exp Date</TableHead>
                                 <TableHead>QTY</TableHead>
                                 <TableHead className="text-right">Action</TableHead>
@@ -275,7 +312,7 @@ export default function TransferFromVendorPage() {
                                         <TableCell>{item.name}</TableCell>
                                         <TableCell>{item.barcode}</TableCell>
                                         <TableCell>{item.brand}</TableCell>
-                                        <TableCell>{docDetails.vendor_name}</TableCell>
+                                        <TableCell>{item.location}</TableCell>
                                         <TableCell>{format(new Date(item.exp_date), 'dd/MM/yyyy')}</TableCell>
                                         <TableCell>{item.qty.toLocaleString()}</TableCell>
                                         <TableCell className="text-right">
@@ -310,4 +347,3 @@ export default function TransferFromVendorPage() {
     </MainLayout>
   );
 }
-    
