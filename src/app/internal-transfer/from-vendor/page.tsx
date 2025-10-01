@@ -31,13 +31,6 @@ type TransferItem = {
     qty: number;
 };
 
-type ProductMaster = {
-    sku: string;
-    name: string;
-    barcode: string;
-    brand: string;
-};
-
 export default function TransferFromVendorPage() {
   const { user } = useAuth();
   const [stagedItems, setStagedItems] = useState<TransferItem[]>([]);
@@ -166,21 +159,37 @@ export default function TransferFromVendorPage() {
     
     setIsSubmitting(true);
     try {
-      const payload = {
-        document: {
-          reference: docDetails.reference,
-          received_by: docDetails.creator_by,
-          notes: `Transfer from Vendor: ${docDetails.vendor_name}`,
-          date: new Date().toISOString(),
+      const documentsToCreate = stagedItems.flatMap(item => ([
+        // Transaction OUT from vendor location
+        {
+            nodocument: docDetails.reference,
+            date: new Date().toISOString(),
+            validatedby: user.name,
+            sku: item.sku,
+            barcode: item.barcode,
+            expdate: item.exp_date,
+            qty: item.qty,
+            location: item.location,
+            status: 'Issue - Internal Transfer' as const,
         },
-        items: stagedItems.map(item => ({...item, location: 'Staging Area Inbound'})),
-        user
-      };
-
-      const response = await fetch('/api/inbound-documents', {
+        // Transaction IN to staging area
+        {
+            nodocument: docDetails.reference,
+            date: new Date().toISOString(),
+            validatedby: user.name,
+            sku: item.sku,
+            barcode: item.barcode,
+            expdate: item.exp_date,
+            qty: item.qty,
+            location: 'Staging Area Inbound',
+            status: 'Receipt - Internal Transfer In to Warehouse' as const,
+        }
+      ]));
+      
+      const response = await fetch('/api/product-out-documents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({ documents: documentsToCreate, user })
       });
       
       if (!response.ok) {
@@ -192,7 +201,7 @@ export default function TransferFromVendorPage() {
           title: 'Success',
           description: `Document ${docDetails.reference} for vendor ${docDetails.vendor_name} has been submitted.`,
       });
-      router.push('/inbound/monitoring');
+      router.push('/internal-transfer/monitoring');
 
     } catch (error: any) {
         toast({
@@ -241,7 +250,7 @@ export default function TransferFromVendorPage() {
                 <h3 className="text-lg font-medium">Add Item to Document</h3>
                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                     <div className="space-y-2">
-                        <Label htmlFor="barcode">Barcode</Label>
+                        <Label>Barcode</Label>
                         <Input id="barcode" name="barcode" placeholder="Scan or enter barcode" value={barcode} onChange={(e) => setBarcode(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearchProduct()} />
                     </div>
                      <div className="flex items-end">
@@ -254,7 +263,7 @@ export default function TransferFromVendorPage() {
                     {foundBatches.length > 0 && (
                         <>
                             <div className="space-y-2 lg:col-span-2">
-                                <Label htmlFor="location">Select Location</Label>
+                                <Label>Select Location</Label>
                                 <Select value={selectedLocation} onValueChange={setSelectedLocation}>
                                     <SelectTrigger id="location">
                                         <SelectValue placeholder="Select location to take stock from..." />
@@ -270,11 +279,11 @@ export default function TransferFromVendorPage() {
                             </div>
                            
                             <div className="space-y-2">
-                                <Label htmlFor="exp_date">Exp Date</Label>
+                                <Label>Exp Date</Label>
                                 <Input id="exp_date" name="exp_date" value={selectedBatchInfo ? format(new Date(selectedBatchInfo.exp_date), 'yyyy-MM-dd') : ''} readOnly disabled className="bg-muted"/>
                             </div>
                              <div className="space-y-2">
-                                <Label htmlFor="qty">QTY</Label>
+                                <Label>QTY</Label>
                                 <Input id="qty" name="qty" type="number" placeholder="Enter quantity" value={quantity} onChange={e => setQuantity(e.target.value)} />
                             </div>
                             <div className="flex items-end">
