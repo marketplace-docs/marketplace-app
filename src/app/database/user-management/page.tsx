@@ -415,8 +415,12 @@ export default function DatabaseUserPage() {
                     {selectedUser && (
                         <div className="grid gap-4 py-4">
                             <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="name" className="text-right">Name</Label>
+                                <Label htmlFor="name" className="text-right">Full Name</Label>
                                 <Input id="name" value={selectedUser.name} className="col-span-3" onChange={(e) => setSelectedUser({ ...selectedUser, name: e.target.value })} />
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="username" className="text-right">Username</Label>
+                                <Input id="username" value={selectedUser.name} className="col-span-3" onChange={(e) => setSelectedUser({ ...selectedUser, name: e.target.value })} />
                             </div>
                              <div className="grid grid-cols-4 items-center gap-4">
                                 <Label htmlFor="email" className="text-right">Email</Label>
