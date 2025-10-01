@@ -15,20 +15,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { ProductOutDocument } from '@/types/product-out-document';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
-
-type InboundDocument = {
-    id: number;
-    reference: string;
-    sku: string;
-    barcode: string;
-    brand: string;
-    exp_date: string;
-    qty: number;
-    date: string;
-    received_by: string;
-    main_status: 'Assign' | 'In Progress' | 'Done';
-};
-
+import type { InboundDocument } from '@/types/inbound-document';
+import { useRouter } from 'next/navigation';
 
 const InboundDetailDialog = ({ document: initialDoc }: { document: InboundDocument }) => {
     const [isExpanded, setIsExpanded] = useState(true);
@@ -193,7 +181,7 @@ const InboundDetailDialog = ({ document: initialDoc }: { document: InboundDocume
 };
 
 
-const InboundMonitoringTable = ({ data, loading, onStatusChange }: { data: InboundDocument[], loading: boolean, onStatusChange: (doc: InboundDocument, newStatus: 'Assign' | 'Done') => Promise<void> }) => {
+const InboundMonitoringTable = ({ data, loading, onStatusChange, onPrint }: { data: InboundDocument[], loading: boolean, onStatusChange: (doc: InboundDocument, newStatus: 'Assign' | 'Done') => Promise<void>, onPrint: (docId: number) => void }) => {
     const [isSubmitting, setIsSubmitting] = useState<number | null>(null);
     
     const handleReassign = async (doc: InboundDocument) => {
@@ -209,7 +197,7 @@ const InboundMonitoringTable = ({ data, loading, onStatusChange }: { data: Inbou
     }
     
     return (
-    <div className="border rounded-lg" id="table-content">
+    <div className="border rounded-lg">
         <Table>
             <TableHeader>
                 <TableRow>
@@ -221,8 +209,8 @@ const InboundMonitoringTable = ({ data, loading, onStatusChange }: { data: Inbou
                     <TableHead>Exp Date</TableHead>
                     <TableHead>Received By</TableHead>
                     <TableHead>Date</TableHead>
-                    <TableHead className="main-status-column">Main Status</TableHead>
-                    <TableHead className="text-right actions-column">Actions</TableHead>
+                    <TableHead>Main Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -242,12 +230,12 @@ const InboundMonitoringTable = ({ data, loading, onStatusChange }: { data: Inbou
                         <TableCell>{format(new Date(item.exp_date), 'yyyy-MM-dd')}</TableCell>
                         <TableCell>{item.received_by}</TableCell>
                         <TableCell>{format(new Date(item.date), "eee, dd/MMM/yyyy HH:mm")}</TableCell>
-                        <TableCell className="main-status-column">
+                        <TableCell>
                             <Badge variant={item.main_status === 'Done' ? 'default' : 'secondary'}>{item.main_status}</Badge>
                         </TableCell>
-                        <TableCell className="text-right flex items-center justify-end gap-1 actions-column">
+                        <TableCell className="text-right flex items-center justify-end gap-1">
                            <InboundDetailDialog document={item} />
-                            <Button variant="ghost" size="icon" onClick={() => window.print()}>
+                            <Button variant="ghost" size="icon" onClick={() => onPrint(item.id)}>
                                 <Printer className="h-4 w-4" />
                             </Button>
                             {item.main_status === 'Done' ? (
@@ -330,11 +318,16 @@ export default function InboundMonitoringPage() {
             toast({ variant: "destructive", title: "Update Failed", description: error.message });
         }
     };
+    
+    const handlePrint = (docId: number) => {
+        const url = `/inbound/monitoring/print?docId=${docId}`;
+        window.open(url, '_blank');
+    };
 
     return (
         <MainLayout>
             <div id="page-content">
-                <div className="w-full space-y-6 no-print">
+                <div className="w-full space-y-6">
                     <h1 className="text-2xl font-bold">Inbound Monitoring</h1>
                     <Card>
                         <CardHeader>
@@ -349,72 +342,11 @@ export default function InboundMonitoringPage() {
                                     <AlertDescription>{error}</AlertDescription>
                                 </Alert>
                             )}
-                            <InboundMonitoringTable data={documents} loading={loading} onStatusChange={handleStatusChange} />
+                            <InboundMonitoringTable data={documents} loading={loading} onStatusChange={handleStatusChange} onPrint={handlePrint} />
                         </CardContent>
                     </Card>
                 </div>
-                <div id="printable-content" className="hidden print:block">
-                    <div className="flex justify-between items-center mb-4">
-                        <p>{format(new Date(), "dd/MM/yy, h:mm a")}</p>
-                        <h2 className="font-bold text-lg">Market Place</h2>
-                        <div></div>
-                    </div>
-                     <table className="w-full text-sm">
-                        <thead>
-                            <tr className="border-t border-b border-black">
-                                <th className="text-left font-semibold p-2">Reference</th>
-                                <th className="text-left font-semibold p-2">SKU</th>
-                                <th className="text-left font-semibold p-2">Barcode</th>
-                                <th className="text-left font-semibold p-2">Brand</th>
-                                <th className="text-left font-semibold p-2">Qty</th>
-                                <th className="text-left font-semibold p-2">Exp Date</th>
-                                <th className="text-left font-semibold p-2">Received By</th>
-                                <th className="text-left font-semibold p-2">Date</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {documents.map(item => (
-                                <tr key={item.id} className="border-b border-gray-200">
-                                    <td className="p-2">{item.reference}</td>
-                                    <td className="p-2">{item.sku}</td>
-                                    <td className="p-2">{item.barcode}</td>
-                                    <td className="p-2">{item.brand}</td>
-                                    <td className="p-2">{item.qty}</td>
-                                    <td className="p-2">{format(new Date(item.exp_date), 'yyyy-MM-dd')}</td>
-                                    <td className="p-2">{item.received_by}</td>
-                                    <td className="p-2">{format(new Date(item.date), "eee, dd/MMM/yyyy HH:mm")}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                     </table>
-                </div>
             </div>
-            <style jsx global>{`
-                @media print {
-                  body * {
-                    visibility: hidden;
-                  }
-                  #printable-content, #printable-content * {
-                    visibility: visible;
-                  }
-                  #printable-content {
-                    position: absolute;
-                    left: 0;
-                    top: 0;
-                    width: 100%;
-                  }
-                   #page-content {
-                    padding: 0;
-                  }
-                  .no-print {
-                      display: none !important;
-                  }
-                  @page {
-                    size: A4 landscape;
-                    margin: 0.5in;
-                  }
-                }
-            `}</style>
         </MainLayout>
     );
 }

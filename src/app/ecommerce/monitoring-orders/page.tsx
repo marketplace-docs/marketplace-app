@@ -599,5 +599,3 @@ export default function MonitoringOrdersPage() {
         </Suspense>
     );
 }
-
-    
