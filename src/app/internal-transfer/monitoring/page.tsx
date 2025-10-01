@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -22,7 +20,9 @@ const transferStatuses = [
     'Issue - Internal Transfer Out From Warehouse',
     'Receipt - Internal Transfer In to Warehouse',
     'Issue - Internal Transfer out B2B',
+    'Receipt - Internal Transfer In to B2B',
     'Issue - Internal Transfer out B2C',
+    'Receipt - Internal Transfer In to B2C',
     'Receipt - Inbound',
 ];
 

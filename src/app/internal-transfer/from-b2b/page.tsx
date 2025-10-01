@@ -39,8 +39,6 @@ export default function TransferFromB2BPage() {
         setIsLoading(true);
         setFoundProduct(null);
         try {
-            // This is a placeholder. In a real scenario, you'd fetch from a specific B2B stock table/view.
-            // For now, we'll simulate it by searching all stock.
             const res = await fetch('/api/master-product/batch-products');
             if (!res.ok) throw new Error('Failed to fetch stock data.');
             const allBatches: BatchProduct[] = await res.json();
@@ -83,14 +81,22 @@ export default function TransferFromB2BPage() {
 
         setIsSubmitting(true);
         try {
-             // In a real scenario, this would have more complex logic, like calling a dedicated B2B stock API
-            // For now, we'll use the batch-upload endpoint for product_out which has FEFO logic
             const payload = {
-                documents: [{
-                    barcode: foundProduct.barcode,
-                    qty: qty,
-                    status: 'Issue - Internal Transfer out B2B',
-                }],
+                documents: [
+                    {
+                        barcode: foundProduct.barcode,
+                        qty: qty,
+                        status: 'Issue - Internal Transfer out B2B',
+                        // The `batch-upload` API will handle FEFO logic to determine location and expdate
+                    },
+                    {
+                        barcode: foundProduct.barcode,
+                        qty: qty,
+                        status: 'Receipt - Internal Transfer In to B2B',
+                        location: destinationLocation.trim().toUpperCase(),
+                         // FEFO logic will determine which expdate to use, for now, we assume the API handles it or we can pass it
+                    }
+                ],
                 user
             };
             

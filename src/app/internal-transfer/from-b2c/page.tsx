@@ -82,11 +82,19 @@ export default function TransferFromB2CPage() {
         setIsSubmitting(true);
         try {
             const payload = {
-                documents: [{
-                    barcode: foundProduct.barcode,
-                    qty: qty,
-                    status: 'Issue - Internal Transfer out B2C',
-                }],
+                documents: [
+                     {
+                        barcode: foundProduct.barcode,
+                        qty: qty,
+                        status: 'Issue - Internal Transfer out B2C',
+                    },
+                    {
+                        barcode: foundProduct.barcode,
+                        qty: qty,
+                        status: 'Receipt - Internal Transfer In to B2C',
+                        location: destinationLocation.trim().toUpperCase(),
+                    }
+                ],
                 user
             };
             

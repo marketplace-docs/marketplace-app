@@ -1,4 +1,3 @@
-
 'use server';
 
 import { supabaseService } from '@/lib/supabase-service';
@@ -17,8 +16,12 @@ async function generateNewDocumentNumber(status: ProductOutStatus): Promise<stri
       prefix = `MP-ADJ-${year}`;
   } else if (status.startsWith('Issue - Internal Transfer out B2C')) {
       prefix = `MP-B2C-${year}`;
+  } else if (status.startsWith('Receipt - Internal Transfer In to B2C')) {
+      prefix = `MP-B2C-IN-${year}`;
   } else if (status.startsWith('Issue - Internal Transfer out B2B')) {
       prefix = `MP-B2B-${year}`;
+  } else if (status.startsWith('Receipt - Internal Transfer In to B2B')) {
+      prefix = `MP-B2B-IN-${year}`;
   } else if (status.startsWith('Issue - Internal Transfer')) {
       prefix = `MP-TRSF-${year}`;
   } else if (status.startsWith('Issue - Return')) {
@@ -91,7 +94,8 @@ export async function POST(request: Request) {
           throw new Error(`Expiration date (expdate) is missing for SKU: ${doc.sku}`);
       }
 
-      const finalDocNumber = doc.nodocument || doc.order_reference || await generateNewDocumentNumber(doc.status);
+      // Prioritize existing reference, otherwise generate a new one.
+      const finalDocNumber = doc.order_reference || doc.nodocument || await generateNewDocumentNumber(doc.status);
       
       const { data: productData } = await supabaseService
           .from('master_products')
@@ -143,6 +147,8 @@ type ProductOutStatus =
     | 'Issue - Internal Transfer out B2B'
     | 'Issue - Internal Transfer out B2C'
     | 'Receipt - Internal Transfer In to Warehouse'
+    | 'Receipt - Internal Transfer In to B2B'
+    | 'Receipt - Internal Transfer In to B2C'
     | 'Issue - Adjustment Manual'
     | 'Adjustment - Loc'
     | 'Adjustment - SKU'
