@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
@@ -28,7 +29,7 @@ const DocumentCard = ({ document: inboundDoc, allProductOutDocs }: { document: I
     const [isExpanded, setIsExpanded] = useState(false);
 
     const relatedPutaways = useMemo(() => 
-        allProductOutDocs.filter(pd => pd.nodocument === inboundDoc.reference && (pd.status === 'Issue - Putaway' || pd.status === 'Receipt - Putaway'))
+        (allProductOutDocs || []).filter(pd => pd.nodocument === inboundDoc.reference && (pd.status === 'Issue - Putaway' || pd.status === 'Receipt - Putaway'))
     , [allProductOutDocs, inboundDoc.reference]);
 
     const totalPutawayQty = useMemo(() => 
@@ -222,7 +223,7 @@ export default function MonitoringPutawayPage() {
                            <div className="flex justify-center items-center h-64"><Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" /></div>
                        ) : paginatedDocs.length > 0 ? (
                             paginatedDocs.map((doc) => (
-                               <DocumentCard key={doc.id} document={doc} allPutawayDocs={allProductOutDocs} />
+                               <DocumentCard key={doc.id} document={doc} allProductOutDocs={allProductOutDocs} />
                             ))
                        ) : (
                            <div className="text-center py-16 text-muted-foreground">No putaway documents found.</div>
