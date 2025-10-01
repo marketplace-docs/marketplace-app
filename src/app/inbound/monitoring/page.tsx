@@ -7,7 +7,7 @@ import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
-import { Eye, Search, ChevronDown, ChevronUp, Loader2, AlertCircle, RefreshCcw, Check } from 'lucide-react';
+import { Eye, Search, ChevronDown, ChevronUp, Loader2, AlertCircle, RefreshCcw, Check, Printer } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format, formatDistanceStrict } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -210,7 +210,7 @@ const InboundMonitoringTable = ({ data, loading, onStatusChange }: { data: Inbou
     }
     
     return (
-    <div className="border rounded-lg">
+    <div className="border rounded-lg" id="printable-content">
         <Table>
             <TableHeader>
                 <TableRow>
@@ -223,7 +223,7 @@ const InboundMonitoringTable = ({ data, loading, onStatusChange }: { data: Inbou
                     <TableHead>Received By</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Main Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="text-right actions-column">Actions</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -246,8 +246,11 @@ const InboundMonitoringTable = ({ data, loading, onStatusChange }: { data: Inbou
                         <TableCell>
                             <Badge variant={item.main_status === 'Done' ? 'default' : 'secondary'}>{item.main_status}</Badge>
                         </TableCell>
-                        <TableCell className="text-right flex items-center justify-end gap-1">
+                        <TableCell className="text-right flex items-center justify-end gap-1 actions-column">
                            <InboundDetailDialog document={item} />
+                            <Button variant="ghost" size="icon" onClick={() => window.print()}>
+                                <Printer className="h-4 w-4" />
+                            </Button>
                             {item.main_status === 'Done' ? (
                                 <Button size="sm" variant="outline" onClick={() => handleReassign(item)} disabled={isSubmitting === item.id}>
                                     {isSubmitting === item.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCcw className="mr-2 h-4 w-4" />}
@@ -350,6 +353,29 @@ export default function InboundMonitoringPage() {
                     </CardContent>
                 </Card>
             </div>
+            <style jsx global>{`
+                @media print {
+                    body * {
+                        visibility: hidden;
+                    }
+                    #printable-content, #printable-content * {
+                        visibility: visible;
+                    }
+                    #printable-content {
+                        position: absolute;
+                        left: 0;
+                        top: 0;
+                        width: 100%;
+                    }
+                    .actions-column, .pagination-controls, .no-print {
+                        display: none !important;
+                    }
+                    @page {
+                        size: auto;
+                        margin: 0.5in;
+                    }
+                }
+            `}</style>
         </MainLayout>
     );
 }
