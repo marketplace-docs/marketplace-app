@@ -1,40 +1,105 @@
 
 'use client';
 
+import React, { useState, useEffect, useCallback } from 'react';
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { CheckSquare } from "lucide-react";
-
-const inboundTaskJobDesc = [
-    "Menerima barang dari supplier dan memverifikasi sesuai dokumen pengiriman (Surat Jalan)",
-    "Melakukan scanning barcode atau input data produk yang diterima ke dalam sistem",
-    "Memeriksa kualitas dan kuantitas barang yang datang",
-    "Membuat dokumen penerimaan barang (Inbound Receipt) di sistem",
-    "Memberikan label identifikasi pada setiap palet atau karton yang diterima",
-    "Berkoordinasi dengan tim Quality Control jika ditemukan barang yang tidak sesuai standar",
-    "Memindahkan barang dari area penerimaan ke area staging atau karantina",
-    "Memastikan semua data penerimaan barang tercatat dengan akurat dan tepat waktu"
-];
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from '@/components/ui/badge';
+import { format } from 'date-fns';
+import { Loader2, AlertCircle, FileWarning } from 'lucide-react';
+import type { InboundDocument } from '@/types/inbound-document';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 
 export default function InboundTasksPage() {
+    const [pendingDocs, setPendingDocs] = useState<InboundDocument[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetchPendingDocuments = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const response = await fetch('/api/inbound-documents');
+            if (!response.ok) {
+                throw new Error('Failed to fetch inbound documents');
+            }
+            const allDocs: InboundDocument[] = await response.json();
+            const pending = allDocs.filter(doc => doc.main_status === 'Assign');
+            setPendingDocs(pending);
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchPendingDocuments();
+    }, [fetchPendingDocuments]);
+
     return (
         <MainLayout>
              <div className="w-full space-y-6">
                 <h1 className="text-2xl font-bold">Inbound Task</h1>
                 <Card>
                     <CardHeader>
-                        <CardTitle>Job Description</CardTitle>
-                        <CardDescription>Berikut adalah daftar tugas dan tanggung jawab untuk proses Inbound.</CardDescription>
+                        <CardTitle>Pending Inbound Documents</CardTitle>
+                        <CardDescription>This is a list of inbound documents that are pending and require putaway action.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <ul className="space-y-3">
-                            {inboundTaskJobDesc.map((task, index) => (
-                                <li key={index} className="flex items-start gap-3">
-                                    <CheckSquare className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
-                                    <span>{task}</span>
-                                </li>
-                            ))}
-                        </ul>
+                        {loading ? (
+                            <div className="flex justify-center items-center h-48">
+                                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                            </div>
+                        ) : error ? (
+                            <div className="text-destructive flex items-center gap-2">
+                                <AlertCircle className="h-5 w-5" />
+                                <span>{error}</span>
+                            </div>
+                        ) : pendingDocs.length > 0 ? (
+                            <div className="border rounded-lg">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>No. Document</TableHead>
+                                            <TableHead>Date</TableHead>
+                                            <TableHead>SKU</TableHead>
+                                            <TableHead>QTY</TableHead>
+                                            <TableHead>Received By</TableHead>
+                                            <TableHead>Status</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {pendingDocs.map((doc) => (
+                                            <TableRow key={doc.id}>
+                                                <TableCell className="font-medium">
+                                                    <Button variant="link" asChild className="p-0 h-auto">
+                                                        <Link href={`/inbound/monitoring`}>
+                                                            {doc.reference}
+                                                        </Link>
+                                                    </Button>
+                                                </TableCell>
+                                                <TableCell>{format(new Date(doc.date), 'dd/MM/yyyy HH:mm')}</TableCell>
+                                                <TableCell>{doc.sku}</TableCell>
+                                                <TableCell>{doc.qty}</TableCell>
+                                                <TableCell>{doc.received_by}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant="secondary">{doc.main_status}</Badge>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        ) : (
+                           <div className="flex flex-col items-center justify-center h-48 text-center text-muted-foreground">
+                                <FileWarning className="h-12 w-12 mb-4" />
+                                <h3 className="text-lg font-semibold">All Clear!</h3>
+                                <p>There are no pending inbound documents at the moment.</p>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </div>
