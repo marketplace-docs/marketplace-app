@@ -1,4 +1,3 @@
-
 'use client';
 
 import { MainLayout } from "@/components/layout/main-layout";
@@ -88,9 +87,7 @@ export default function GoPutawayPage() {
         try {
             const now = new Date().toISOString();
 
-            // Two-step transaction: Issue from Staging, Receipt to final location
             const transactions = [
-                // 1. Issue from Staging Area
                 {
                     nodocument: foundDocument.reference,
                     date: now,
@@ -102,7 +99,6 @@ export default function GoPutawayPage() {
                     location: "Staging Area Inbound", 
                     status: 'Issue - Putaway' as const,
                 },
-                 // 2. Receipt into new Location
                 {
                     nodocument: foundDocument.reference,
                     date: now,
@@ -127,19 +123,16 @@ export default function GoPutawayPage() {
                 throw new Error(errorData.error || 'Failed to create putaway stock transactions.');
             }
             
-            // Finally, update the main inbound document status to Done
-            const updateStatusResponse = await fetch(`/api/inbound-documents/${foundDocument.id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    main_status: 'Done',
-                    user,
-                 }),
-            });
+            if (qty >= foundDocument.qty) {
+                const updateStatusResponse = await fetch(`/api/inbound-documents/${foundDocument.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ main_status: 'Done', user }),
+                });
 
-            if (!updateStatusResponse.ok) {
-                // This is a secondary issue, log it but don't fail the whole process
-                console.error("Failed to update inbound document status, but putaway transactions were successful.");
+                if (!updateStatusResponse.ok) {
+                    console.error("Failed to update inbound document status, but putaway transactions were successful.");
+                }
             }
 
             toast({ title: 'Putaway Successful', description: `${qty} units of ${foundDocument.sku} have been placed at ${scannedLocation}.` });
@@ -232,4 +225,3 @@ export default function GoPutawayPage() {
         </MainLayout>
     );
 }
-

@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
@@ -20,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import type { PutawayDocument } from '@/types/putaway-document';
 import type { InboundDocument } from '@/types/inbound-document';
+import type { ProductOutDocument } from '@/types/product-out-document';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -29,24 +29,24 @@ type CombinedDocument = InboundDocument & {
     putaway_docs: PutawayDocument[];
 };
 
-const DocumentCard = ({ document, allPutawayDocs }: { document: InboundDocument; allPutawayDocs: PutawayDocument[] }) => {
+const DocumentCard = ({ document: inboundDoc, allPutawayDocs }: { document: InboundDocument; allPutawayDocs: ProductOutDocument[] }) => {
     const [isExpanded, setIsExpanded] = useState(false);
 
     const relatedPutaways = useMemo(() => 
-        allPutawayDocs.filter(pd => pd.no_document === document.reference)
-    , [allPutawayDocs, document.reference]);
+        allPutawayDocs.filter(pd => pd.nodocument === inboundDoc.reference && (pd.status === 'Issue - Putaway' || pd.status === 'Receipt - Putaway'))
+    , [allPutawayDocs, inboundDoc.reference]);
 
     const totalPutawayQty = useMemo(() => 
         relatedPutaways
-            .filter(pd => pd.status === 'Receipt - Putaway')
+            .filter(pd => pd.status === 'Receipt - Putaway') // Only count receipts into final location
             .reduce((sum, current) => sum + current.qty, 0)
     , [relatedPutaways]);
 
     const currentStatus: 'Assign' | 'In Progress' | 'Done' = useMemo(() => {
-        if (totalPutawayQty >= document.qty) return 'Done';
+        if (totalPutawayQty >= inboundDoc.qty) return 'Done';
         if (totalPutawayQty > 0) return 'In Progress';
         return 'Assign';
-    }, [totalPutawayQty, document.qty]);
+    }, [totalPutawayQty, inboundDoc.qty]);
 
     const isDone = currentStatus === 'Done';
 
@@ -60,15 +60,15 @@ const DocumentCard = ({ document, allPutawayDocs }: { document: InboundDocument;
                     <div className="flex items-center gap-3">
                         {isDone ? <CheckCircle2 className="h-6 w-6 text-green-600" /> : <ClipboardList className="h-6 w-6 text-yellow-600" />}
                         <div>
-                            <p className={cn("font-semibold", isDone ? "text-green-800" : "text-yellow-800")}>{document.reference}</p>
+                            <p className={cn("font-semibold", isDone ? "text-green-800" : "text-yellow-800")}>{inboundDoc.reference}</p>
                             <p className={cn("text-xs", isDone ? "text-green-700" : "text-yellow-700")}>
-                                Internal Transfer Document - Receipt Inbound
+                                {inboundDoc.reference.startsWith('DOC-TRSF-VNR-') ? 'Vendor Transfer Document' : 'Receipt Inbound Document'}
                             </p>
                         </div>
                     </div>
                     <div className="text-right text-xs text-muted-foreground">
-                        <p className="font-medium text-gray-700">Worker: {document.received_by}</p>
-                         <p>Received: {format(new Date(document.date), 'dd/MM/yy HH:mm')}</p>
+                        <p className="font-medium text-gray-700">Worker: {inboundDoc.received_by}</p>
+                         <p>Received: {format(new Date(inboundDoc.date), 'dd/MM/yy HH:mm')}</p>
                     </div>
                 </div>
             </CardHeader>
@@ -89,11 +89,11 @@ const DocumentCard = ({ document, allPutawayDocs }: { document: InboundDocument;
                         <TableBody>
                             <TableRow>
                                 <TableCell>
-                                    <div className="font-medium">{document.brand}</div>
-                                    <div className="text-sm text-muted-foreground">{document.sku}</div>
+                                    <div className="font-medium">{inboundDoc.brand}</div>
+                                    <div className="text-sm text-muted-foreground">{inboundDoc.sku}</div>
                                 </TableCell>
-                                <TableCell>{document.barcode}</TableCell>
-                                <TableCell>{document.qty}</TableCell>
+                                <TableCell>{inboundDoc.barcode}</TableCell>
+                                <TableCell>{inboundDoc.qty}</TableCell>
                                 <TableCell>{totalPutawayQty}</TableCell>
                                 <TableCell>{totalPutawayQty}</TableCell>
                                 <TableCell>
@@ -127,7 +127,7 @@ const DocumentCard = ({ document, allPutawayDocs }: { document: InboundDocument;
                                     <TableBody>
                                         {relatedPutaways.map(pd => (
                                             <TableRow key={pd.id}>
-                                                <TableCell>{pd.status === 'Issue - Putaway' ? 'Staging Area Inbound' : pd.no_document}</TableCell>
+                                                <TableCell>{pd.status === 'Issue - Putaway' ? 'Staging Area Inbound' : pd.nodocument}</TableCell>
                                                 <TableCell>{pd.location}</TableCell>
                                                 <TableCell>{pd.qty}</TableCell>
                                                 <TableCell><Badge variant="outline">{pd.status === 'Issue - Putaway' ? 'OUT' : 'IN'}</Badge></TableCell>
@@ -151,7 +151,7 @@ const DocumentCard = ({ document, allPutawayDocs }: { document: InboundDocument;
 
 export default function MonitoringPutawayPage() {
     const [inboundDocuments, setInboundDocuments] = useState<InboundDocument[]>([]);
-    const [allPutawayDocs, setAllPutawayDocs] = useState<PutawayDocument[]>([]);
+    const [allProductOutDocs, setAllProductOutDocs] = useState<ProductOutDocument[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -163,19 +163,19 @@ export default function MonitoringPutawayPage() {
         setLoading(true);
         setError(null);
         try {
-            const [inboundRes, putawayRes] = await Promise.all([
+            const [inboundRes, productOutRes] = await Promise.all([
                 fetch('/api/inbound-documents'),
-                fetch('/api/putaway-documents'),
+                fetch('/api/product-out-documents'),
             ]);
             
             if (!inboundRes.ok) throw new Error('Failed to fetch inbound documents');
-            if (!putawayRes.ok) throw new Error('Failed to fetch putaway documents');
+            if (!productOutRes.ok) throw new Error('Failed to fetch product out documents');
 
             const inboundDocs: InboundDocument[] = await inboundRes.json();
-            const putawayDocs: PutawayDocument[] = await putawayRes.json();
+            const productOutDocs: ProductOutDocument[] = await productOutRes.json();
             
             setInboundDocuments(inboundDocs.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-            setAllPutawayDocs(putawayDocs);
+            setAllProductOutDocs(productOutDocs);
 
         } catch (err: any) {
             setError(err.message);
@@ -214,7 +214,7 @@ export default function MonitoringPutawayPage() {
                     <CardHeader>
                         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                             <div>
-                                <CardTitle>Putaway Tasks & History</CardTitle>
+                                <CardTitle>Putaway Tasks &amp; History</CardTitle>
                                 <CardDescription>A log of all items that are pending or have been put away.</CardDescription>
                             </div>
                             <div className="w-full md:w-auto">
@@ -227,7 +227,7 @@ export default function MonitoringPutawayPage() {
                            <div className="flex justify-center items-center h-64"><Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" /></div>
                        ) : paginatedDocs.length > 0 ? (
                             paginatedDocs.map((doc) => (
-                               <DocumentCard key={doc.id} document={doc} allPutawayDocs={allPutawayDocs} />
+                               <DocumentCard key={doc.id} document={doc} allPutawayDocs={allProductOutDocs} />
                             ))
                        ) : (
                            <div className="text-center py-16 text-muted-foreground">No putaway documents found.</div>
