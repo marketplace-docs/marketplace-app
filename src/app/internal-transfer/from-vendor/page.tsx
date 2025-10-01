@@ -20,6 +20,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { BatchProduct } from '@/types/batch-product';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 type TransferItem = {
     sku: string;
@@ -31,6 +32,8 @@ type TransferItem = {
     qty: number;
 };
 
+type TransferDirection = 'IN' | 'OUT';
+
 export default function TransferFromVendorPage() {
   const { user } = useAuth();
   const [stagedItems, setStagedItems] = useState<TransferItem[]>([]);
@@ -39,6 +42,7 @@ export default function TransferFromVendorPage() {
     creator_by: '',
     vendor_name: '',
   });
+  const [transferDirection, setTransferDirection] = useState<TransferDirection>('IN');
 
   // State for the item adding process
   const [barcode, setBarcode] = useState('');
@@ -159,32 +163,63 @@ export default function TransferFromVendorPage() {
     
     setIsSubmitting(true);
     try {
-      const documentsToCreate = stagedItems.flatMap(item => ([
-        // Transaction OUT from vendor location
-        {
-            nodocument: docDetails.reference,
-            date: new Date().toISOString(),
-            validatedby: user.name,
-            sku: item.sku,
-            barcode: item.barcode,
-            expdate: item.exp_date,
-            qty: item.qty,
-            location: item.location,
-            status: 'Issue - Internal Transfer' as const,
-        },
-        // Transaction IN to staging area
-        {
-            nodocument: docDetails.reference,
-            date: new Date().toISOString(),
-            validatedby: user.name,
-            sku: item.sku,
-            barcode: item.barcode,
-            expdate: item.exp_date,
-            qty: item.qty,
-            location: 'Staging Area Inbound',
-            status: 'Receipt - Internal Transfer In to Warehouse' as const,
+        const documentsToCreate = stagedItems.flatMap(item => {
+        if (transferDirection === 'IN') {
+          return [
+            // Transaction OUT from vendor location
+            {
+                nodocument: docDetails.reference,
+                date: new Date().toISOString(),
+                validatedby: user.name,
+                sku: item.sku,
+                barcode: item.barcode,
+                expdate: item.exp_date,
+                qty: item.qty,
+                location: item.location,
+                status: 'Issue - Internal Transfer' as const,
+            },
+            // Transaction IN to staging area
+            {
+                nodocument: docDetails.reference,
+                date: new Date().toISOString(),
+                validatedby: user.name,
+                sku: item.sku,
+                barcode: item.barcode,
+                expdate: item.exp_date,
+                qty: item.qty,
+                location: 'Staging Area Inbound',
+                status: 'Receipt - Internal Transfer In to Warehouse' as const,
+            }
+          ]
+        } else { // Direction is 'OUT'
+            return [
+                 // Transaction OUT from Staging Area
+                {
+                    nodocument: docDetails.reference,
+                    date: new Date().toISOString(),
+                    validatedby: user.name,
+                    sku: item.sku,
+                    barcode: item.barcode,
+                    expdate: item.exp_date,
+                    qty: item.qty,
+                    location: 'Staging Area Inbound',
+                    status: 'Issue - Internal Transfer' as const,
+                },
+                 // Transaction IN to vendor location
+                {
+                    nodocument: docDetails.reference,
+                    date: new Date().toISOString(),
+                    validatedby: user.name,
+                    sku: item.sku,
+                    barcode: item.barcode,
+                    expdate: item.exp_date,
+                    qty: item.qty,
+                    location: item.location,
+                    status: 'Receipt - Internal Transfer In to Warehouse' as const,
+                }
+            ]
         }
-      ]));
+      });
       
       const response = await fetch('/api/product-out-documents', {
         method: 'POST',
@@ -230,7 +265,7 @@ export default function TransferFromVendorPage() {
           <CardContent className="space-y-6">
             <div className="space-y-4 p-4 border-2 border-primary/20 rounded-lg">
                 <h3 className="text-lg font-medium">Document Details</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                      <div className="space-y-2">
                         <Label htmlFor="reference">Reference</Label>
                         <Input id="reference" value={docDetails.reference} readOnly className="bg-muted" />
@@ -241,7 +276,20 @@ export default function TransferFromVendorPage() {
                     </div>
                      <div className="space-y-2">
                         <Label htmlFor="creator_by">Creator By</Label>
-                        <Input id="creator_by" placeholder="Creator's name" value={docDetails.creator_by} onChange={(e) => setDocDetails(prev => ({ ...prev, creator_by: e.target.value }))} />
+                        <Input id="creator_by" placeholder="Creator's name" value={docDetails.creator_by} readOnly className="bg-muted" />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Transfer Direction</Label>
+                        <RadioGroup defaultValue="IN" onValueChange={(value: TransferDirection) => setTransferDirection(value)} className="flex items-center space-x-4 pt-2">
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="IN" id="in" />
+                                <Label htmlFor="in">IN (From Vendor)</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="OUT" id="out" />
+                                <Label htmlFor="out">OUT (To Vendor)</Label>
+                            </div>
+                        </RadioGroup>
                     </div>
                 </div>
             </div>
@@ -278,10 +326,6 @@ export default function TransferFromVendorPage() {
                                 </Select>
                             </div>
                            
-                            <div className="space-y-2">
-                                <Label>Exp Date</Label>
-                                <Input id="exp_date" name="exp_date" value={selectedBatchInfo ? format(new Date(selectedBatchInfo.exp_date), 'yyyy-MM-dd') : ''} readOnly disabled className="bg-muted"/>
-                            </div>
                              <div className="space-y-2">
                                 <Label>QTY</Label>
                                 <Input id="qty" name="qty" type="number" placeholder="Enter quantity" value={quantity} onChange={e => setQuantity(e.target.value)} />
