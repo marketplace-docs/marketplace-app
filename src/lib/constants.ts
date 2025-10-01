@@ -74,11 +74,6 @@ export const NAV_LINKS: NavLink[] = [
                 label: 'Monitoring',
                 icon: Eye,
             },
-            {
-                href: '/putaway/update-expired',
-                label: 'Update Expired',
-                icon: CalendarClock,
-            },
              {
                 href: '/putaway/task',
                 label: 'Task',
