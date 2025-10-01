@@ -139,12 +139,12 @@ export default function BatchProductPage() {
             const matchesStatus = statusFilter === 'All' || product.batches.some(batch => batch.status === statusFilter);
 
             const matchesLocationType = locationTypeFilter === 'All' || product.batches.some(batch => {
-                const locPrefix = batch.location.split('-')[0].toUpperCase();
+                const loc = batch.location.toUpperCase();
                 switch (locationTypeFilter) {
-                    case 'B2C': return locPrefix === 'B2C';
-                    case 'MP': return locPrefix === 'MP';
-                    case 'B2B': return locPrefix === 'B2B';
-                    case 'VN': return locPrefix === 'VN';
+                    case 'B2C': return loc.startsWith('B2C');
+                    case 'MP': return loc.startsWith('MP');
+                    case 'B2B': return loc.startsWith('B2B');
+                    case 'VN': return loc.startsWith('VN');
                     default: return true;
                 }
             });
@@ -158,12 +158,12 @@ export default function BatchProductPage() {
             }
             if (locationTypeFilter !== 'All') {
                 filteredBatches = filteredBatches.filter(batch => {
-                     const locPrefix = batch.location.split('-')[0].toUpperCase();
+                     const loc = batch.location.toUpperCase();
                     switch (locationTypeFilter) {
-                        case 'B2C': return locPrefix === 'B2C';
-                        case 'MP': return locPrefix === 'MP';
-                        case 'B2B': return locPrefix === 'B2B';
-                        case 'VN': return locPrefix === 'VN';
+                        case 'B2C': return loc.startsWith('B2C');
+                        case 'MP': return loc.startsWith('MP');
+                        case 'B2B': return loc.startsWith('B2B');
+                        case 'VN': return loc.startsWith('VN');
                         default: return true;
                     }
                 });
@@ -320,9 +320,9 @@ export default function BatchProductPage() {
                                         ) : paginatedData.length > 0 ? (
                                             paginatedData.map((product) => (
                                             <AccordionItem value={product.sku} key={product.sku} asChild>
-                                                 <React.Fragment>
+                                                 <>
                                                 <TableRow>
-                                                    <TableCell className="font-medium">{product.sku}</TableCell>
+                                                     <TableCell className="font-medium">{product.sku}</TableCell>
                                                     <TableCell>{product.name}</TableCell>
                                                     <TableCell>{product.barcode}</TableCell>
                                                     <TableCell>{product.brand}</TableCell>
@@ -394,7 +394,7 @@ export default function BatchProductPage() {
                                                         </AccordionContent>
                                                     </TableCell>
                                                 </TableRow>
-                                                </React.Fragment>
+                                                </>
                                             </AccordionItem>
                                             ))
                                         ) : (
