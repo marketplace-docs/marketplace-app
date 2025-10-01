@@ -280,8 +280,12 @@ export default function InboundMonitoringPage() {
         try {
             const response = await fetch('/api/inbound-documents');
             if (!response.ok) throw new Error('Failed to fetch inbound documents.');
-            const data = await response.json();
-            setDocuments(data);
+            const data: InboundDocument[] = await response.json();
+            
+            // Filter out vendor transfer documents
+            const regularInboundDocs = data.filter(doc => !doc.reference.startsWith('DOC-TRSF-VNR-'));
+            setDocuments(regularInboundDocs);
+
         } catch (err: any) {
             setError(err.message);
         } finally {
