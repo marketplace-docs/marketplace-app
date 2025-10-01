@@ -46,7 +46,8 @@ export default function TransferFromB2CPage() {
             const productBatches = allBatches.filter(b => b.barcode === barcode && b.stock > 0);
 
             if (productBatches.length === 0) {
-                toast({ variant: 'destructive', title: 'Not Found', description: `No sellable stock found for barcode ${barcode}.` });
+                toast({ variant: 'destructive', title: 'Not Found', description: `No available sellable stock found for barcode ${barcode}.` });
+                setIsLoading(false);
                 return;
             }
 

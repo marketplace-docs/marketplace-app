@@ -42,11 +42,13 @@ export default function TransferFromWarehousePage() {
             
             const batch = allBatches.find(b => 
                 b.location.toLowerCase() === sourceLocation.toLowerCase() && 
-                b.barcode === barcode
+                b.barcode === barcode &&
+                b.stock > 0
             );
 
-            if (!batch || batch.stock <= 0) {
-                toast({ variant: 'destructive', title: 'Not Found', description: `No stock for barcode ${barcode} found at location ${sourceLocation}.` });
+            if (!batch) {
+                toast({ variant: 'destructive', title: 'Not Found', description: `No available stock for barcode ${barcode} found at location ${sourceLocation}.` });
+                setIsLoading(false);
                 return;
             }
 
