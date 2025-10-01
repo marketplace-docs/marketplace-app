@@ -20,6 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 type ProductStatus = 'All' | 'Sellable' | 'Expiring' | 'Expired' | 'Out of Stock' | 'Quarantine' | 'Damaged' | 'Marketplace' | 'Sensitive MP';
+type LocationTypeFilter = 'All' | 'B2C' | 'MP' | 'B2B' | 'VN';
 
 type BatchProduct = {
     id: string;
@@ -72,6 +73,7 @@ export default function BatchProductPage() {
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<ProductStatus>('All');
+    const [locationTypeFilter, setLocationTypeFilter] = useState<LocationTypeFilter>('All');
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const { user } = useAuth();
@@ -135,19 +137,45 @@ export default function BatchProductPage() {
                 (product.brand && product.brand.toLowerCase().includes(searchTerm.toLowerCase()));
 
             const matchesStatus = statusFilter === 'All' || product.batches.some(batch => batch.status === statusFilter);
+
+            const matchesLocationType = locationTypeFilter === 'All' || product.batches.some(batch => {
+                const locPrefix = batch.location.split('-')[0].toUpperCase();
+                switch (locationTypeFilter) {
+                    case 'B2C': return locPrefix === 'B2C';
+                    case 'MP': return locPrefix === 'MP';
+                    case 'B2B': return locPrefix === 'B2B';
+                    case 'VN': return locPrefix === 'VN';
+                    default: return true;
+                }
+            });
             
-            return matchesSearch && matchesStatus;
+            return matchesSearch && matchesStatus && matchesLocationType;
         }).map(product => {
+            let filteredBatches = product.batches;
+
             if (statusFilter !== 'All') {
-                return {
-                    ...product,
-                    batches: product.batches.filter(batch => batch.status === statusFilter),
-                };
+                filteredBatches = filteredBatches.filter(batch => batch.status === statusFilter);
             }
-            return product;
+            if (locationTypeFilter !== 'All') {
+                filteredBatches = filteredBatches.filter(batch => {
+                     const locPrefix = batch.location.split('-')[0].toUpperCase();
+                    switch (locationTypeFilter) {
+                        case 'B2C': return locPrefix === 'B2C';
+                        case 'MP': return locPrefix === 'MP';
+                        case 'B2B': return locPrefix === 'B2B';
+                        case 'VN': return locPrefix === 'VN';
+                        default: return true;
+                    }
+                });
+            }
+
+            return {
+                ...product,
+                batches: filteredBatches,
+            };
         });
 
-    }, [inventoryData, searchTerm, statusFilter]);
+    }, [inventoryData, searchTerm, statusFilter, locationTypeFilter]);
 
 
     const kpiData = useMemo(() => {
@@ -162,7 +190,7 @@ export default function BatchProductPage() {
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [rowsPerPage, searchTerm, statusFilter]);
+    }, [rowsPerPage, searchTerm, statusFilter, locationTypeFilter]);
 
     const totalPages = Math.ceil(aggregatedAndFilteredData.length / rowsPerPage);
     const paginatedData = aggregatedAndFilteredData.slice(
@@ -231,6 +259,18 @@ export default function BatchProductPage() {
                                 <CardDescription>Up-to-date stock information from goods received and issued.</CardDescription>
                             </div>
                             <div className="flex w-full md:w-auto items-center gap-2">
+                                <Select value={locationTypeFilter} onValueChange={(value) => setLocationTypeFilter(value as LocationTypeFilter)}>
+                                    <SelectTrigger className="w-full md:w-[180px]">
+                                        <SelectValue placeholder="Filter by Loc Type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="All">All Loc Types</SelectItem>
+                                        <SelectItem value="B2C">B2C</SelectItem>
+                                        <SelectItem value="MP">Marketplace (MP)</SelectItem>
+                                        <SelectItem value="B2B">B2B</SelectItem>
+                                        <SelectItem value="VN">Vendor (VN)</SelectItem>
+                                    </SelectContent>
+                                </Select>
                                 <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as ProductStatus)}>
                                     <SelectTrigger className="w-full md:w-[180px]">
                                         <SelectValue placeholder="Filter by status" />
@@ -262,7 +302,7 @@ export default function BatchProductPage() {
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead className="w-1/3">SKU</TableHead>
+                                            <TableHead>SKU</TableHead>
                                             <TableHead>Name Product</TableHead>
                                             <TableHead>Barcode</TableHead>
                                             <TableHead>Brand</TableHead>
@@ -280,7 +320,7 @@ export default function BatchProductPage() {
                                         ) : paginatedData.length > 0 ? (
                                             paginatedData.map((product) => (
                                             <AccordionItem value={product.sku} key={product.sku} asChild>
-                                                <>
+                                                 <React.Fragment>
                                                 <TableRow>
                                                     <TableCell className="font-medium">{product.sku}</TableCell>
                                                     <TableCell>{product.name}</TableCell>
@@ -354,7 +394,7 @@ export default function BatchProductPage() {
                                                         </AccordionContent>
                                                     </TableCell>
                                                 </TableRow>
-                                                </>
+                                                </React.Fragment>
                                             </AccordionItem>
                                             ))
                                         ) : (
