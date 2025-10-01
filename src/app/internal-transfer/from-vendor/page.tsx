@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
@@ -16,7 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { MainLayout } from '@/components/layout/main-layout';
 import { useRouter } from 'next/navigation';
 import { Loader2, Plus, Search, Trash2 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, addYears } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { BatchProduct } from '@/types/batch-product';
@@ -242,7 +241,7 @@ export default function TransferFromVendorPage() {
                 <h3 className="text-lg font-medium">Add Item to Document</h3>
                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                     <div className="space-y-2">
-                        <Label htmlFor="barcode">1. Barcode</Label>
+                        <Label htmlFor="barcode">Barcode</Label>
                         <Input id="barcode" name="barcode" placeholder="Scan or enter barcode" value={barcode} onChange={(e) => setBarcode(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearchProduct()} />
                     </div>
                      <div className="flex items-end">
@@ -255,7 +254,7 @@ export default function TransferFromVendorPage() {
                     {foundBatches.length > 0 && (
                         <>
                             <div className="space-y-2 lg:col-span-2">
-                                <Label htmlFor="location">2. Select Location</Label>
+                                <Label htmlFor="location">Select Location</Label>
                                 <Select value={selectedLocation} onValueChange={setSelectedLocation}>
                                     <SelectTrigger id="location">
                                         <SelectValue placeholder="Select location to take stock from..." />
@@ -275,7 +274,7 @@ export default function TransferFromVendorPage() {
                                 <Input id="exp_date" name="exp_date" value={selectedBatchInfo ? format(new Date(selectedBatchInfo.exp_date), 'yyyy-MM-dd') : ''} readOnly disabled className="bg-muted"/>
                             </div>
                              <div className="space-y-2">
-                                <Label htmlFor="qty">3. QTY</Label>
+                                <Label htmlFor="qty">QTY</Label>
                                 <Input id="qty" name="qty" type="number" placeholder="Enter quantity" value={quantity} onChange={e => setQuantity(e.target.value)} />
                             </div>
                             <div className="flex items-end">
