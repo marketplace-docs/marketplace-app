@@ -7,16 +7,19 @@ import { PickLabel } from '@/components/pick-label';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { BatchProduct } from '@/types/batch-product';
-import type { ProductOutDocument } from '@/types/product-out-document';
 
 type WaveOrder = {
     id: number;
     order_reference: string;
     sku: string;
+    name: string;
+    barcode: string;
+    exp_date: string;
     qty: number;
     from: string;
     location: string;
-    status: 'Assigned' | 'Picked' | 'Packed' | 'Shipped' | 'Delivered';
+    customer_name: string;
+    customer_address: string;
 };
 
 function PrintPageContent() {
@@ -35,16 +38,21 @@ function PrintPageContent() {
 
         const fetchOrderData = async () => {
             try {
-                const [wavesRes, allBatchesRes] = await Promise.all([
+                const [wavesRes, allBatchesRes, allProductsRes] = await Promise.all([
                     fetch('/api/waves'),
-                    fetch('/api/master-product/batch-products')
+                    fetch('/api/master-product/batch-products'),
+                    fetch('/api/master-products'),
                 ]);
                 
                 if (!wavesRes.ok) throw new Error('Failed to fetch waves.');
                 if (!allBatchesRes.ok) throw new Error('Failed to fetch batch products.');
+                if (!allProductsRes.ok) throw new Error('Failed to fetch master products.');
 
                 const allWaves = await wavesRes.json();
                 const allBatches: BatchProduct[] = await allBatchesRes.json();
+                const allProducts: {sku: string, name: string}[] = await allProductsRes.json();
+                
+                const productMap = new Map(allProducts.map(p => [p.sku, p.name]));
 
                 const ordersToPrint: WaveOrder[] = [];
                 
@@ -60,10 +68,14 @@ function PrintPageContent() {
                                 id: order.id,
                                 order_reference: order.order_reference,
                                 sku: order.sku,
+                                name: productMap.get(order.sku) || 'Unknown Product',
+                                barcode: availableBatch ? availableBatch.barcode : 'N/A',
+                                exp_date: availableBatch ? availableBatch.exp_date : new Date().toISOString(),
                                 qty: order.qty,
                                 from: order.from,
                                 location: availableBatch ? availableBatch.location : 'N/A',
-                                status: 'Assigned'
+                                customer_name: order.customer,
+                                customer_address: order.address,
                             });
                         }
                     }
@@ -98,20 +110,24 @@ function PrintPageContent() {
     return (
         <div className="print-container">
             {orders.map(order => (
-                <PickLabel key={order.id} order={order} />
+                <div key={order.id} className="label-container" style={{ pageBreakAfter: 'always' }}>
+                    <PickLabel order={order} />
+                </div>
             ))}
              <style jsx global>{`
                 @media print {
                     body {
                         margin: 0;
                         padding: 0;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
                     }
-                    .label-container {
-                        page-break-after: always;
+                    .label-container:last-child {
+                        page-break-after: auto;
                     }
                 }
                 @page {
-                    size: A6;
+                    size: A4;
                     margin: 0;
                 }
             `}</style>
@@ -126,5 +142,3 @@ export default function PrintPage() {
         </Suspense>
     );
 }
-
-    
