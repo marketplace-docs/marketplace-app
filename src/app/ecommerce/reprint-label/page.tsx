@@ -2,7 +2,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -66,10 +65,10 @@ export default function ReprintLabelPage() {
     };
 
     return (
-        <MainLayout>
-            <div className="w-full space-y-6">
-                <h1 className="text-2xl font-bold">Reprint Label</h1>
-                <Card className="max-w-2xl mx-auto">
+        <div className="flex h-screen w-full items-center justify-center bg-muted">
+            <div className="w-full max-w-4xl space-y-6 px-4">
+                <h1 className="text-3xl font-bold text-center">Reprint Label</h1>
+                <Card className="w-full">
                     <CardHeader>
                         <div className="flex items-center justify-center mb-4">
                             <Printer className="h-16 w-16 text-primary" />
@@ -80,7 +79,7 @@ export default function ReprintLabelPage() {
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                         <div className="flex items-end gap-2">
+                         <div className="flex items-end gap-2 max-w-lg mx-auto">
                             <div className="flex-1 space-y-2">
                                 <Label htmlFor="orderRef" className="text-lg">Order Reference</Label>
                                 <Input 
@@ -101,7 +100,7 @@ export default function ReprintLabelPage() {
                         </div>
                         
                         {foundOrder && (
-                             <div className="space-y-4 pt-6 border-t-2 border-dashed">
+                             <div className="space-y-4 pt-6 border-t-2 border-dashed max-w-lg mx-auto">
                                 <Card>
                                     <CardHeader>
                                         <CardTitle>Order Found: {foundOrder.reference}</CardTitle>
@@ -121,6 +120,6 @@ export default function ReprintLabelPage() {
                     </CardContent>
                 </Card>
             </div>
-        </MainLayout>
+        </div>
     );
 }
