@@ -1,7 +1,8 @@
--- First, drop the existing function to avoid any signature conflicts
+
+-- Drop the old function if it exists to avoid conflicts
 DROP FUNCTION IF EXISTS public.get_all_batch_products();
 
--- Then, recreate the function with the correct security settings and logic
+-- Recreate the function with the correct, secure syntax
 CREATE OR REPLACE FUNCTION public.get_all_batch_products()
 RETURNS TABLE(
     id text,
@@ -9,13 +10,13 @@ RETURNS TABLE(
     name text,
     barcode text,
     brand text,
-    exp_date date,
+    exp_date text,
     location text,
     stock bigint,
-    status public.product_status
+    status text
 )
 LANGUAGE plpgsql
-SECURITY DEFINER
+-- Set a non-mutable search_path for security
 SET search_path = 'public'
 AS $$
 BEGIN
@@ -23,56 +24,58 @@ BEGIN
     WITH stock_moves AS (
         SELECT
             p.sku,
+            p.name,
             p.barcode,
-            p.expdate,
-            p.location,
-            SUM(
-                CASE
-                    WHEN p.status IN (
-                        'Receipt - Inbound', 'Receipt - Putaway', 'Receipt - Internal Transfer In to Warehouse',
-                        'Receipt - Update Expired', 'Receipt - Outbound Return', 'Receipt',
-                        'Receipt - Internal Transfer In to B2B', 'Receipt - Internal Transfer In to B2C'
-                    ) THEN p.qty
-                    WHEN p.status IN (
-                        'Issue - Order', 'Issue - Internal Transfer', 'Issue - Internal Transfer Out From Warehouse',
-                        'Issue - Internal Transfer out B2B', 'Issue - Internal Transfer out B2C',
-                        'Issue - Adjustment Manual', 'Issue - Putaway', 'Issue - Return',
-                        'Issue - Return Putaway', 'Issue - Update Expired', 'Adjustment - Loc',
-                        'Adjusment - Loc'
-                    ) THEN -p.qty
-                    ELSE 0
-                END
-            ) AS final_stock
+            p.brand,
+            pod.expdate::text AS exp_date,
+            pod.location,
+            CASE
+                WHEN pod.status IN (
+                    'Receipt - Inbound', 'Receipt - Putaway', 'Receipt - Internal Transfer In to Warehouse', 
+                    'Receipt - Update Expired', 'Receipt - Outbound Return', 'Receipt',
+                    'Receipt - Internal Transfer In to B2B', 'Receipt - Internal Transfer In to B2C'
+                ) THEN pod.qty
+                ELSE -pod.qty
+            END AS quantity
         FROM
-            product_out_documents p
-        GROUP BY
-            p.sku, p.barcode, p.expdate, p.location
+            product_out_documents pod
+        JOIN
+            master_products p ON pod.sku = p.sku
     ),
-    master_products_info AS (
-        SELECT DISTINCT ON (sku) sku, name, brand FROM master_products
+    aggregated_stock AS (
+        SELECT
+            sku,
+            name,
+            barcode,
+            brand,
+            exp_date,
+            location,
+            SUM(quantity) AS final_stock
+        FROM
+            stock_moves
+        GROUP BY
+            sku, name, barcode, brand, exp_date, location
     )
     SELECT
-        (sm.sku || '-' || sm.location || '-' || sm.expdate::text) AS id,
-        sm.sku,
-        COALESCE(mpi.name, '(No Master Data)'),
-        sm.barcode,
-        mpi.brand,
-        sm.expdate,
-        sm.location,
-        sm.final_stock AS stock,
+        (md5(concat(ags.sku, ags.location, ags.exp_date)))::text as id,
+        ags.sku,
+        ags.name,
+        ags.barcode,
+        ags.brand,
+        ags.exp_date,
+        ags.location,
+        ags.final_stock AS stock,
         CASE
-            WHEN sm.final_stock <= 0 THEN 'Out of Stock'::public.product_status
-            WHEN sm.location ILIKE 'SENSITIVE-MP%' THEN 'Sensitive MP'::public.product_status
-            WHEN sm.location ILIKE 'MP-%' THEN 'Marketplace'::public.product_status
-            WHEN sm.location ILIKE 'QUARANTINE%' THEN 'Quarantine'::public.product_status
-            WHEN sm.location ILIKE 'DAMAGE%' THEN 'Damaged'::public.product_status
-            WHEN sm.expdate IS NOT NULL AND sm.expdate <= NOW() THEN 'Expired'::public.product_status
-            WHEN sm.expdate IS NOT NULL AND sm.expdate <= (NOW() + INTERVAL '3 month') THEN 'Expiring'::public.product_status
-            ELSE 'Sellable'::public.product_status
-        END AS status
+            WHEN ags.final_stock <= 0 THEN 'Out of Stock'
+            WHEN ags.exp_date::date <= NOW() THEN 'Expired'
+            WHEN ags.exp_date::date <= (NOW() + interval '3 months') THEN 'Expiring'
+            WHEN ags.location ILIKE '%QUARANTINE%' THEN 'Quarantine'
+            WHEN ags.location ILIKE '%DAMAGED%' THEN 'Damaged'
+            WHEN ags.location ILIKE '%MP-%' THEN 'Marketplace'
+            WHEN ags.location ILIKE '%SENSITIVE-MP%' THEN 'Sensitive MP'
+            ELSE 'Sellable'
+        END::text AS status
     FROM
-        stock_moves sm
-    LEFT JOIN
-        master_products_info mpi ON sm.sku = mpi.sku;
+        aggregated_stock ags;
 END;
 $$;
