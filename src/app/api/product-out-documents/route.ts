@@ -15,6 +15,10 @@ async function generateNewDocumentNumber(status: ProductOutStatus): Promise<stri
       prefix = `MP-ORD-${year}`;
   } else if (status.startsWith('Adjustment') || status === 'Adjusment - Loc') { // Handle typo and correct version
       prefix = `MP-ADJ-${year}`;
+  } else if (status.startsWith('Issue - Internal Transfer out B2C')) {
+      prefix = `MP-B2C-${year}`;
+  } else if (status.startsWith('Issue - Internal Transfer out B2B')) {
+      prefix = `MP-B2B-${year}`;
   } else if (status.startsWith('Issue - Internal Transfer')) {
       prefix = `MP-TRSF-${year}`;
   } else if (status.startsWith('Issue - Return')) {
@@ -51,7 +55,7 @@ async function generateNewDocumentNumber(status: ProductOutStatus): Promise<stri
     newSeq = lastSeq + 1;
   }
   
-  return `${prefix}-${newSeq.toString().padStart(5, '0')}`;
+  return `${prefix}-${newSeq.toString().padStart(6, '0')}`;
 }
 
 
@@ -86,8 +90,7 @@ export async function POST(request: Request) {
         throw new Error(`Expiration date (expdate) is missing for SKU: ${doc.sku}`);
     }
 
-    const docNumber = doc.nodocument || doc.order_reference;
-    const finalDocNumber = docNumber ? docNumber : await generateNewDocumentNumber(doc.status);
+    const finalDocNumber = doc.nodocument || await generateNewDocumentNumber(doc.status);
     
     // Fetch master product name
     const { data: productData } = await supabaseService
@@ -107,7 +110,7 @@ export async function POST(request: Request) {
         date: doc.date,
         validatedby: doc.validatedby,
         expdate: doc.expdate,
-        order_reference: finalDocNumber,
+        order_reference: doc.order_reference || finalDocNumber,
     };
   }));
 
@@ -154,3 +157,4 @@ type ProductOutStatus =
     | 'Receipt - Inbound'
     | 'Adjusment - Loc'; // Keep for backwards compatibility if needed
     
+
