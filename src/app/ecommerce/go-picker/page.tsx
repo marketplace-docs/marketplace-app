@@ -101,17 +101,15 @@ export default function GoPickerPage() {
                 .sort((a, b) => new Date(a.exp_date).getTime() - new Date(b.exp_date).getTime())
                 [0];
 
-            if (!availableBatch) {
-                throw new Error(`No available stock batch found for SKU ${orderInWave.sku}. The order might be Out of Stock.`);
-            }
+            const isOutOfStock = !availableBatch;
             
             const orderDetails: FoundOrder = {
                 id: orderInWave.order_id,
                 reference: orderInWave.order_reference,
                 sku: orderInWave.sku,
-                barcode: availableBatch.barcode,
+                barcode: availableBatch?.barcode || 'N/A - OOS',
                 qty: orderInWave.qty,
-                location: availableBatch.location,
+                location: availableBatch?.location || 'N/A - OOS',
                 waveId: targetWave.id,
                 wave_document_number: targetWave.wave_document_number,
                 customer: orderInWave.customer || 'N/A',
@@ -120,14 +118,26 @@ export default function GoPickerPage() {
                 from: 'N/A',
                 delivery_type: 'N/A',
                 order_date: new Date().toISOString(),
-                total_stock_on_hand: availableBatch.stock,
-                status: 'Payment Accepted',
+                total_stock_on_hand: availableBatch?.stock || 0,
+                status: isOutOfStock ? 'Out of Stock' : 'Payment Accepted',
                 address: orderInWave.address || 'N/A',
                 phone: orderInWave.phone || 'N/A'
             };
             
             setFoundOrder(orderDetails);
-            setStep('scanLocation');
+            
+            if (isOutOfStock) {
+                setPickedQty('0'); // Pre-fill 0 for OOS
+                setStep('enterQuantity'); // Skip to the last step
+                toast({
+                    variant: 'destructive',
+                    title: 'Out of Stock',
+                    description: 'No available stock found for this item. Please confirm to move to OOS management.',
+                });
+            } else {
+                setStep('scanLocation');
+            }
+
 
         } catch (error: any) {
              toast({ variant: 'destructive', title: 'Error', description: error.message });
@@ -332,10 +342,18 @@ export default function GoPickerPage() {
                         
                         {/* Step 4: Enter Quantity */}
                         <div className={cn("space-y-4", step !== 'enterQuantity' && 'hidden')}>
-                            <div className="p-4 rounded-lg bg-green-50 border-green-300 border text-green-800 flex items-center gap-2">
-                                <CheckCircle2 className="h-5 w-5"/>
-                                <p className="font-bold">Product and Location Verified!</p>
-                            </div>
+                            {foundOrder?.status === 'Payment Accepted' ? (
+                                <div className="p-4 rounded-lg bg-green-50 border-green-300 border text-green-800 flex items-center gap-2">
+                                    <CheckCircle2 className="h-5 w-5"/>
+                                    <p className="font-bold">Product and Location Verified!</p>
+                                </div>
+                            ) : (
+                                 <div className="p-4 rounded-lg bg-red-50 border-red-300 border text-red-800 flex items-center gap-2">
+                                    <Badge variant="destructive">OUT OF STOCK</Badge>
+                                    <p className="font-bold">No stock available for this item.</p>
+                                </div>
+                            )}
+
                             <Label htmlFor="actualQty" className="text-lg">Enter Picked Quantity</Label>
                              <Input
                                 ref={qtyInputRef}
@@ -348,7 +366,7 @@ export default function GoPickerPage() {
                                 onKeyDown={(e) => e.key === 'Enter' && handleConfirmPick()}
                             />
                             <p className="text-xs text-muted-foreground mt-1">Enter a quantity less than required to report as partial or Out of Stock.</p>
-                            <Button onClick={handleConfirmPick} className="w-full h-12 text-lg" disabled={isSubmitting || !pickedQty}>
+                            <Button onClick={handleConfirmPick} className="w-full h-12 text-lg" disabled={isSubmitting || pickedQty === ''}>
                                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                 Done Pick
                             </Button>
