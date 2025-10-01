@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -95,11 +96,11 @@ export default function LoginPage() {
                 <Input id="email-display" type="email" value={email} disabled />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="name">User Name</Label>
+                <Label htmlFor="name">Username</Label>
                 <Input
                   id="name"
                   type="text"
-                  placeholder="masukan nama pengguna anda"
+                  placeholder="masukan username anda"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required

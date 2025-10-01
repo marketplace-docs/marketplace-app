@@ -42,14 +42,7 @@ import { useToast } from "@/hooks/use-toast";
 import { MainLayout } from "@/components/layout/main-layout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuth } from "@/hooks/use-auth";
-
-type User = {
-    id: number;
-    name: string;
-    email: string;
-    status: 'Staff' | 'Reguler' | 'Event';
-    role: string;
-};
+import type { User } from '@/types/user';
 
 type NewUser = Omit<User, 'id'>;
 
@@ -70,7 +63,7 @@ export default function DatabaseUserPage() {
     const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
     
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
-    const [newUser, setNewUser] = useState<NewUser>({ name: '', email: '', status: 'Reguler', role: 'Staff' });
+    const [newUser, setNewUser] = useState<NewUser>({ name: '', full_name: '', email: '', status: 'Reguler', role: 'Staff' });
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const { toast } = useToast();
@@ -138,22 +131,25 @@ export default function DatabaseUserPage() {
                     userRole: currentUser.role,
                 })
             });
-            if (!response.ok) throw new Error('Failed to update user');
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to update user');
+            }
             
             await fetchUsers();
             setEditDialogOpen(false);
             setSelectedUser(null);
             toast({ title: "Success", description: "User has been updated successfully." });
-        } catch (error) {
-            toast({ variant: 'destructive', title: "Error", description: "Could not update user." });
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: "Error", description: error.message });
         } finally {
             setIsSubmitting(false);
         }
     };
     
     const handleAddUser = async () => {
-        if (!newUser.name || !newUser.email) {
-            toast({ variant: "destructive", title: "Add Failed", description: "Name and Email cannot be empty." });
+        if (!newUser.name || !newUser.full_name || !newUser.email) {
+            toast({ variant: "destructive", title: "Add Failed", description: "Username, Full Name, and Email cannot be empty." });
             return;
         }
         if (!currentUser) return;
@@ -177,7 +173,7 @@ export default function DatabaseUserPage() {
             
             await fetchUsers();
             setAddDialogOpen(false);
-            setNewUser({ name: '', email: '', status: 'Reguler', role: 'Staff' });
+            setNewUser({ name: '', full_name: '', email: '', status: 'Reguler', role: 'Staff' });
             toast({ title: "Success", description: "New user added." });
         } catch (error: any) {
             toast({ variant: 'destructive', title: "Error", description: error.message || "Could not add user." });
@@ -237,7 +233,11 @@ export default function DatabaseUserPage() {
                           </DialogHeader>
                           <div className="grid gap-4 py-4">
                                <div className="grid grid-cols-4 items-center gap-4">
-                                  <Label htmlFor="new-name" className="text-right">Name</Label>
+                                  <Label htmlFor="new-full_name" className="text-right">Full Name</Label>
+                                  <Input id="new-full_name" value={newUser.full_name} className="col-span-3" onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })} />
+                              </div>
+                               <div className="grid grid-cols-4 items-center gap-4">
+                                  <Label htmlFor="new-name" className="text-right">Username</Label>
                                   <Input id="new-name" value={newUser.name} className="col-span-3" onChange={(e) => setNewUser({ ...newUser, name: e.target.value })} />
                               </div>
                                <div className="grid grid-cols-4 items-center gap-4">
@@ -319,7 +319,7 @@ export default function DatabaseUserPage() {
                             ) : paginatedUsers.length > 0 ? (
                                 paginatedUsers.map((user) => (
                                     <TableRow key={user.id}>
-                                        <TableCell className="font-medium">{user.name}</TableCell>
+                                        <TableCell className="font-medium">{user.full_name}</TableCell>
                                         <TableCell>{user.name}</TableCell>
                                         <TableCell>{user.email}</TableCell>
                                         <TableCell>
@@ -415,12 +415,12 @@ export default function DatabaseUserPage() {
                     {selectedUser && (
                         <div className="grid gap-4 py-4">
                             <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="name" className="text-right">Full Name</Label>
-                                <Input id="name" value={selectedUser.name} className="col-span-3" onChange={(e) => setSelectedUser({ ...selectedUser, name: e.target.value })} />
+                                <Label htmlFor="full_name" className="text-right">Full Name</Label>
+                                <Input id="full_name" value={selectedUser.full_name} className="col-span-3" onChange={(e) => setSelectedUser({ ...selectedUser, full_name: e.target.value })} />
                             </div>
                             <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="username" className="text-right">Username</Label>
-                                <Input id="username" value={selectedUser.name} className="col-span-3" onChange={(e) => setSelectedUser({ ...selectedUser, name: e.target.value })} />
+                                <Label htmlFor="name" className="text-right">Username</Label>
+                                <Input id="name" value={selectedUser.name} className="col-span-3" onChange={(e) => setSelectedUser({ ...selectedUser, name: e.target.value })} />
                             </div>
                              <div className="grid grid-cols-4 items-center gap-4">
                                 <Label htmlFor="email" className="text-right">Email</Label>

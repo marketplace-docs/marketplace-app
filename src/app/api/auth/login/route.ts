@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     const { email, name, password } = await request.json();
 
     if (!email || !name || !password) {
-      return NextResponse.json({ error: 'Email, name, and password are required' }, { status: 400 });
+      return NextResponse.json({ error: 'Email, username, and password are required' }, { status: 400 });
     }
     
     // 1. Check if the password is valid
@@ -22,9 +22,9 @@ export async function POST(request: Request) {
     // 2. Fetch user data from the database using the service client, now checking name as well
     const { data: dbUser, error: dbError } = await supabaseService
       .from('users')
-      .select('id, name, email, role')
+      .select('id, name, full_name, email, role')
       .eq('email', lowercasedEmail)
-      .eq('name', name) // Add validation for the username
+      .eq('name', name) // Validate username
       .single();
 
     if (dbError || !dbUser) {
@@ -36,6 +36,7 @@ export async function POST(request: Request) {
     const user = {
       id: dbUser.id,
       name: dbUser.name,
+      full_name: dbUser.full_name,
       email: dbUser.email,
       role: dbUser.role,
     };

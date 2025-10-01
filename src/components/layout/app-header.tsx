@@ -1,3 +1,4 @@
+
 "use client"
 
 import {
@@ -97,12 +98,12 @@ export function AppHeader() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-10 w-auto px-2 gap-2">
               <div className="flex flex-col items-end">
-                  <span className="font-semibold text-sm">{user?.name}</span>
+                  <span className="font-semibold text-sm">{user?.full_name}</span>
                   <span className="text-xs text-muted-foreground">{user?.email}</span>
               </div>
               <Avatar className="h-8 w-8">
                    <AvatarFallback className="bg-primary text-primary-foreground">
-                      {getInitials(user?.name)}
+                      {getInitials(user?.full_name)}
                   </AvatarFallback>
               </Avatar>
             </Button>

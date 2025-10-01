@@ -8,7 +8,7 @@ const ADD_USER_ROLES = ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admi
 export async function GET() {
   const { data, error } = await supabaseService
     .from('users')
-    .select('id, name, email, role, status')
+    .select('id, name, full_name, email, role, status')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -20,7 +20,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const body = await request.json();
-  const { name, email, role, status, userName, userEmail, userRole } = body;
+  const { name, full_name, email, role, status, userName, userEmail, userRole } = body;
 
   if (!userRole || !ADD_USER_ROLES.includes(userRole)) {
     return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
@@ -28,17 +28,20 @@ export async function POST(request: Request) {
 
   const user = { name: userName, email: userEmail };
 
-  if (!name || !email || !role || !status) {
+  if (!name || !full_name || !email || !role || !status) {
     return NextResponse.json({ error: 'All fields are required' }, { status: 400 });
   }
 
   const { data, error } = await supabaseService
     .from('users')
-    .insert([{ name, email, role, status }])
+    .insert([{ name, full_name, email, role, status }])
     .select()
     .single();
 
   if (error) {
+    if (error.code === '23505') { // unique constraint violation
+        return NextResponse.json({ error: 'Username already exists.' }, { status: 409 });
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
   
