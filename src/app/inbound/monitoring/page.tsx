@@ -222,7 +222,7 @@ const InboundMonitoringTable = ({ data, loading, onStatusChange }: { data: Inbou
                     <TableHead>Exp Date</TableHead>
                     <TableHead>Received By</TableHead>
                     <TableHead>Date</TableHead>
-                    <TableHead>Main Status</TableHead>
+                    <TableHead className="main-status-column">Main Status</TableHead>
                     <TableHead className="text-right actions-column">Actions</TableHead>
                 </TableRow>
             </TableHeader>
@@ -243,7 +243,7 @@ const InboundMonitoringTable = ({ data, loading, onStatusChange }: { data: Inbou
                         <TableCell>{format(new Date(item.exp_date), 'yyyy-MM-dd')}</TableCell>
                         <TableCell>{item.received_by}</TableCell>
                         <TableCell>{format(new Date(item.date), "eee, dd/MMM/yyyy HH:mm")}</TableCell>
-                        <TableCell>
+                        <TableCell className="main-status-column">
                             <Badge variant={item.main_status === 'Done' ? 'default' : 'secondary'}>{item.main_status}</Badge>
                         </TableCell>
                         <TableCell className="text-right flex items-center justify-end gap-1 actions-column">
@@ -334,10 +334,12 @@ export default function InboundMonitoringPage() {
 
     return (
         <MainLayout>
-            <div className="w-full space-y-6">
-                <h1 className="text-2xl font-bold">Inbound Monitoring</h1>
+            <div className="w-full space-y-6" id="page-content">
+                <div className="no-print">
+                    <h1 className="text-2xl font-bold">Inbound Monitoring</h1>
+                </div>
                  <Card>
-                    <CardHeader>
+                    <CardHeader className="no-print">
                         <CardTitle>Inbound Monitoring</CardTitle>
                         <CardDescription>Monitor the status and perform actions on inbound items.</CardDescription>
                     </CardHeader>
@@ -355,25 +357,30 @@ export default function InboundMonitoringPage() {
             </div>
             <style jsx global>{`
                 @media print {
-                    body * {
-                        visibility: hidden;
-                    }
-                    #printable-content, #printable-content * {
-                        visibility: visible;
-                    }
-                    #printable-content {
-                        position: absolute;
-                        left: 0;
-                        top: 0;
-                        width: 100%;
-                    }
-                    .actions-column, .pagination-controls, .no-print {
-                        display: none !important;
-                    }
-                    @page {
-                        size: auto;
-                        margin: 0.5in;
-                    }
+                  body * {
+                    visibility: hidden;
+                  }
+                  #printable-content, #printable-content * {
+                    visibility: visible;
+                  }
+                  #printable-content {
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    width: 100%;
+                    border: none;
+                    box-shadow: none;
+                  }
+                  .actions-column, .pagination-controls, .no-print, .main-status-column {
+                    display: none !important;
+                  }
+                   #page-content {
+                    padding: 0;
+                  }
+                  @page {
+                    size: landscape;
+                    margin: 0.5in;
+                  }
                 }
             `}</style>
         </MainLayout>
