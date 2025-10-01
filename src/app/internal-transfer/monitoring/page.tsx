@@ -17,6 +17,7 @@ import type { InboundDocument } from '@/types/inbound-document';
 type TransferDocument = (ProductOutDocument & { doc_type: 'product_out' }) | (InboundDocument & { doc_type: 'inbound' });
 
 const transferStatuses = [
+    'Issue - Internal Transfer',
     'Issue - Internal Transfer Out From Warehouse',
     'Receipt - Internal Transfer In to Warehouse',
     'Issue - Internal Transfer out B2B',
