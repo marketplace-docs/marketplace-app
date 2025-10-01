@@ -82,12 +82,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Request body must be an array of documents.' }, { status: 400 });
   }
   
-  // Use Promise.all to generate document numbers in parallel if needed, or sequentially to guarantee order
   const docsToInsert = await Promise.all(documents.map(async (doc) => {
     if (!doc.expdate) {
         throw new Error(`Expiration date (expdate) is missing for SKU: ${doc.sku}`);
     }
-    const newDocNumber = await generateNewDocumentNumber(doc.status);
+
+    const docNumber = doc.nodocument || doc.order_reference;
+    const finalDocNumber = docNumber ? docNumber : await generateNewDocumentNumber(doc.status);
     
     // Fetch master product name
     const { data: productData } = await supabaseService
@@ -97,7 +98,7 @@ export async function POST(request: Request) {
         .single();
 
     return {
-        nodocument: newDocNumber,
+        nodocument: finalDocNumber,
         sku: doc.sku,
         name: productData?.name || '(No Master Data)',
         barcode: doc.barcode,
@@ -154,3 +155,4 @@ type ProductOutStatus =
     | 'Receipt - Inbound'
     | 'Adjusment - Loc'; // Keep for backwards compatibility if needed
     
+
