@@ -8,7 +8,7 @@ const UPDATE_ROLES = ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin'
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const { id } = params;
   const body = await request.json();
-  const { name, full_name, email, role, status, userName, userEmail, userRole } = body;
+  const { name, email, role, status, userName, userEmail, userRole } = body;
 
   if (!userRole || !UPDATE_ROLES.includes(userRole)) {
     return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
@@ -18,14 +18,14 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
   const { data, error } = await supabaseService
     .from('users')
-    .update({ name, full_name, email, role, status })
+    .update({ name, email, role, status })
     .eq('id', id)
     .select()
     .single();
 
   if (error) {
     if (error.code === '23505') { // unique constraint violation
-        return NextResponse.json({ error: 'Username already exists.' }, { status: 409 });
+        return NextResponse.json({ error: 'Email already exists.' }, { status: 409 });
     }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

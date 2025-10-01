@@ -12,9 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Store, Loader2, Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage() {
-  const [step, setStep] = useState<'email' | 'credentials'>('email');
   const [email, setEmail] = useState('');
-  const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -22,21 +20,9 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const handleNext = () => {
-    if (!email) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Please enter your email.',
-      });
-      return;
-    }
-    setStep('credentials');
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !name || !password) {
+    if (!email || !password) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -47,7 +33,7 @@ export default function LoginPage() {
     setLoading(true);
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
-    const success = await login({ email, name, password });
+    const success = await login({ email, password });
     setLoading(false);
     if (success) {
       sessionStorage.setItem('showLoginSuccessToast', 'true');
@@ -72,8 +58,7 @@ export default function LoginPage() {
           <CardDescription>Welcome to Fulfillment Marketplace Dashboard</CardDescription>
         </CardHeader>
         <CardContent>
-          {step === 'email' ? (
-            <form onSubmit={(e) => { e.preventDefault(); handleNext(); }} className="space-y-4">
+           <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -82,27 +67,6 @@ export default function LoginPage() {
                   placeholder="masukan email anda"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <Button type="submit" className="w-full">
-                Next
-              </Button>
-            </form>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email-display">Email</Label>
-                <Input id="email-display" type="email" value={email} disabled />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="name">Username</Label>
-                <Input
-                  id="name"
-                  type="text"
-                  placeholder="masukan username anda"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
                   required
                 />
               </div>
@@ -128,16 +92,10 @@ export default function LoginPage() {
                   </Button>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" onClick={() => setStep('email')} disabled={loading}>
-                    Back
-                </Button>
-                <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Login'}
-                </Button>
-              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Login'}
+              </Button>
             </form>
-          )}
         </CardContent>
       </Card>
     </div>

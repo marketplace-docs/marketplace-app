@@ -6,10 +6,10 @@ const validPassword = 'Marketplace@soco123!!!';
 
 export async function POST(request: Request) {
   try {
-    const { email, name, password } = await request.json();
+    const { email, password } = await request.json();
 
-    if (!email || !name || !password) {
-      return NextResponse.json({ error: 'Email, username, and password are required' }, { status: 400 });
+    if (!email || !password) {
+      return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
     }
     
     // 1. Check if the password is valid
@@ -19,12 +19,11 @@ export async function POST(request: Request) {
 
     const lowercasedEmail = email.toLowerCase();
     
-    // 2. Fetch user data from the database using the service client, now checking name as well
+    // 2. Fetch user data from the database using the service client
     const { data: dbUser, error: dbError } = await supabaseService
       .from('users')
-      .select('id, name, full_name, email, role')
+      .select('id, name, email, role')
       .eq('email', lowercasedEmail)
-      .eq('name', name) // Validate username
       .single();
 
     if (dbError || !dbUser) {
@@ -36,7 +35,6 @@ export async function POST(request: Request) {
     const user = {
       id: dbUser.id,
       name: dbUser.name,
-      full_name: dbUser.full_name,
       email: dbUser.email,
       role: dbUser.role,
     };

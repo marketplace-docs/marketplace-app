@@ -63,7 +63,7 @@ export default function DatabaseUserPage() {
     const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
     
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
-    const [newUser, setNewUser] = useState<NewUser>({ name: '', full_name: '', email: '', status: 'Reguler', role: 'Staff' });
+    const [newUser, setNewUser] = useState<NewUser>({ name: '', email: '', status: 'Reguler', role: 'Staff' });
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const { toast } = useToast();
@@ -148,8 +148,8 @@ export default function DatabaseUserPage() {
     };
     
     const handleAddUser = async () => {
-        if (!newUser.name || !newUser.full_name || !newUser.email) {
-            toast({ variant: "destructive", title: "Add Failed", description: "Username, Full Name, and Email cannot be empty." });
+        if (!newUser.name || !newUser.email) {
+            toast({ variant: "destructive", title: "Add Failed", description: "Name and Email cannot be empty." });
             return;
         }
         if (!currentUser) return;
@@ -173,7 +173,7 @@ export default function DatabaseUserPage() {
             
             await fetchUsers();
             setAddDialogOpen(false);
-            setNewUser({ name: '', full_name: '', email: '', status: 'Reguler', role: 'Staff' });
+            setNewUser({ name: '', email: '', status: 'Reguler', role: 'Staff' });
             toast({ title: "Success", description: "New user added." });
         } catch (error: any) {
             toast({ variant: 'destructive', title: "Error", description: error.message || "Could not add user." });
@@ -233,11 +233,7 @@ export default function DatabaseUserPage() {
                           </DialogHeader>
                           <div className="grid gap-4 py-4">
                                <div className="grid grid-cols-4 items-center gap-4">
-                                  <Label htmlFor="new-full_name" className="text-right">Full Name</Label>
-                                  <Input id="new-full_name" value={newUser.full_name} className="col-span-3" onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })} />
-                              </div>
-                               <div className="grid grid-cols-4 items-center gap-4">
-                                  <Label htmlFor="new-name" className="text-right">Username</Label>
+                                  <Label htmlFor="new-name" className="text-right">Name</Label>
                                   <Input id="new-name" value={newUser.name} className="col-span-3" onChange={(e) => setNewUser({ ...newUser, name: e.target.value })} />
                               </div>
                                <div className="grid grid-cols-4 items-center gap-4">
@@ -301,8 +297,7 @@ export default function DatabaseUserPage() {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Full Name</TableHead>
-                                <TableHead>Username</TableHead>
+                                <TableHead>Name</TableHead>
                                 <TableHead>Email</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead>Role</TableHead>
@@ -312,15 +307,14 @@ export default function DatabaseUserPage() {
                         <TableBody>
                             {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="h-24 text-center">
+                                    <TableCell colSpan={5} className="h-24 text-center">
                                         <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                                     </TableCell>
                                 </TableRow>
                             ) : paginatedUsers.length > 0 ? (
                                 paginatedUsers.map((user) => (
                                     <TableRow key={user.id}>
-                                        <TableCell className="font-medium">{user.full_name}</TableCell>
-                                        <TableCell>{user.name}</TableCell>
+                                        <TableCell className="font-medium">{user.name}</TableCell>
                                         <TableCell>{user.email}</TableCell>
                                         <TableCell>
                                             <Badge variant={statusVariantMap[user.status] || 'default'}>{user.status}</Badge>
@@ -348,7 +342,7 @@ export default function DatabaseUserPage() {
                                 ))
                             ) : (
                                  <TableRow>
-                                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                                    <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                                         No users found.
                                     </TableCell>
                                 </TableRow>
@@ -415,11 +409,7 @@ export default function DatabaseUserPage() {
                     {selectedUser && (
                         <div className="grid gap-4 py-4">
                             <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="full_name" className="text-right">Full Name</Label>
-                                <Input id="full_name" value={selectedUser.full_name} className="col-span-3" onChange={(e) => setSelectedUser({ ...selectedUser, full_name: e.target.value })} />
-                            </div>
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="name" className="text-right">Username</Label>
+                                <Label htmlFor="name" className="text-right">Name</Label>
                                 <Input id="name" value={selectedUser.name} className="col-span-3" onChange={(e) => setSelectedUser({ ...selectedUser, name: e.target.value })} />
                             </div>
                              <div className="grid grid-cols-4 items-center gap-4">

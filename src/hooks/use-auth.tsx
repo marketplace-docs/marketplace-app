@@ -19,7 +19,7 @@ type MenuPermissions = {
 type AuthContextType = {
   user: User | null;
   permissions: MenuPermissions | null;
-  login: (credentials: { email: string; name: string, password?: string }) => Promise<boolean>;
+  login: (credentials: { email: string; password?: string }) => Promise<boolean>;
   logout: () => void;
   loading: boolean;
 };
@@ -181,7 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initializeAuth();
   }, [fetchPermissions]);
 
-  const login = async (credentials: { email: string; name: string, password?: string }): Promise<boolean> => {
+  const login = async (credentials: { email: string; password?: string }): Promise<boolean> => {
     try {
       setLoading(true);
       const response = await fetch('/api/auth/login', {
