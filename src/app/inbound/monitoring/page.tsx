@@ -209,7 +209,7 @@ const InboundMonitoringTable = ({ data, loading, onStatusChange }: { data: Inbou
     }
     
     return (
-    <div className="border rounded-lg" id="printable-content">
+    <div className="border rounded-lg" id="table-content">
         <Table>
             <TableHeader>
                 <TableRow>
@@ -333,26 +333,61 @@ export default function InboundMonitoringPage() {
 
     return (
         <MainLayout>
-            <div className="w-full space-y-6" id="page-content">
-                <div className="no-print">
+            <div id="page-content">
+                <div className="w-full space-y-6 no-print">
                     <h1 className="text-2xl font-bold">Inbound Monitoring</h1>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Inbound Monitoring</CardTitle>
+                            <CardDescription>Monitor the status and perform actions on inbound items.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            {error && (
+                                <Alert variant="destructive" className="mb-4">
+                                    <AlertCircle className="h-4 w-4" />
+                                    <AlertTitle>Error</AlertTitle>
+                                    <AlertDescription>{error}</AlertDescription>
+                                </Alert>
+                            )}
+                            <InboundMonitoringTable data={documents} loading={loading} onStatusChange={handleStatusChange} />
+                        </CardContent>
+                    </Card>
                 </div>
-                 <Card>
-                    <CardHeader className="no-print">
-                        <CardTitle>Inbound Monitoring</CardTitle>
-                        <CardDescription>Monitor the status and perform actions on inbound items.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        {error && (
-                            <Alert variant="destructive" className="mb-4">
-                                <AlertCircle className="h-4 w-4" />
-                                <AlertTitle>Error</AlertTitle>
-                                <AlertDescription>{error}</AlertDescription>
-                            </Alert>
-                        )}
-                        <InboundMonitoringTable data={documents} loading={loading} onStatusChange={handleStatusChange} />
-                    </CardContent>
-                </Card>
+                <div id="printable-content" className="hidden print:block">
+                    <div className="flex justify-between items-center mb-4">
+                        <p>{format(new Date(), "dd/MM/yy, h:mm a")}</p>
+                        <h2 className="font-bold text-lg">Market Place</h2>
+                        <div></div>
+                    </div>
+                     <table className="w-full text-sm">
+                        <thead>
+                            <tr className="border-t border-b border-black">
+                                <th className="text-left font-semibold p-2">Reference</th>
+                                <th className="text-left font-semibold p-2">SKU</th>
+                                <th className="text-left font-semibold p-2">Barcode</th>
+                                <th className="text-left font-semibold p-2">Brand</th>
+                                <th className="text-left font-semibold p-2">Qty</th>
+                                <th className="text-left font-semibold p-2">Exp Date</th>
+                                <th className="text-left font-semibold p-2">Received By</th>
+                                <th className="text-left font-semibold p-2">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {documents.map(item => (
+                                <tr key={item.id} className="border-b border-gray-200">
+                                    <td className="p-2">{item.reference}</td>
+                                    <td className="p-2">{item.sku}</td>
+                                    <td className="p-2">{item.barcode}</td>
+                                    <td className="p-2">{item.brand}</td>
+                                    <td className="p-2">{item.qty}</td>
+                                    <td className="p-2">{format(new Date(item.exp_date), 'yyyy-MM-dd')}</td>
+                                    <td className="p-2">{item.received_by}</td>
+                                    <td className="p-2">{format(new Date(item.date), "eee, dd/MMM/yyyy HH:mm")}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                     </table>
+                </div>
             </div>
             <style jsx global>{`
                 @media print {
@@ -367,17 +402,15 @@ export default function InboundMonitoringPage() {
                     left: 0;
                     top: 0;
                     width: 100%;
-                    border: none;
-                    box-shadow: none;
-                  }
-                  .actions-column, .pagination-controls, .no-print, .main-status-column {
-                    display: none !important;
                   }
                    #page-content {
                     padding: 0;
                   }
+                  .no-print {
+                      display: none !important;
+                  }
                   @page {
-                    size: landscape;
+                    size: A4 landscape;
                     margin: 0.5in;
                   }
                 }
@@ -385,5 +418,3 @@ export default function InboundMonitoringPage() {
         </MainLayout>
     );
 }
-
-    
