@@ -341,7 +341,7 @@ function MonitoringOrdersContent() {
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="border rounded-lg" id="main-table-content">
+                        <div className="border rounded-lg">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -599,3 +599,5 @@ export default function MonitoringOrdersPage() {
         </Suspense>
     );
 }
+
+    
