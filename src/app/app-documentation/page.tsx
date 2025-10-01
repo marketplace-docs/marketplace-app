@@ -79,6 +79,7 @@ const featureDescriptions: FeatureDescription[] = [
         children: [
             { label: "My Orders", description: "Mengelola pesanan manual, mengunggah pesanan via CSV, dan membuat 'wave' (maks. 150 order) untuk diproses tim picker." },
             { label: "Monitoring Orders", description: "Memantau status semua 'wave', melihat detail pesanan di dalamnya, membatalkan wave, dan mencetak picklist per-wave." },
+            { label: "Reprint-Label", description: "Fitur untuk mencetak ulang label pengiriman atau picklist jika terjadi kerusakan atau kehilangan." },
             { label: "Go-Picker", description: "Alur kerja terpemandu untuk picker dengan validasi scan (order, lokasi, produk) untuk akurasi maksimal." },
             { label: "Out of Stock", description: "Pusat manajemen untuk pesanan yang tidak dapat dipenuhi (OOS). Memungkinkan admin mengirim kembali pesanan ke antrian atau menghapusnya." },
             { label: "Outbound", description: "Stasiun kerja untuk tim packer dengan validasi scan produk dan kemasan sebelum mencetak label pengiriman." },
