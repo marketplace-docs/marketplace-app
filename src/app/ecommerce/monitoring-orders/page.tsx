@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useCallback, Suspense, useRef } from 'react';
@@ -249,12 +250,7 @@ function MonitoringOrdersContent() {
     };
     
     const handlePrintWave = async (wave: Wave) => {
-        const orderIds = (await fetchWaveOrders(wave.id)).map(o => o.id);
-        if (orderIds.length === 0) {
-            toast({ variant: 'destructive', title: 'Print Error', description: 'No orders found in this wave to print.' });
-            return;
-        }
-        const url = `/ecommerce/monitoring-orders/print?orderIds=${orderIds.join(',')}`;
+        const url = `/ecommerce/monitoring-orders/print-wave?waveId=${wave.id}`;
         window.open(url, '_blank');
     };
 
