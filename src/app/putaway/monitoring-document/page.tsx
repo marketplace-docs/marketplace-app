@@ -29,12 +29,22 @@ const DocumentCard = ({ document: inboundDoc, allProductOutDocs }: { document: I
     const [isExpanded, setIsExpanded] = useState(false);
 
     const relatedPutaways = useMemo(() => {
-        return (allProductOutDocs || []).filter(pd => 
-            pd.nodocument === inboundDoc.reference &&
+        return (allProductOutDocs || []).filter(pd => {
+             // Safe date comparison
+            const isDateMatch = (d1: string, d2: string) => {
+                if (!d1 || !d2) return false;
+                try {
+                    return new Date(d1).toISOString().split('T')[0] === new Date(d2).toISOString().split('T')[0];
+                } catch (e) {
+                    return false;
+                }
+            };
+
+            return pd.nodocument === inboundDoc.reference &&
             pd.sku === inboundDoc.sku &&
             pd.barcode === inboundDoc.barcode &&
-            new Date(pd.exp_date).toISOString().split('T')[0] === new Date(inboundDoc.exp_date).toISOString().split('T')[0]
-        );
+            isDateMatch(pd.expdate, inboundDoc.exp_date);
+        });
     }, [allProductOutDocs, inboundDoc]);
 
     const totalPutawayQty = useMemo(() => 
