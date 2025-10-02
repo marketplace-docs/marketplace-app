@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -183,6 +184,7 @@ const InboundDetailDialog = ({ document: initialDoc }: { document: InboundDocume
 
 const InboundMonitoringTable = ({ data, loading, onStatusChange, onPrint }: { data: InboundDocument[], loading: boolean, onStatusChange: (doc: InboundDocument, newStatus: 'Assign' | 'Done') => Promise<void>, onPrint: (docId: number) => void }) => {
     const [isSubmitting, setIsSubmitting] = useState<number | null>(null);
+    const { user } = useAuth();
     
     const handleReassign = async (doc: InboundDocument) => {
         setIsSubmitting(doc.id);
@@ -238,16 +240,20 @@ const InboundMonitoringTable = ({ data, loading, onStatusChange, onPrint }: { da
                             <Button variant="ghost" size="icon" onClick={() => onPrint(item.id)}>
                                 <Printer className="h-4 w-4" />
                             </Button>
-                            {item.main_status === 'Done' ? (
-                                <Button size="sm" variant="outline" onClick={() => handleReassign(item)} disabled={isSubmitting === item.id}>
-                                    {isSubmitting === item.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCcw className="mr-2 h-4 w-4" />}
-                                    Re-assign
-                                </Button>
-                            ) : (
-                                <Button size="sm" variant="outline" onClick={() => handleMarkAsDone(item)} disabled={isSubmitting === item.id}>
-                                    {isSubmitting === item.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
-                                    Mark as Done
-                                </Button>
+                             {user?.role === 'Super Admin' && (
+                                <>
+                                {item.main_status === 'Done' ? (
+                                    <Button size="sm" variant="outline" onClick={() => handleReassign(item)} disabled={isSubmitting === item.id}>
+                                        {isSubmitting === item.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCcw className="mr-2 h-4 w-4" />}
+                                        Re-assign
+                                    </Button>
+                                ) : (
+                                    <Button size="sm" variant="outline" onClick={() => handleMarkAsDone(item)} disabled={isSubmitting === item.id}>
+                                        {isSubmitting === item.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
+                                        Mark as Done
+                                    </Button>
+                                )}
+                                </>
                             )}
                         </TableCell>
                     </TableRow>
