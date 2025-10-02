@@ -40,7 +40,7 @@ export const NAV_LINKS: NavLink[] = [
      {
         href: '/inbound',
         label: 'Inbound',
-        icon: ArrowRightSquare,
+        icon: PackagePlus,
         children: [
              {
                 href: '/inbound/create',
@@ -168,12 +168,12 @@ export const NAV_LINKS: NavLink[] = [
             {
                 href: '/ecommerce/outbound',
                 label: 'Outbound',
-                icon: PackageMinus,
+                icon: PackageCheck,
             },
              {
                 href: '/ecommerce/outbound-monitoring',
                 label: 'Outbound Monitoring',
-                icon: PackageCheck,
+                icon: Eye,
             },
             {
                 href: '/ecommerce/dispatcher',
@@ -195,12 +195,12 @@ export const NAV_LINKS: NavLink[] = [
     {
         href: '/master-product',
         label: 'Batch Product',
-        icon: Package,
+        icon: Boxes,
         children: [
              {
                 href: '/master-product/batch-product',
                 label: 'Product Stock',
-                icon: Boxes,
+                icon: Package,
             },
             {
                 href: '/master-product/stock-log',
