@@ -29,31 +29,41 @@ function PrintPageContent() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const orderIds = searchParams.get('orderIds')?.split(',');
+        const orderIdsParam = searchParams.get('orderIds');
+        const waveIdParam = searchParams.get('waveId');
 
-        if (!orderIds || orderIds.length === 0) {
+        if (!orderIdsParam && !waveIdParam) {
             setLoading(false);
             return;
         }
 
         const fetchOrderData = async () => {
             try {
-                const [wavesRes, allBatchesRes, allProductsRes] = await Promise.all([
-                    fetch('/api/waves'),
-                    fetch('/api/master-product/batch-products'),
-                    fetch('/api/master-products'),
+                const [allWaves, allBatches, allProducts] = await Promise.all([
+                    fetch('/api/waves').then(res => res.json()),
+                    fetch('/api/master-product/batch-products').then(res => res.json()),
+                    fetch('/api/master-products').then(res => res.json()),
                 ]);
-                
-                if (!wavesRes.ok) throw new Error('Failed to fetch waves.');
-                if (!allBatchesRes.ok) throw new Error('Failed to fetch batch products.');
-                if (!allProductsRes.ok) throw new Error('Failed to fetch master products.');
 
-                const allWaves = await wavesRes.json();
-                const allBatches: BatchProduct[] = await allBatchesRes.json();
-                const allProducts: {sku: string, name: string}[] = await allProductsRes.json();
-                
-                const productMap = new Map(allProducts.map(p => [p.sku, p.name]));
+                const productMap = new Map(allProducts.map((p: any) => [p.sku, p.name]));
+                let orderIds: string[] = [];
 
+                if (waveIdParam) {
+                    // Fetch all order IDs from the wave
+                    const waveDetailsRes = await fetch(`/api/waves/${waveIdParam}`);
+                    if (!waveDetailsRes.ok) throw new Error(`Could not fetch details for wave ${waveIdParam}.`);
+                    const waveDetails = await waveDetailsRes.json();
+                    orderIds = waveDetails.orders.map((o: any) => o.id.toString());
+                } else if (orderIdsParam) {
+                    orderIds = orderIdsParam.split(',');
+                }
+
+                if (orderIds.length === 0) {
+                    setOrders([]);
+                    setLoading(false);
+                    return;
+                }
+                
                 const ordersToPrint: WaveOrder[] = [];
                 
                 for (const wave of allWaves) {
@@ -63,7 +73,7 @@ function PrintPageContent() {
 
                     for (const order of waveDetails.orders) {
                         if (orderIds.includes(order.id.toString())) {
-                            const availableBatch = allBatches.find(b => b.sku === order.sku && b.stock > 0);
+                            const availableBatch = allBatches.find((b: BatchProduct) => b.sku === order.sku && b.stock > 0);
                              ordersToPrint.push({
                                 id: order.id,
                                 order_reference: order.order_reference,
@@ -84,10 +94,17 @@ function PrintPageContent() {
                 setOrders(ordersToPrint);
                 setLoading(false);
                 
-                // Trigger print after a short delay to ensure rendering
-                setTimeout(() => {
-                    window.print();
-                }, 500);
+                if (ordersToPrint.length > 0) {
+                     setTimeout(() => {
+                        window.print();
+                    }, 500);
+                } else {
+                    toast({
+                        variant: 'destructive',
+                        title: 'No Orders Found',
+                        description: 'Could not find any orders matching the provided IDs.'
+                    });
+                }
 
 
             } catch (error: any) {
@@ -105,6 +122,10 @@ function PrintPageContent() {
 
     if (loading) {
         return <div className="flex h-screen w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+    }
+
+    if (orders.length === 0) {
+        return <div className="flex h-screen w-full items-center justify-center"><p>No orders to print.</p></div>;
     }
 
     return (

@@ -249,12 +249,34 @@ function MonitoringOrdersContent() {
         }
     };
     
-    const handlePrintWave = async (wave: Wave) => {
-        const url = wave.wave_type === 'Bulk' 
-            ? `/ecommerce/monitoring-orders/print-wave?waveId=${wave.id}`
-            : `/ecommerce/monitoring-orders/print?waveId=${wave.id}`; // Mix wave prints all order labels
-        window.open(url, '_blank');
+     const handlePrintWave = async (wave: Wave) => {
+        if (wave.wave_type === 'Bulk') {
+            const url = `/ecommerce/monitoring-orders/print-wave?waveId=${wave.id}`;
+            window.open(url, '_blank');
+        } else {
+            // For Mix wave, fetch all order IDs and pass them
+            setIsPrinting(wave.id);
+            try {
+                const waveDetailsRes = await fetch(`/api/waves/${wave.id}`);
+                if (!waveDetailsRes.ok) throw new Error('Could not fetch wave details to print.');
+                const waveDetails = await waveDetailsRes.json();
+                const orderIds = waveDetails.orders.map((o: any) => o.id).join(',');
+                
+                if (!orderIds) {
+                    toast({ variant: 'destructive', title: 'No Orders', description: 'This wave has no orders to print.' });
+                    return;
+                }
+
+                const url = `/ecommerce/monitoring-orders/print?orderIds=${orderIds}`;
+                window.open(url, '_blank');
+            } catch (error: any) {
+                toast({ variant: 'destructive', title: 'Print Error', description: error.message });
+            } finally {
+                setIsPrinting(null);
+            }
+        }
     };
+
 
     const handlePrintOrder = (order: WaveOrder) => {
         const url = `/ecommerce/monitoring-orders/print?orderIds=${order.id}`;
