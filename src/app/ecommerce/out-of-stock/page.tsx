@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -17,11 +18,23 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Badge } from '@/components/ui/badge';
 import type { BatchProduct } from '@/types/batch-product';
 import { format } from 'date-fns';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
-const OosOrderItem = ({ order, allBatches, onSendToPacking, onReturnToProduct }: { order: Order, allBatches: BatchProduct[], onSendToPacking: (orderId: number) => void, onReturnToProduct: (order: Order) => void }) => {
+const OosOrderItem = ({ order, allBatches, onSendToPacking, onReturnToProduct }: { order: Order, allBatches: BatchProduct[], onSendToPacking: (order: Order, selectedBatchId: string) => void, onReturnToProduct: (order: Order) => void }) => {
+    const [selectedBatchId, setSelectedBatchId] = useState<string | undefined>();
+    
     const availableBatches = useMemo(() => {
         return allBatches.filter(b => b.sku === order.sku && b.stock > 0);
     }, [allBatches, order.sku]);
+
+    const handleSendClick = () => {
+        if (!selectedBatchId) {
+            alert('Please select a location to source the stock from.');
+            return;
+        }
+        onSendToPacking(order, selectedBatchId);
+    }
 
     return (
         <AccordionItem value={order.reference}>
@@ -46,17 +59,20 @@ const OosOrderItem = ({ order, allBatches, onSendToPacking, onReturnToProduct }:
                     <div>
                         <h4 className="font-semibold mb-2">Available Stock Locations</h4>
                         {availableBatches.length > 0 ? (
-                            <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                            <RadioGroup value={selectedBatchId} onValueChange={setSelectedBatchId} className="space-y-2 max-h-48 overflow-y-auto pr-2">
                                 {availableBatches.map(batch => (
-                                    <div key={batch.id} className="flex justify-between items-center p-2 rounded-md border bg-background">
-                                        <div>
-                                            <p className="font-mono text-sm">{batch.location}</p>
-                                            <p className="text-xs text-muted-foreground">EXP: {format(new Date(batch.exp_date), 'dd/MM/yyyy')}</p>
+                                    <Label key={batch.id} htmlFor={batch.id} className="flex justify-between items-center p-3 rounded-md border has-[:checked]:bg-blue-50 has-[:checked]:border-blue-400 cursor-pointer">
+                                        <div className="flex items-center gap-3">
+                                            <RadioGroupItem value={batch.id} id={batch.id} />
+                                            <div>
+                                                <p className="font-mono text-sm font-semibold">{batch.location}</p>
+                                                <p className="text-xs text-muted-foreground">EXP: {format(new Date(batch.exp_date), 'dd/MM/yyyy')}</p>
+                                            </div>
                                         </div>
-                                        <Badge variant="secondary">Stock: {batch.stock}</Badge>
-                                    </div>
+                                        <Badge variant={batch.stock >= order.qty ? "default" : "destructive"}>Stock: {batch.stock}</Badge>
+                                    </Label>
                                 ))}
-                            </div>
+                            </RadioGroup>
                         ) : (
                             <p className="text-sm text-muted-foreground italic">No other available stock found for this SKU.</p>
                         )}
@@ -70,7 +86,7 @@ const OosOrderItem = ({ order, allBatches, onSendToPacking, onReturnToProduct }:
                            <Button size="sm" variant="outline" onClick={() => onReturnToProduct(order)}>
                                 <Undo2 className="mr-2 h-4 w-4" /> Report to CS & Remove
                             </Button>
-                             <Button size="sm" variant="default" onClick={() => onSendToPacking(order.id)}>
+                             <Button size="sm" variant="default" onClick={handleSendClick} disabled={!selectedBatchId}>
                                 <Send className="mr-2 h-4 w-4" /> Send to Packing
                             </Button>
                         </div>
@@ -152,14 +168,31 @@ export default function OutOfStockManagementPage() {
     const handleNextPage = () => setCurrentPage((prev) => (prev < totalPages ? prev + 1 : prev));
     const handlePrevPage = () => setCurrentPage((prev) => (prev > 1 ? prev - 1 : prev));
     
-    const handleSendToPacking = async (orderId: number) => {
+    const handleSendToPacking = async (order: Order, selectedBatchId: string) => {
         if (!user || !canManage) return;
+
+        const selectedBatch = allBatches.find(b => b.id === selectedBatchId);
+
+        if (!selectedBatch) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Selected stock location not found.' });
+            return;
+        }
+
+        if (selectedBatch.stock < order.qty) {
+            toast({ variant: 'destructive', title: 'Insufficient Stock', description: `Stock at ${selectedBatch.location} is only ${selectedBatch.stock}, but order requires ${order.qty}.` });
+            return;
+        }
+
         setIsSubmitting(true);
         try {
-            const response = await fetch(`/api/manual-orders/${orderId}`, {
+            const response = await fetch(`/api/manual-orders/${order.id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: 'Payment Accepted', user })
+                body: JSON.stringify({ 
+                    status: 'Payment Accepted',
+                    location: selectedBatch.location, // Update the location
+                    user 
+                })
             });
 
             if (!response.ok) {
@@ -167,7 +200,7 @@ export default function OutOfStockManagementPage() {
                 throw new Error(errorData.error || 'Failed to update order status');
             }
             
-            toast({ title: "Success", description: "Order has been sent back to My Orders for packing." });
+            toast({ title: "Success", description: "Order has been sent back to My Orders for packing from the new location." });
             await fetchData();
 
         } catch (error: any) {
@@ -244,7 +277,7 @@ export default function OutOfStockManagementPage() {
                                        key={order.id} 
                                        order={order} 
                                        allBatches={allBatches}
-                                       onSendToPacking={() => handleSendToPacking(order.id)}
+                                       onSendToPacking={handleSendToPacking}
                                        onReturnToProduct={() => { setSelectedOrder(order); setReturnDialogOpen(true); }}
                                    />
                                ))}

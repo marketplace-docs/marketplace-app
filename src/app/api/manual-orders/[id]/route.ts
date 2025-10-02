@@ -60,6 +60,9 @@ export async function PATCH(request: Request, { params }: { params: { id: string
             details = `Order ${orderData.reference} marked as Out of Stock during picking.`;
         } else if (fieldsToUpdate.status === 'Payment Accepted') {
             details = `Order ${orderData.reference} sent back to packing queue from OOS.`;
+            if (fieldsToUpdate.location) {
+                details += ` New location assigned: ${fieldsToUpdate.location}`;
+            }
         }
     }
 
