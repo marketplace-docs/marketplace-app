@@ -26,89 +26,89 @@ const featureDescriptions: FeatureDescription[] = [
         icon: NAV_LINKS.find(l => l.label === "Admin Task")!.icon,
         description: "Modul untuk mengelola tugas-tugas administratif dan sumber daya manusia harian di gudang.",
         children: [
-            { label: "Create", description: "Membuat data manpower baru untuk pekerjaan spesifik." },
-            { label: "Monitoring Manpower", description: "Melihat, mengedit, dan menghapus data manpower yang telah dibuat. Hak akses disesuaikan per peran." },
-            { label: "Task", description: "Dasbor operasional yang menampilkan ringkasan semua tugas gudang yang tertunda (pending), seperti Putaway dan Cycle Count." },
+            { label: "Create", description: "Membuat data manpower baru untuk pekerjaan spesifik, seperti Leader, Putaway, Picker, Packer, dll." },
+            { label: "Monitoring Manpower", description: "Melihat, mengedit, dan menghapus data manpower yang telah dibuat. Dilengkapi fitur cetak dan hak akses yang disesuaikan per peran pengguna." },
+            { label: "Task", description: "Dasbor operasional yang menampilkan ringkasan semua tugas gudang yang tertunda (pending), seperti dokumen Putaway yang belum selesai dan tugas Cycle Count yang menunggu validasi." },
         ]
     },
-    {
+     {
         label: "Inbound",
         icon: NAV_LINKS.find(l => l.label === "Inbound")!.icon,
-        description: "Manajemen proses penerimaan barang dari supplier, memastikan data tercatat akurat sebelum masuk ke proses putaway.",
+        description: "Manajemen proses penerimaan barang dari supplier atau entitas eksternal lainnya, memastikan data tercatat akurat sebelum masuk ke gudang.",
         children: [
-            { label: "Create", description: "Membuat dokumen penerimaan (inbound) baru, mencari data produk via SKU/Barcode, dan menambahkan item ke dalam satu dokumen untuk diproses." },
-            { label: "Monitoring", description: "Memantau semua dokumen inbound dan melihat detail progres putaway untuk setiap item, termasuk durasi dan kuantitas yang sudah selesai." },
-            { label: "Task", description: "Menampilkan daftar tanggung jawab umum dan panduan kerja untuk tim Inbound." },
+            { label: "Create", description: "Membuat dokumen penerimaan (inbound) baru. Fitur ini memungkinkan pencarian data produk via SKU/Barcode untuk pengisian otomatis dan menambahkan beberapa item ke dalam satu dokumen." },
+            { label: "Monitoring", description: "Memantau semua dokumen inbound, melihat detail progres putaway untuk setiap item, termasuk durasi dan kuantitas yang sudah selesai ditempatkan di lokasi penyimpanan." },
+            { label: "Task", description: "Menampilkan daftar dokumen inbound yang statusnya masih 'Assign' dan memerlukan tindakan putaway segera." },
+            { label: "Transfer From Vendor", description: "Fitur khusus untuk mencatat penerimaan barang yang berasal dari transfer vendor, memisahkannya dari alur inbound reguler." },
         ]
     },
     {
         label: "Putaway",
         icon: NAV_LINKS.find(l => l.label === "Putaway")!.icon,
-        description: "Manajemen proses penempatan barang dari area penerimaan (staging) ke lokasi penyimpanan definitif di gudang.",
+        description: "Manajemen proses penempatan barang dari area penerimaan (staging) ke lokasi penyimpanan definitif di gudang. Alur kerja ini memastikan setiap barang tercatat di lokasi yang benar.",
         children: [
-            { label: "Go-Putaway", description: "Fitur untuk operator gudang. Scan dokumen inbound, verifikasi produk, lalu scan lokasi tujuan untuk menyelesaikan proses putaway secara akurat." },
-            { label: "Monitoring", description: "Melihat riwayat lengkap semua dokumen putaway yang telah selesai, termasuk detail pergerakan barang dari dokumen sumber ke lokasi tujuan." },
-            { label: "Update Expired", description: "Fitur khusus untuk memperbarui tanggal kedaluwarsa atau memindahkan sebagian stok (split) ke lokasi lain jika diperlukan." },
-            { label: "Task", description: "Menampilkan daftar dokumen putaway yang statusnya masih 'Pending' dan memerlukan tindakan segera." },
+            { label: "Go-Putaway", description: "Fitur untuk operator gudang. Scan dokumen inbound, verifikasi produk, lalu scan lokasi tujuan untuk menyelesaikan proses putaway secara akurat dan efisien." },
+            { label: "Monitoring", description: "Melihat riwayat lengkap semua dokumen putaway yang telah selesai, termasuk detail pergerakan barang dari dokumen sumber ke lokasi tujuan, serta siapa yang mengerjakannya." },
+             { label: "Task", description: "Menampilkan daftar tugas putaway yang statusnya masih 'Pending' dan memerlukan tindakan segera oleh operator." },
         ]
     },
     {
         label: "Return",
         icon: NAV_LINKS.find(l => l.label === "Return")!.icon,
-        description: "Mengelola proses pengembalian barang dari pelanggan atau ekspedisi.",
+        description: "Mengelola proses pengembalian barang dari pelanggan atau ekspedisi, memastikan setiap item retur terdokumentasi dengan baik.",
         children: [
-            { label: "Create", description: "Mencatat dokumen retur baru." },
-            { label: "Monitoring", description: "Melihat dan mengelola semua dokumen retur yang tercatat." },
-            { label: "Task", description: "Menampilkan daftar tanggung jawab umum untuk proses penanganan retur." },
+            { label: "Create", description: "Mencatat dokumen retur baru dengan detail lengkap seperti nomor dokumen, SKU, alasan retur, dan penerima." },
+            { label: "Monitoring", description: "Melihat, mengedit, dan menghapus semua dokumen retur yang tercatat. Dilengkapi fitur upload dan export massal via CSV." },
+            { label: "Task", description: "Menampilkan daftar tanggung jawab umum dan panduan kerja untuk tim yang menangani proses retur barang." },
         ]
     },
     {
         label: "Cycle Count",
         icon: NAV_LINKS.find(l => l.label === "Cycle Count")!.icon,
-        description: "Modul lengkap untuk manajemen stok opname (Cycle Count) dengan alur kerja terstruktur.",
+        description: "Modul lengkap untuk manajemen stock opname (Cycle Count) dengan alur kerja terstruktur untuk memastikan akurasi data stok.",
         children: [
-            { label: "Create", description: "Membuat tugas cycle count baru berdasarkan filter SKU, brand, lokasi, dll., lalu menugaskannya ke 'Person In Charge'." },
-            { label: "CC Location", description: "Fitur cepat untuk melakukan hitungan fisik langsung di sebuah lokasi. Hasilnya akan menjadi dokumen baru yang perlu divalidasi." },
-            { label: "Monitoring Cycle Count", description: "Memantau semua dokumen cycle count (Pending, In Progress, Completed). Dari sini, atasan dapat melakukan validasi hasil hitungan." },
-            { label: "Task", description: "Halaman khusus untuk 'penghitung' (counter) untuk melihat semua tugas cycle count yang ditugaskan kepada mereka." },
+            { label: "Create", description: "Membuat tugas cycle count baru berdasarkan filter SKU, brand, atau lokasi, lalu menugaskannya ke 'Person In Charge' dengan batas waktu." },
+            { label: "CC Location", description: "Fitur cepat untuk melakukan hitungan fisik langsung di sebuah lokasi. Hasilnya akan menjadi dokumen baru yang perlu divalidasi oleh atasan." },
+            { label: "Monitoring Cycle Count", description: "Memantau semua dokumen cycle count (Pending, In Progress, Completed). Dari sini, atasan dapat melihat detail hitungan dan melakukan validasi." },
+            { label: "Task", description: "Halaman khusus untuk 'penghitung' (counter) untuk melihat semua tugas cycle count yang ditugaskan kepada mereka dan yang statusnya masih aktif." },
         ]
     },
-    {
+     {
         label: "e-Commerce",
         icon: NAV_LINKS.find(l => l.label === "e-Commerce")!.icon,
-        description: "Mengelola seluruh alur kerja pesanan dari marketplace, mulai dari pesanan masuk hingga barang keluar dari gudang.",
+        description: "Mengelola seluruh alur kerja pesanan dari marketplace, mulai dari pesanan masuk, proses picking & packing, hingga barang keluar dari gudang.",
         children: [
-            { label: "My Orders", description: "Mengelola pesanan manual, mengunggah pesanan via CSV, dan membuat 'wave' (maks. 150 order) untuk diproses tim picker." },
-            { label: "Monitoring Orders", description: "Memantau status semua 'wave', melihat detail pesanan di dalamnya, membatalkan wave, dan mencetak picklist per-wave." },
-            { label: "Reprint-Label", description: "Fitur untuk mencetak ulang label pengiriman atau picklist jika terjadi kerusakan atau kehilangan." },
-            { label: "Go-Picker", description: "Alur kerja terpemandu untuk picker dengan validasi scan (order, lokasi, produk) untuk akurasi maksimal." },
-            { label: "Out of Stock", description: "Pusat manajemen untuk pesanan yang tidak dapat dipenuhi (OOS). Memungkinkan admin mengirim kembali pesanan ke antrian atau menghapusnya." },
-            { label: "Outbound", description: "Stasiun kerja untuk tim packer dengan validasi scan produk dan kemasan sebelum mencetak label pengiriman." },
-            { label: "Outbound Monitoring", description: "Melihat riwayat lengkap semua pesanan yang telah di-pick dan di-pack, termasuk siapa yang mengerjakan dan kapan." },
-            { label: "Dispatcher", description: "Stasiun kerja tim logistik. Memindai paket, menimbang berat, dan mengubah status menjadi 'Shipped' atau 'Delivered'." },
-            { label: "Shipment Monitoring", description: "Melihat riwayat semua paket yang telah dikirim (Shipped) atau telah sampai (Delivered)." },
-            { label: "Handover 3PL", description: "Fitur serah terima massal ke kurir (3PL). Scan banyak paket sekaligus untuk mengubah statusnya menjadi 'Delivered'." },
+            { label: "My Orders", description: "Pusat pengelolaan pesanan manual. Memungkinkan filter OOS, filter SKU sama, upload pesanan massal via CSV, dan yang terpenting, membuat 'wave' (maks. 150 order) untuk diproses tim picker." },
+            { label: "Monitoring Orders", description: "Memantau status semua 'wave' (progress, done), melihat detail pesanan di dalamnya, membatalkan wave (rollback otomatis), dan mencetak picklist per-wave." },
+            { label: "Reprint-Label", description: "Fitur khusus untuk mencetak ulang label pengiriman jika terjadi kerusakan atau kehilangan." },
+            { label: "Go-Picker", description: "Alur kerja terpemandu untuk picker dengan validasi scan (order, lokasi, produk) untuk akurasi maksimal dan mencegah kesalahan pengambilan barang." },
+            { label: "Out of Stock", description: "Pusat manajemen untuk pesanan yang tidak dapat dipenuhi (OOS). Memungkinkan admin mengirim pesanan langsung ke proses packing dari lokasi alternatif atau melaporkannya ke CS." },
+            { label: "Outbound", description: "Stasiun kerja untuk tim packer. Memvalidasi produk dan kemasan via scan sebelum mencetak label pengiriman, memastikan tidak ada barang yang tertukar." },
+             { label: "Outbound Monitoring", description: "Melihat riwayat lengkap semua pesanan yang telah di-pick dan di-pack, termasuk siapa yang mengerjakan dan kapan." },
+            { label: "Dispatcher", description: "Stasiun kerja tim logistik. Memindai paket, menimbang berat, dan mengubah status menjadi 'Shipped' atau 'Delivered' sebagai konfirmasi pengiriman." },
+             { label: "Shipment Monitoring", description: "Melihat riwayat semua paket yang telah dikirim (Shipped) atau telah sampai di tujuan (Delivered)." },
+             { label: "Handover 3PL", description: "Fitur serah terima massal ke kurir (3PL). Scan banyak paket sekaligus untuk mengubah statusnya menjadi 'Delivered' secara efisien." },
         ]
     },
      {
         label: "Batch Product",
         icon: NAV_LINKS.find(l => l.label === "Batch Product")!.icon,
-        description: "Pusat data untuk semua informasi terkait produk, stok, dan lokasi gudang.",
+        description: "Pusat data untuk semua informasi terkait produk, stok, dan lokasi gudang. Memberikan visibilitas penuh terhadap inventaris.",
         children: [
-            { label: "Product Stock", description: "Menampilkan data stok terkini yang diagregasi per batch (berdasarkan lokasi & tanggal kedaluwarsa)." },
-            { label: "Stock Log", description: "Menampilkan riwayat lengkap semua pergerakan stok (masuk, keluar, dan pembaruan internal)." },
-            { label: "Location", description: "Mengelola data master semua lokasi gudang. Mendukung penambahan massal via upload CSV." },
+            { label: "Product Stock", description: "Menampilkan data stok terkini yang diagregasi per batch (berdasarkan SKU, lokasi & tanggal kedaluwarsa). Dilengkapi fitur untuk mengatasi anomali stok negatif." },
+            { label: "Stock Log", description: "Menampilkan riwayat lengkap semua pergerakan stok (masuk, keluar, dan penyesuaian internal) dengan detail kuantitas sebelum dan sesudah transaksi." },
+            { label: "Location", description: "Mengelola data master semua lokasi gudang, termasuk tipe lokasi. Mendukung penambahan lokasi baru secara massal via upload CSV." },
         ]
     },
      {
         label: "Internal Transfer",
         icon: NAV_LINKS.find(l => l.label === "Internal Transfer")!.icon,
-        description: "Modul untuk memindahkan stok antar lokasi internal atau antara gudang dan entitas lain seperti B2B, B2C, dan Vendor.",
+        description: "Modul untuk memindahkan stok antar lokasi internal atau antara gudang dan entitas lain seperti B2B dan B2C.",
         children: [
-            { label: "Transfer From Warehouse", description: "Memindahkan stok dari satu lokasi penyimpanan ke lokasi lain di dalam gudang." },
-            { label: "Transfer From B2B", description: "Mentransfer stok yang dialokasikan untuk B2B ke lokasi lain." },
-            { label: "Transfer From B2C", description: "Mentransfer stok yang dialokasikan untuk B2C (jual umum) ke lokasi lain." },
-            { label: "Monitoring", description: "Melihat riwayat lengkap semua transaksi internal transfer yang pernah terjadi." },
+            { label: "Transfer From Warehouse", description: "Memindahkan stok dari satu lokasi penyimpanan ke lokasi lain di dalam gudang secara terstruktur." },
+            { label: "Transfer From B2B", description: "Mentransfer stok yang dialokasikan untuk B2B ke lokasi lain di gudang, misalnya untuk kebutuhan B2C." },
+            { label: "Transfer From B2C", description: "Mentransfer stok yang dialokasikan untuk B2C (jual umum) ke lokasi lain, misalnya untuk alokasi B2B." },
+            { label: "Monitoring", description: "Melihat riwayat lengkap semua transaksi internal transfer yang pernah terjadi, baik masuk maupun keluar." },
         ]
     },
     {
@@ -116,9 +116,9 @@ const featureDescriptions: FeatureDescription[] = [
         icon: NAV_LINKS.find(l => l.label === "Marketplace")!.icon,
         description: "Mengelola toko dan operasional yang terkait dengan platform marketplace.",
         children: [
-            { label: "Create", description: "Mendaftarkan toko marketplace baru." },
-            { label: "Monitoring Store", description: "Melihat dan mengelola daftar toko yang sudah ada." },
-            { label: "Task", description: "Menampilkan daftar tanggung jawab umum untuk operasional Marketplace." },
+            { label: "Create", description: "Mendaftarkan toko marketplace baru ke dalam sistem." },
+            { label: "Monitoring Store", description: "Melihat, mengedit, menghapus, serta mengelola daftar toko yang sudah ada, dengan fitur upload dan export massal." },
+            { label: "Task", description: "Menampilkan daftar tanggung jawab umum dan panduan kerja untuk tim operasional Marketplace." },
         ]
     },
     {
@@ -126,22 +126,21 @@ const featureDescriptions: FeatureDescription[] = [
         icon: NAV_LINKS.find(l => l.label === "Reports")!.icon,
         description: "Menyajikan laporan dan analisis data operasional untuk pengambilan keputusan.",
         children: [
-            { label: "Backlog", description: "Menampilkan data backlog pesanan dari berbagai marketplace, lengkap dengan visualisasi grafik." },
-            { label: "Daily Performance", description: "Melihat, menambah, dan mengelola laporan kinerja harian per individu." },
-            { label: "KPI Performance", description: "Menganalisis Key Performance Indicator (KPI) tim berdasarkan data kinerja harian." },
+            { label: "Backlog", description: "Menampilkan data backlog pesanan dari berbagai marketplace, lengkap dengan visualisasi grafik untuk analisis tren." },
+            { label: "Daily Performance", description: "Melihat, menambah, dan mengelola laporan kinerja harian per individu, dengan fitur upload dan edit massal." },
+            { label: "KPI Performance", description: "Menganalisis Key Performance Indicator (KPI) tim berdasarkan data kinerja harian yang sudah terinput, lengkap dengan visualisasi data." },
         ]
     },
     {
         label: "Database",
         icon: NAV_LINKS.find(l => l.label === "Database")!.icon,
-        description: "Modul untuk manajemen data master, pengguna, dan hak akses sistem.",
+        description: "Modul untuk manajemen data master, pengguna, dan hak akses sistem. Pusat kontrol untuk admin.",
         children: [
-             { label: "Master Product", description: "Mengelola data master produk, mendukung upload massal via CSV." },
+             { label: "Master Product", description: "Mengelola data induk produk, mendukung upload massal via CSV untuk efisiensi input data." },
             { label: "User Management", description: "Mengelola data pengguna, termasuk menambah, mengedit (Super Admin bisa mengubah Role), dan menghapus (hanya Super Admin)." },
-            { label: "Role", description: "Menampilkan daftar peran (role) yang ada di dalam sistem." },
-            { label: "Menu Permission", description: "Mengatur hak akses setiap pengguna terhadap menu-menu di aplikasi (hanya Super Admin)." },
-            { label: "Log Activity", description: "Melihat jejak audit dari semua aktivitas penting yang terjadi di sistem." },
-            { label: "DB Function", description: "Menampilkan daftar fungsi (RPC) yang ada di database untuk pemeliharaan." },
+            { label: "Role", description: "Menampilkan daftar peran (role) yang ada di dalam sistem beserta penjelasannya." },
+            { label: "Menu Permission", description: "Fitur eksklusif Super Admin untuk mengatur hak akses setiap pengguna terhadap menu-menu di aplikasi." },
+            { label: "Log Activity", description: "Melihat jejak audit dari semua aktivitas penting yang terjadi di sistem, seperti login, logout, create, update, dan delete data." },
         ]
     }
 ];
@@ -212,7 +211,7 @@ export default function AppDocumentationPage() {
                             {NAV_LINKS.map(link => (
                                 <div key={link.label}>
                                     <h3 className="font-semibold text-md mb-2 flex items-center gap-2">
-                                        <link.icon className="h-5 w-5 text-primary" />
+                                        {link.icon && <link.icon className="h-5 w-5 text-primary" />}
                                         {link.label}
                                     </h3>
                                     {link.children ? (
@@ -250,3 +249,5 @@ export default function AppDocumentationPage() {
         </MainLayout>
     );
 }
+
+    
