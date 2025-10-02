@@ -14,7 +14,6 @@ export const WavePickList: React.FC<{ wave: Wave }> = ({ wave }) => {
             fontFamily: 'sans-serif',
             display: 'flex',
             flexDirection: 'column',
-            justifyContent: 'center',
             alignItems: 'center',
             padding: '10mm',
             boxSizing: 'border-box',
@@ -31,7 +30,7 @@ export const WavePickList: React.FC<{ wave: Wave }> = ({ wave }) => {
                 <QRCode value={wave.wave_document_number} size={128} level="M" />
             </div>
 
-            <div style={{ marginBottom: '15px' }}>
+            <div>
                 <Barcode 
                     value={wave.wave_document_number} 
                     format="CODE128"
@@ -44,6 +43,10 @@ export const WavePickList: React.FC<{ wave: Wave }> = ({ wave }) => {
                     {wave.wave_document_number}
                 </p>
             </div>
+            
+            {/* This div will push everything above it up */}
+            <div style={{ flexGrow: 1 }}></div>
+
         </div>
     );
 };
