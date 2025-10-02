@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -44,12 +43,6 @@ export const WavePickList: React.FC<{ wave: Wave }> = ({ wave }) => {
                  <p style={{ fontSize: '14pt', fontWeight: 'bold', margin: '5px 0 0 0', letterSpacing: '2px' }}>
                     {wave.wave_document_number}
                 </p>
-            </div>
-            
-            <div style={{ marginTop: 'auto', borderTop: '2px dashed #ccc', paddingTop: '10px', width: '100%' }}>
-                <p style={{ fontSize: '9pt', margin: 0, fontWeight: 'bold' }}>PT Sociolla Ritel Indonesia</p>
-                <p style={{ fontSize: '9pt', margin: 0 }}>E-mail: cs@sociolla.com</p>
-                <p style={{ fontSize: '9pt', margin: 0 }}>Web: www.sociolla.com</p>
             </div>
         </div>
     );
