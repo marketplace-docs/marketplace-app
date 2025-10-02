@@ -119,6 +119,7 @@ const featureDescriptions: FeatureDescription[] = [
             { label: "Create", description: "Mendaftarkan toko marketplace baru ke dalam sistem." },
             { label: "Monitoring Store", description: "Melihat, mengedit, menghapus, serta mengelola daftar toko yang sudah ada, dengan fitur upload dan export massal." },
             { label: "Task", description: "Menampilkan daftar tanggung jawab umum dan panduan kerja untuk tim operasional Marketplace." },
+            { label: "Sync", description: "Menarik data pesanan secara otomatis dari platform terhubung (Shopee, Lazada, Tiktok) yang statusnya 'Siap Dikirim' dan memasukkannya ke antrian 'My Orders'." }
         ]
     },
     {
@@ -249,5 +250,3 @@ export default function AppDocumentationPage() {
         </MainLayout>
     );
 }
-
-    
