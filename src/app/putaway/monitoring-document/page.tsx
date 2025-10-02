@@ -46,6 +46,19 @@ const DocumentCard = ({ document: inboundDoc, allProductOutDocs }: { document: I
 
     const isDone = currentStatus === 'Done';
 
+    const doneAtTimestamp = useMemo(() => {
+        if (!isDone) return null;
+        const doneDate = relatedPutaways
+            .filter(pd => pd.status === 'Receipt - Putaway')
+            .reduce((latest, current) => {
+                const currentDate = new Date(current.date);
+                return currentDate > latest ? currentDate : latest;
+            }, new Date(0));
+
+        return doneDate > new Date(0) ? doneDate : null;
+    }, [isDone, relatedPutaways]);
+
+
     return (
         <Card className="overflow-hidden">
             <CardHeader className={cn(
@@ -64,7 +77,10 @@ const DocumentCard = ({ document: inboundDoc, allProductOutDocs }: { document: I
                     </div>
                     <div className="text-right text-xs text-muted-foreground">
                         <p className="font-medium text-gray-700">Worker: {inboundDoc.received_by}</p>
-                         <p>Received: {format(new Date(inboundDoc.date), 'dd/MM/yy HH:mm')}</p>
+                        <p>Received: {format(new Date(inboundDoc.date), 'dd/MM/yy HH:mm')}</p>
+                        {doneAtTimestamp && (
+                             <p>Done At: {format(doneAtTimestamp, 'dd/MM/yy HH:mm')}</p>
+                        )}
                     </div>
                 </div>
             </CardHeader>
