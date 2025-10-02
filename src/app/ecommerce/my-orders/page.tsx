@@ -76,6 +76,7 @@ export default function MyOrdersPage() {
     
     const [isOosMode, setIsOosMode] = useState(false);
     const [isBulkMode, setIsBulkMode] = useState(false);
+    const [isFilterOpen, setIsFilterOpen] = useState(true);
 
 
     const defaultNewOrderState: Partial<NewOrder> = {
@@ -477,9 +478,9 @@ export default function MyOrdersPage() {
                     <p className="text-sm text-muted-foreground">Only order with <span className="font-semibold text-primary">Payment accepted</span>, and <span className="font-semibold text-primary">Ready To Be Shipped</span> can be proceesed</p>
                 </div>
                 
-                <Accordion type="single" collapsible defaultValue='filter' className="w-full">
+                <Accordion type="single" collapsible value={isFilterOpen ? 'filter' : ''} onValueChange={(value) => setIsFilterOpen(value === 'filter')} className="w-full">
                     <AccordionItem value="filter" className="border rounded-lg">
-                        <AccordionTrigger className="p-4 bg-muted/50 rounded-t-lg hover:no-underline">
+                        <AccordionTrigger className="p-4 bg-muted/50 rounded-t-lg hover:no-underline" disabled={isFilterOpen}>
                             <div className='flex items-center gap-2'>
                                 <SlidersHorizontal className="h-5 w-5" />
                                 <span className="font-semibold">Filter</span>
@@ -541,7 +542,7 @@ export default function MyOrdersPage() {
                                 <div className="flex items-center space-x-2"><Switch id="ecobox" checked={filters.ecobox} onCheckedChange={(value) => handleFilterChange('ecobox', value)} /><Label htmlFor="ecobox">Ecobox</Label></div>
                             </div>
                             <div className="flex items-center justify-between mt-4">
-                                <div className="flex items-center space-x-2"><Switch id="always-open" defaultChecked /><Label htmlFor="always-open">Always open</Label></div>
+                                <div className="flex items-center space-x-2"><Switch id="always-open" checked={isFilterOpen} onCheckedChange={setIsFilterOpen} /><Label htmlFor="always-open">Always open</Label></div>
                                 <div className="flex gap-2">
                                     <Button variant="outline" onClick={handleReset}>RESET</Button>
                                     <Button onClick={handleSearch}><Search className="mr-2 h-4 w-4" /> SEARCH</Button>
@@ -900,7 +901,3 @@ export default function MyOrdersPage() {
         </MainLayout>
     );
 }
-
-
-
-    
