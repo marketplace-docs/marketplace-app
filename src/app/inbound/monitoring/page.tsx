@@ -32,7 +32,7 @@ const InboundDetailDialog = ({ document: initialDoc }: { document: InboundDocume
             .reduce((acc, doc) => acc + doc.qty, 0);
     }, [putawayDocs]);
     
-    const outstandingQty = initialDoc.qty - totalPutaway;
+    const outstandingQty = Math.max(0, initialDoc.qty - totalPutaway);
     
     const currentStatus = useMemo(() => {
         if (outstandingQty <= 0) return 'Done';
@@ -199,7 +199,7 @@ const InboundMonitoringTable = ({ data, loading, onStatusChange, onPrint }: { da
     }
     
     return (
-    <div className="border rounded-lg">
+    <div className="border rounded-lg" id="printable-content">
         <Table>
             <TableHeader>
                 <TableRow>
@@ -212,7 +212,7 @@ const InboundMonitoringTable = ({ data, loading, onStatusChange, onPrint }: { da
                     <TableHead>Received By</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Main Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="text-right actions-column">Actions</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -235,7 +235,7 @@ const InboundMonitoringTable = ({ data, loading, onStatusChange, onPrint }: { da
                         <TableCell>
                             <Badge variant={item.main_status === 'Done' ? 'default' : 'secondary'}>{item.main_status}</Badge>
                         </TableCell>
-                        <TableCell className="text-right flex items-center justify-end gap-1">
+                        <TableCell className="text-right flex items-center justify-end gap-1 actions-column">
                            <InboundDetailDialog document={item} />
                             <Button variant="ghost" size="icon" onClick={() => onPrint(item.id)}>
                                 <Printer className="h-4 w-4" />
@@ -353,6 +353,25 @@ export default function InboundMonitoringPage() {
                     </Card>
                 </div>
             </div>
+             <style jsx global>{`
+                @media print {
+                    body > *:not(#printable-content) {
+                        visibility: hidden;
+                    }
+                    #printable-content, #printable-content * {
+                        visibility: visible;
+                    }
+                    #printable-content {
+                        position: absolute;
+                        left: 0;
+                        top: 0;
+                        width: 100%;
+                    }
+                    .actions-column {
+                        display: none;
+                    }
+                }
+            `}</style>
         </MainLayout>
     );
 }
