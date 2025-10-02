@@ -1,11 +1,10 @@
 
-
 'use server';
 
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 import { logActivity } from '@/lib/logger';
-
+import { getAuthenticatedUser } from '@/lib/auth-service';
 
 // GET details of a specific wave (including its orders)
 export async function GET(request: Request, { params }: { params: { id: string } }) {
@@ -62,16 +61,12 @@ async function generateNewDocumentNumberForReturn(): Promise<string> {
 
 // DELETE a wave (now with rollback logic)
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
-    const { id } = params;
-    const user = {
-        name: request.headers.get('X-User-Name'),
-        email: request.headers.get('X-User-Email'),
-        role: request.headers.get('X-User-Role'),
-    };
-
-    if (!user?.role || !['Super Admin', 'Manager', 'Supervisor'].includes(user.role)) {
+    const user = await getAuthenticatedUser(request);
+    if (!user || !['Super Admin', 'Manager', 'Supervisor'].includes(user.role)) {
         return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
     }
+    
+    const { id } = params;
 
     try {
         // 1. Get all orders in the wave, including the extra data
@@ -162,14 +157,12 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
             throw new Error(deleteWaveError.message);
         }
 
-        if (user.name && user.email) {
-            await logActivity({
-                userName: user.name,
-                userEmail: user.email,
-                action: 'CANCEL_WAVE',
-                details: `Cancelled wave ID: ${id}. Returned ${waveOrders.length} orders to queue and reversed stock.`,
-            });
-        }
+        await logActivity({
+            userName: user.name,
+            userEmail: user.email,
+            action: 'CANCEL_WAVE',
+            details: `Cancelled wave ID: ${id}. Returned ${waveOrders.length} orders to queue and reversed stock.`,
+        });
         
         return NextResponse.json({ message: 'Wave cancelled successfully. Orders and stock have been rolled back.' }, { status: 200 });
 
@@ -180,13 +173,13 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
 
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
-  const { id } = params;
-  const body = await request.json();
-  const { action, status, user, orderId } = body;
-
-  if (!user?.role) {
+  const user = await getAuthenticatedUser(request);
+  if (!user) {
     return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
   }
+
+  const { id } = params;
+  const { action, status, orderId } = await request.json();
 
   // Handle marking an order as Out of Stock
   if (action === 'mark_oos') {

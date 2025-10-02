@@ -1,10 +1,10 @@
 
-
 'use server';
 
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 import { logActivity } from '@/lib/logger';
+import { getAuthenticatedUser } from '@/lib/auth-service';
 
 async function generateNewDocumentNumber(prefixBase: string): Promise<string> {
   const year = new Date().getFullYear();
@@ -34,12 +34,13 @@ async function generateNewDocumentNumber(prefixBase: string): Promise<string> {
 
 
 export async function POST(request: Request) {
-  try {
-    const { adjustments, user } = await request.json();
+  const user = await getAuthenticatedUser(request);
+  if (!user || !user.role) {
+    return NextResponse.json({ error: 'Forbidden: User authentication is required.' }, { status: 403 });
+  }
 
-    if (!user || !user.role) {
-      return NextResponse.json({ error: 'Forbidden: User authentication is required.' }, { status: 403 });
-    }
+  try {
+    const { adjustments } = await request.json();
 
     if (!Array.isArray(adjustments) || adjustments.length === 0) {
       return NextResponse.json({ error: 'No adjustments provided.' }, { status: 400 });
@@ -91,7 +92,6 @@ export async function POST(request: Request) {
       throw new Error('Failed to create adjustment documents in database.');
     }
 
-    // Log this important activity
     await logActivity({
       userName: user.name,
       userEmail: user.email,

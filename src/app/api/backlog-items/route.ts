@@ -2,6 +2,7 @@
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 import { logActivity } from '@/lib/logger';
+import { getAuthenticatedUser } from '@/lib/auth-service';
 
 const CREATE_ROLES = ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin', 'Staff'];
 
@@ -19,11 +20,12 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const { items, user } = await request.json();
-  
-  if (!user?.role || !CREATE_ROLES.includes(user.role)) {
+  const user = await getAuthenticatedUser(request);
+  if (!user || !CREATE_ROLES.includes(user.role)) {
     return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
   }
+  
+  const { items } = await request.json();
 
   if (!Array.isArray(items)) {
     return NextResponse.json({ error: 'Request body must be an array of backlog items.' }, { status: 400 });
@@ -44,14 +46,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  if (user && user.name && user.email) {
-    await logActivity({
-        userName: user.name,
-        userEmail: user.email,
-        action: 'CREATE',
-        details: `Bulk uploaded ${items.length} backlog items`,
-    });
-  }
+  await logActivity({
+      userName: user.name,
+      userEmail: user.email,
+      action: 'CREATE',
+      details: `Bulk uploaded ${items.length} backlog items`,
+  });
 
   return NextResponse.json(data, { status: 201 });
 }

@@ -1,8 +1,10 @@
+
 'use server';
 
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 import { logActivity } from '@/lib/logger';
+import { getAuthenticatedUser } from '@/lib/auth-service';
 
 const ALLOWED_ROLES = ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin'];
 const BATCH_SIZE = 1000; // Process 1000 rows at a time
@@ -24,19 +26,14 @@ export async function GET() {
 
 
 export async function POST(request: Request) {
-    const formData = await request.formData();
-    const file = formData.get('file') as File | null;
-    const userJson = formData.get('user') as string | null;
-
-    if (!userJson) {
-        return NextResponse.json({ error: 'User data is missing.' }, { status: 400 });
-    }
-    const user = JSON.parse(userJson);
-
-    if (!user?.role || !ALLOWED_ROLES.includes(user.role)) {
+    const user = await getAuthenticatedUser(request);
+    if (!user || !ALLOWED_ROLES.includes(user.role)) {
         return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
     }
 
+    const formData = await request.formData();
+    const file = formData.get('file') as File | null;
+    
     if (!file) {
         return NextResponse.json({ error: 'No file provided.' }, { status: 400 });
     }
@@ -112,4 +109,3 @@ export async function POST(request: Request) {
         errors: allErrors,
     });
 }
-    

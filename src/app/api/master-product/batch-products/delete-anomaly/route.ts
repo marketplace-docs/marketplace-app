@@ -5,6 +5,7 @@ import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 import { logActivity } from '@/lib/logger';
 import { format } from 'date-fns';
+import { getAuthenticatedUser } from '@/lib/auth-service';
 
 type BatchProduct = {
     id: string;
@@ -17,11 +18,12 @@ type BatchProduct = {
 };
 
 export async function POST(request: Request) {
-    const { batch, user } = await request.json();
-
+    const user = await getAuthenticatedUser(request);
     if (!user || user.role !== 'Super Admin') {
         return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
     }
+
+    const { batch } = await request.json();
 
     if (!batch || !batch.barcode || !batch.location || !batch.exp_date) {
         return NextResponse.json({ error: 'Invalid batch data provided.' }, { status: 400 });

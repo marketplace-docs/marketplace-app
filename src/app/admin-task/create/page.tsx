@@ -78,12 +78,7 @@ export default function CreateTaskPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-            ...newTask,
-            userName: user.name,
-            userEmail: user.email,
-            userRole: user.role,
-        }),
+        body: JSON.stringify(newTask),
       });
 
       if (!response.ok) {

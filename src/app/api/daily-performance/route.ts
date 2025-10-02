@@ -3,6 +3,7 @@ import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 import { format } from 'date-fns';
 import { logActivity } from '@/lib/logger';
+import { getAuthenticatedUser } from '@/lib/auth-service';
 
 const ALLOWED_ROLES = ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin', 'Staff'];
 
@@ -47,11 +48,12 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-    const { entries, user } = await request.json();
-
-    if (!user?.role || !ALLOWED_ROLES.includes(user.role)) {
+    const user = await getAuthenticatedUser(request);
+    if (!user || !ALLOWED_ROLES.includes(user.role)) {
         return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
     }
+
+    const { entries } = await request.json();
 
     if (!Array.isArray(entries)) {
         return NextResponse.json({ error: 'Request body must be an array of performance entries.' }, { status: 400 });
@@ -81,26 +83,25 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    if (user && user.name && user.email) {
-      await logActivity({
-        userName: user.name,
-        userEmail: user.email,
-        action: 'CREATE',
-        details: `Added ${entries.length} daily performance entries`,
-      });
-    }
+    await logActivity({
+      userName: user.name,
+      userEmail: user.email,
+      action: 'CREATE',
+      details: `Added ${entries.length} daily performance entries`,
+    });
 
     return NextResponse.json(data, { status: 201 });
 }
 
 
 export async function PATCH(request: Request) {
-    const { updates, user } = await request.json();
-
+    const user = await getAuthenticatedUser(request);
     const UPDATE_ROLES = ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin'];
-    if (!user?.role || !UPDATE_ROLES.includes(user.role)) {
+    if (!user || !UPDATE_ROLES.includes(user.role)) {
         return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
     }
+
+    const { updates } = await request.json();
 
     if (!Array.isArray(updates)) {
         return NextResponse.json({ error: 'Request body must be an array of updates.' }, { status: 400 });
@@ -136,15 +137,12 @@ export async function PATCH(request: Request) {
         return NextResponse.json({ error: `Failed to update ${errors.length} records.`, details: errors.map(e => e.error?.message) }, { status: 500 });
     }
 
-    if (user && user.name && user.email) {
-        await logActivity({
-            userName: user.name,
-            userEmail: user.email,
-            action: 'UPDATE',
-            details: `Updated ${updates.length} daily performance entries. IDs: ${updates.map(u => u.id).join(', ')}`,
-        });
-    }
-
+    await logActivity({
+        userName: user.name,
+        userEmail: user.email,
+        action: 'UPDATE',
+        details: `Updated ${updates.length} daily performance entries. IDs: ${updates.map(u => u.id).join(', ')}`,
+    });
 
     return NextResponse.json({ message: 'Performance data updated successfully.' });
 }

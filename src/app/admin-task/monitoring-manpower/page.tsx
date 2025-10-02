@@ -104,12 +104,7 @@ export default function MonitoringManpowerPage() {
       const response = await fetch(`/api/admin-tasks/${selectedTask.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            ...selectedTask,
-            userName: user.name,
-            userEmail: user.email,
-            userRole: user.role,
-        })
+        body: JSON.stringify(selectedTask)
       });
       if (!response.ok) throw new Error('Failed to update task');
       
@@ -130,11 +125,6 @@ export default function MonitoringManpowerPage() {
     try {
       const response = await fetch(`/api/admin-tasks/${selectedTask.id}`, {
         method: 'DELETE',
-        headers: {
-            'X-User-Name': user.name,
-            'X-User-Email': user.email,
-            'X-User-Role': user.role
-        }
       });
       if (!response.ok) throw new Error('Failed to delete task');
 
@@ -401,5 +391,3 @@ export default function MonitoringManpowerPage() {
     </MainLayout>
   );
 }
-
-    

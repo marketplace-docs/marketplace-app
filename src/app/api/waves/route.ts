@@ -1,11 +1,11 @@
 
-
 'use server';
 
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 import { logActivity } from '@/lib/logger';
 import { format } from 'date-fns';
+import { getAuthenticatedUser } from '@/lib/auth-service';
 
 async function generateWaveDocumentNumber(waveType: 'Bulk' | 'Mix'): Promise<string> {
     const year = new Date().getFullYear();
@@ -34,12 +34,14 @@ async function generateWaveDocumentNumber(waveType: 'Bulk' | 'Mix'): Promise<str
 }
 
 export async function POST(request: Request) {
+    const user = await getAuthenticatedUser(request);
+    if (!user || !user.role) {
+        return NextResponse.json({ error: 'Forbidden: You must be logged in.' }, { status: 403 });
+    }
+    
     try {
-        const { orderReferences, user, waveType } = await request.json();
+        const { orderReferences, waveType } = await request.json();
 
-        if (!user || !user.role) {
-            return NextResponse.json({ error: 'Forbidden: You must be logged in.' }, { status: 403 });
-        }
         if (!Array.isArray(orderReferences) || orderReferences.length === 0) {
             return NextResponse.json({ error: 'No orders selected for the wave.' }, { status: 400 });
         }

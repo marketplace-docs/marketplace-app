@@ -1,10 +1,10 @@
 
-
 'use server';
 
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 import { logActivity } from '@/lib/logger';
+import { getAuthenticatedUser } from '@/lib/auth-service';
 
 const ALLOWED_ROLES = ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin'];
 
@@ -23,11 +23,12 @@ export async function GET() {
 
 
 export async function POST(request: Request) {
-  const { document, items, user } = await request.json();
-
-  if (!user?.role || !ALLOWED_ROLES.includes(user.role)) {
+  const user = await getAuthenticatedUser(request);
+  if (!user || !ALLOWED_ROLES.includes(user.role)) {
     return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
   }
+  
+  const { document, items } = await request.json();
   
   if (!document || !Array.isArray(items) || items.length === 0) {
     return NextResponse.json({ error: 'Invalid document or items data provided.' }, { status: 400 });

@@ -2,15 +2,17 @@
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 import { logActivity } from '@/lib/logger';
+import { getAuthenticatedUser } from '@/lib/auth-service';
 
 const ALLOWED_ROLES = ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin', 'Staff'];
 
 export async function POST(request: Request) {
-    const { ids, user } = await request.json();
-
-    if (!user?.role || !ALLOWED_ROLES.includes(user.role)) {
+    const user = await getAuthenticatedUser(request);
+    if (!user || !ALLOWED_ROLES.includes(user.role)) {
         return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
     }
+
+    const { ids } = await request.json();
 
     if (!Array.isArray(ids) || ids.length === 0) {
         return NextResponse.json({ error: 'An array of order IDs is required.' }, { status: 400 });

@@ -4,6 +4,7 @@
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 import { logActivity } from '@/lib/logger';
+import { getAuthenticatedUser } from '@/lib/auth-service';
 
 const ALLOWED_ROLES = ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin'];
 
@@ -22,11 +23,12 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const { locations, user } = await request.json();
-  
-  if (!user?.role || !ALLOWED_ROLES.includes(user.role)) {
+  const user = await getAuthenticatedUser(request);
+  if (!user || !ALLOWED_ROLES.includes(user.role)) {
     return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
   }
+  
+  const { locations } = await request.json();
 
   if (!Array.isArray(locations) || locations.length === 0) {
     return NextResponse.json({ error: 'Request body must be an array of location objects.' }, { status: 400 });
@@ -50,14 +52,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  if (user && user.name && user.email) {
-    await logActivity({
-        userName: user.name,
-        userEmail: user.email,
-        action: 'CREATE',
-        details: `Created ${locations.length} new location(s): ${locations.map(l => l.name).join(', ')}`,
-    });
-  }
+  await logActivity({
+      userName: user.name,
+      userEmail: user.email,
+      action: 'CREATE',
+      details: `Created ${locations.length} new location(s): ${locations.map(l => l.name).join(', ')}`,
+  });
 
   return NextResponse.json(data, { status: 201 });
 }

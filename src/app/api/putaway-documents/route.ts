@@ -4,6 +4,7 @@
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 import { logActivity } from '@/lib/logger';
+import { getAuthenticatedUser } from '@/lib/auth-service';
 
 // This is no longer the main endpoint for creating putaway transactions, 
 // as that logic is now handled by the two-step process in Go-Putaway page 
@@ -31,12 +32,12 @@ export async function GET() {
 
 // POST is now primarily for manual overrides or legacy support.
 export async function POST(request: Request) {
-  const body = await request.json();
-  const { user, documents, ...singleDoc } = body;
-
-  if (!user?.role || !ALLOWED_ROLES.includes(user.role)) {
+  const user = await getAuthenticatedUser(request);
+  if (!user || !ALLOWED_ROLES.includes(user.role)) {
     return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
   }
+
+  const { documents, ...singleDoc } = await request.json();
 
   // Handle bulk upload from CSV - maintained for admin purposes
   if (Array.isArray(documents)) {
@@ -63,14 +64,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    if (user && user.name && user.email) {
-      await logActivity({
-        userName: user.name,
-        userEmail: user.email,
-        action: 'CREATE',
-        details: `Bulk uploaded ${documents.length} putaway documents`,
-      });
-    }
+    await logActivity({
+      userName: user.name,
+      userEmail: user.email,
+      action: 'CREATE',
+      details: `Bulk uploaded ${documents.length} putaway documents`,
+    });
     return NextResponse.json(data, { status: 201 });
   }
 
@@ -89,14 +88,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  if (user && user.name && user.email) {
-    await logActivity({
-        userName: user.name,
-        userEmail: user.email,
-        action: 'CREATE',
-        details: `Putaway Document: ${no_document}`,
-    });
-  }
+  await logActivity({
+      userName: user.name,
+      userEmail: user.email,
+      action: 'CREATE',
+      details: `Putaway Document: ${no_document}`,
+  });
 
   return NextResponse.json(data, { status: 201 });
 }

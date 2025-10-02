@@ -1,21 +1,21 @@
 
-
 'use server';
 
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 import { logActivity } from '@/lib/logger';
+import { getAuthenticatedUser } from '@/lib/auth-service';
 
 const ALLOWED_ROLES = ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin', 'Staff'];
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
-  const { id } = params;
-  const body = await request.json();
-  const { packer_name, shipping_status, weight, user } = body;
-
-  if (!user?.role || !ALLOWED_ROLES.includes(user.role)) {
+  const user = await getAuthenticatedUser(request);
+  if (!user || !ALLOWED_ROLES.includes(user.role)) {
     return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
   }
+
+  const { id } = params;
+  const { packer_name, shipping_status, weight } = await request.json();
 
   const updateData: { packer_name?: string; shipping_status?: string; weight?: number } = {};
   let logAction = 'UPDATE';

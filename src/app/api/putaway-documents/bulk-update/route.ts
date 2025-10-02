@@ -4,17 +4,18 @@
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 import { logActivity } from '@/lib/logger';
+import { getAuthenticatedUser } from '@/lib/auth-service';
 
 const UPDATE_ROLES = ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin'];
 
 export async function PATCH(request: Request) {
-  try {
-    const body = await request.json();
-    const { ids, status, userName, userEmail, userRole } = body;
+  const user = await getAuthenticatedUser(request);
+  if (!user || !UPDATE_ROLES.includes(user.role)) {
+    return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
+  }
 
-    if (!userRole || !UPDATE_ROLES.includes(userRole)) {
-      return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
-    }
+  try {
+    const { ids, status } = await request.json();
 
     if (!Array.isArray(ids) || ids.length === 0 || !status) {
       return NextResponse.json({ error: 'Document IDs and status are required.' }, { status: 400 });
@@ -31,14 +32,12 @@ export async function PATCH(request: Request) {
       throw new Error(error.message);
     }
     
-    if (userName && userEmail) {
-        await logActivity({
-            userName,
-            userEmail,
-            action: 'BULK_UPDATE',
-            details: `Updated status to "${status}" for ${ids.length} putaway document(s). IDs: ${ids.join(', ')}`,
-        });
-    }
+    await logActivity({
+        userName: user.name,
+        userEmail: user.email,
+        action: 'BULK_UPDATE',
+        details: `Updated status to "${status}" for ${ids.length} putaway document(s). IDs: ${ids.join(', ')}`,
+    });
 
     return NextResponse.json({ message: 'Documents updated successfully', data });
   } catch (error: any) {

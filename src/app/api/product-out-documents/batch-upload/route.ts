@@ -1,11 +1,11 @@
 
-
 'use server';
 
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 import { logActivity } from '@/lib/logger';
 import { format } from 'date-fns';
+import { getAuthenticatedUser } from '@/lib/auth-service';
 
 type ProductOutStatus =
     | 'Issue - Order'
@@ -104,12 +104,16 @@ async function generateNewDocumentNumber(status: ProductOutStatus): Promise<stri
 }
 
 export async function POST(request: Request) {
+    const user = await getAuthenticatedUser(request);
+    if (!user) {
+        return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+    
     try {
-        // This API now only handles JSON, not FormData
-        const { documents, user } = await request.json();
+        const { documents } = await request.json();
         
-        if (!documents || !Array.isArray(documents) || !user) {
-            return NextResponse.json({ error: 'Invalid request body. Expects { documents: [], user: {} }' }, { status: 400 });
+        if (!documents || !Array.isArray(documents)) {
+            return NextResponse.json({ error: 'Invalid request body. Expects { documents: [] }' }, { status: 400 });
         }
 
         const failedRows: { document: any, reason: string }[] = [];

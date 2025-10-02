@@ -4,6 +4,7 @@
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 import { logActivity } from '@/lib/logger';
+import { getAuthenticatedUser } from '@/lib/auth-service';
 
 const ALLOWED_ROLES = ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin', 'Staff'];
 
@@ -78,12 +79,12 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const body = await request.json();
-  const { user, documents } = body;
-
-  if (!user?.role || !ALLOWED_ROLES.includes(user.role)) {
+  const user = await getAuthenticatedUser(request);
+  if (!user || !ALLOWED_ROLES.includes(user.role)) {
     return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
   }
+
+  const { documents } = await request.json();
 
   if (!Array.isArray(documents)) {
     return NextResponse.json({ error: 'Request body must be an array of documents.' }, { status: 400 });
@@ -132,14 +133,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  if (user && user.name && user.email) {
-    await logActivity({
-        userName: user.name,
-        userEmail: user.email,
-        action: 'CREATE',
-        details: `Created ${documents.length} Product Out Document(s)`,
-    });
-  }
+  await logActivity({
+      userName: user.name,
+      userEmail: user.email,
+      action: 'CREATE',
+      details: `Created ${documents.length} Product Out Document(s)`,
+  });
 
   return NextResponse.json(data, { status: 201 });
 }
@@ -165,4 +164,3 @@ type ProductOutStatus =
     | 'Receipt'
     | 'Receipt - Inbound'
     | 'Adjusment - Loc'; // Keep for backwards compatibility if needed
-    

@@ -1,9 +1,11 @@
+
 'use server';
 
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 import { logActivity } from '@/lib/logger';
 import { format } from 'date-fns';
+import { getAuthenticatedUser } from '@/lib/auth-service';
 
 const ROLES = {
   SUPER_ADMIN: 'Super Admin',
@@ -45,13 +47,13 @@ async function generateNewDocumentNumber(): Promise<string> {
 }
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
-  // The `id` from params is now potentially misleading. The true ID is in the body.
-  const body = await request.json();
-  const { userName, userEmail, userRole } = body;
-
-  if (!userRole || !UPDATE_ROLES.includes(userRole)) {
+  const user = await getAuthenticatedUser(request);
+  if (!user || !UPDATE_ROLES.includes(user.role)) {
     return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
   }
+
+  // The `id` from params is now potentially misleading. The true ID is in the body.
+  const body = await request.json();
 
   // Check for the new stock splitting/updating logic
   if (body.originalDoc && body.update) {
@@ -95,20 +97,18 @@ export async function PATCH(request: Request, { params }: { params: { id: string
         return NextResponse.json({ error: "Failed to update document: " + error.message }, { status: 500 });
       }
 
-      if (userName && userEmail) {
-        const logDetails = [];
-        const oldExpFormatted = format(new Date(originalExpDate), 'dd/MM/yyyy');
-        const newExpFormatted = format(new Date(newExpDate), 'dd/MM/yyyy');
-        if (newLocation !== originalLocation) logDetails.push(`location from "${originalLocation}" to "${newLocation}"`);
-        if (newExpFormatted !== oldExpFormatted) logDetails.push(`exp date from ${oldExpFormatted} to ${newExpFormatted}`);
-        
-        await logActivity({
-          userName,
-          userEmail,
-          action: 'UPDATE_BATCH',
-          details: `Updated ${originalQty} items for Doc ID ${originalDocId}. ${logDetails.join(' & ')}.`,
-        });
-      }
+      const logDetails = [];
+      const oldExpFormatted = format(new Date(originalExpDate), 'dd/MM/yyyy');
+      const newExpFormatted = format(new Date(newExpDate), 'dd/MM/yyyy');
+      if (newLocation !== originalLocation) logDetails.push(`location from "${originalLocation}" to "${newLocation}"`);
+      if (newExpFormatted !== oldExpFormatted) logDetails.push(`exp date from ${oldExpFormatted} to ${newExpFormatted}`);
+      
+      await logActivity({
+        userName: user.name,
+        userEmail: user.email,
+        action: 'UPDATE_BATCH',
+        details: `Updated ${originalQty} items for Doc ID ${originalDocId}. ${logDetails.join(' & ')}.`,
+      });
 
       return NextResponse.json(data);
     }
@@ -144,7 +144,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
         brand: originalDoc.brand,
         exp_date: newExpDate, // Use the new expiration date
         location: newLocation, // Use the new location
-        check_by: userName,
+        check_by: user.name,
       })
       .select()
       .single();
@@ -156,28 +156,25 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       return NextResponse.json({ error: "Failed to create new split document: " + insertError.message }, { status: 500 });
     }
     
-    if (userName && userEmail) {
-        const logDetails = [];
-        const oldExpFormatted = format(new Date(originalExpDate), 'dd/MM/yyyy');
-        const newExpFormatted = format(new Date(newExpDate), 'dd/MM/yyyy');
+    const logDetails = [];
+    const oldExpFormatted = format(new Date(originalExpDate), 'dd/MM/yyyy');
+    const newExpFormatted = format(new Date(newExpDate), 'dd/MM/yyyy');
 
-        if (newLocation !== originalLocation) {
-            logDetails.push(`location to "${newLocation}"`);
-        }
-        if (newExpFormatted !== oldExpFormatted) {
-            logDetails.push(`exp date to ${newExpFormatted}`);
-        }
-
-        const detailsString = logDetails.length > 0 ? logDetails.join(' & ') : "No changes in location or exp date";
-
-        await logActivity({
-            userName,
-            userEmail,
-            action: 'SPLIT_BATCH',
-            details: `Split ${qtyToUpdate} items from Doc ID ${originalDocId}. New Doc: ${newDocNumber}. Changes: ${detailsString}.`,
-        });
+    if (newLocation !== originalLocation) {
+        logDetails.push(`location to "${newLocation}"`);
+    }
+    if (newExpFormatted !== oldExpFormatted) {
+        logDetails.push(`exp date to ${newExpFormatted}`);
     }
 
+    const detailsString = logDetails.length > 0 ? logDetails.join(' & ') : "No changes in location or exp date";
+
+    await logActivity({
+        userName: user.name,
+        userEmail: user.email,
+        action: 'SPLIT_BATCH',
+        details: `Split ${qtyToUpdate} items from Doc ID ${originalDocId}. New Doc: ${newDocNumber}. Changes: ${detailsString}.`,
+    });
 
     return NextResponse.json({ message: 'Stock split successful', newDocument: newDoc });
 
@@ -198,30 +195,24 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    if (userName && userEmail) {
-      await logActivity({
-          userName,
-          userEmail,
-          action: 'UPDATE',
-          details: `Putaway Document ID: ${id}`,
-      });
-    }
+    await logActivity({
+        userName: user.name,
+        userEmail: user.email,
+        action: 'UPDATE',
+        details: `Putaway Document ID: ${id}`,
+    });
 
     return NextResponse.json(data);
   }
 }
 
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
-  const { id } = params;
-  const user = {
-      name: request.headers.get('X-User-Name'),
-      email: request.headers.get('X-User-Email'),
-      role: request.headers.get('X-User-Role')
-  };
-
-  if (!user.role || !DELETE_ROLES.includes(user.role)) {
+  const user = await getAuthenticatedUser(request);
+  if (!user || !DELETE_ROLES.includes(user.role)) {
     return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
   }
+  
+  const { id } = params;
 
   const { error } = await supabaseService
     .from('putaway_documents')
@@ -233,14 +224,12 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  if (user.name && user.email) {
-    await logActivity({
-        userName: user.name,
-        userEmail: user.email,
-        action: 'DELETE',
-        details: `Putaway Document ID: ${id}`,
-    });
-  }
+  await logActivity({
+      userName: user.name,
+      userEmail: user.email,
+      action: 'DELETE',
+      details: `Putaway Document ID: ${id}`,
+  });
 
   return NextResponse.json({ message: 'Document deleted successfully' }, { status: 200 });
 }

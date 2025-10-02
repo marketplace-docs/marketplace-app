@@ -1,8 +1,8 @@
 
-
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 import { logActivity } from '@/lib/logger';
+import { getAuthenticatedUser } from '@/lib/auth-service';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -39,14 +39,17 @@ export async function GET(request: Request) {
 
 
 export async function POST(request: Request) {
+    const user = await getAuthenticatedUser(request);
+    if (!user) {
+        return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
+    }
+
     const contentType = request.headers.get('content-type');
 
     // Handle JSON body for single/manual add
     if (contentType && contentType.includes('application/json')) {
-      const { ordersToInsert, user } = await request.json();
-        if (!user) {
-          return NextResponse.json({ error: 'User data is missing.' }, { status: 400 });
-        }
+      const { ordersToInsert } = await request.json();
+        
         const { data, error } = await supabaseService
             .from('manual_orders')
             .insert(ordersToInsert)
@@ -69,18 +72,12 @@ export async function POST(request: Request) {
     // Handle FormData for bulk upload from CSV
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
-    const userJson = formData.get('user') as string | null;
-
-    if (!userJson) {
-        return NextResponse.json({ error: 'User data is missing.' }, { status: 400 });
-    }
-    const user = JSON.parse(userJson);
 
     if (!file) {
         return NextResponse.json({ error: 'No file provided.' }, { status: 400 });
     }
     
-    if (!user?.role) {
+    if (!user.role) {
         return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
     }
 

@@ -2,6 +2,7 @@
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 import { logActivity } from '@/lib/logger';
+import { getAuthenticatedUser } from '@/lib/auth-service';
 
 const ADD_USER_ROLES = ['Super Admin', 'Manager', 'Supervisor', 'Captain', 'Admin', 'Staff'];
 
@@ -19,18 +20,22 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const body = await request.json();
-  const { name, email, role, status, userName, userEmail, userRole } = body;
-
-  if (!userRole || !ADD_USER_ROLES.includes(userRole)) {
+  const user = await getAuthenticatedUser(request);
+  if (!user || !ADD_USER_ROLES.includes(user.role)) {
     return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
   }
 
-  const user = { name: userName, email: userEmail };
+  const { name, email, role, status } = await request.json();
 
   if (!name || !email || !role || !status) {
     return NextResponse.json({ error: 'All fields are required' }, { status: 400 });
   }
+  
+  // Only Super Admin can create other admins
+  if (role !== 'Staff' && user.role !== 'Super Admin') {
+    return NextResponse.json({ error: 'Forbidden: You can only create Staff users.' }, { status: 403 });
+  }
+
 
   const { data, error } = await supabaseService
     .from('users')
@@ -45,14 +50,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
   
-  if (user.name && user.email) {
-      await logActivity({
-          userName: user.name,
-          userEmail: user.email,
-          action: 'CREATE',
-          details: `User: ${email} (Role: ${role})`,
-      });
-  }
+  await logActivity({
+      userName: user.name,
+      userEmail: user.email,
+      action: 'CREATE',
+      details: `User: ${email} (Role: ${role})`,
+  });
 
   return NextResponse.json(data, { status: 201 });
 }

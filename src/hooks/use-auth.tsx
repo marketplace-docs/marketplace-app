@@ -152,34 +152,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (storedUser?.id) {
             try {
-                const response = await fetch(`/api/users`);
-                 if (!response.ok) {
-                    throw new Error("Failed to re-validate session.");
+                // Re-validate user session against the server
+                const headers = new Headers();
+                headers.append('X-User-Email', storedUser.email);
+                
+                const response = await fetch(`/api/users/${storedUser.id}`, {
+                    headers: headers
+                });
+
+                if (!response.ok) {
+                   const errorData = await response.json();
+                   if (errorData.error === 'Forbidden') { // Our new error
+                       throw new Error("Session check failed, user does not exist or invalid.");
+                   }
                 }
-                const allUsers: User[] = await response.json();
-                const validUser = allUsers.find(u => u.id === storedUser!.id);
+                const validUser: User = await response.json();
 
                 if (validUser) {
                     setUser(validUser);
                     const userPermissions = await fetchPermissions(validUser.id);
                     setPermissions(userPermissions);
                 } else {
-                    setUser(null);
-                    setPermissions(null);
-                    localStorage.removeItem('user');
+                    await logout();
                 }
             } catch(e) {
                  console.error("Session re-validation failed:", e);
-                 setUser(null);
-                 setPermissions(null);
-                 localStorage.removeItem('user');
+                 await logout();
             }
         }
         
         setLoading(false);
     };
     initializeAuth();
-  }, [fetchPermissions]);
+  }, [fetchPermissions, logout]);
 
   const login = async (credentials: { email: string; password?: string }): Promise<boolean> => {
     try {

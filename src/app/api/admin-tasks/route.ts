@@ -2,6 +2,7 @@
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 import { logActivity } from '@/lib/logger';
+import { getAuthenticatedUser } from '@/lib/auth-service';
 
 // Role-based access control rules
 const ROLES = {
@@ -30,14 +31,12 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const body = await request.json();
-  const { name, job, shift, status, userName, userEmail, userRole } = body;
-  
-  if (!userRole || !CREATE_ROLES.includes(userRole)) {
+  const user = await getAuthenticatedUser(request);
+  if (!user || !CREATE_ROLES.includes(user.role)) {
     return NextResponse.json({ error: 'Forbidden: You do not have permission to perform this action.' }, { status: 403 });
   }
-
-  const user = { name: userName, email: userEmail }; // Assuming user info is passed in body
+  
+  const { name, job, shift, status } = await request.json();
 
   const { data, error } = await supabaseService
     .from('admin_tasks')
@@ -49,15 +48,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  if (user.name && user.email) {
-    await logActivity({
-        userName: user.name,
-        userEmail: user.email,
-        action: 'CREATE',
-        details: `Admin Task: ${name} (Job: ${job})`,
-    });
-  }
-
+  await logActivity({
+      userName: user.name,
+      userEmail: user.email,
+      action: 'CREATE',
+      details: `Admin Task: ${name} (Job: ${job})`,
+  });
 
   return NextResponse.json(data, { status: 201 });
 }

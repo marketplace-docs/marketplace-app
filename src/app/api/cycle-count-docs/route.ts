@@ -1,18 +1,21 @@
+
 'use server';
 
 import { supabaseService } from '@/lib/supabase-service';
 import { NextResponse } from 'next/server';
 import { logActivity } from '@/lib/logger';
+import { getAuthenticatedUser } from '@/lib/auth-service';
 
 const ALLOWED_ROLES = ['Super Admin', 'Manager', 'Supervisor'];
 
 export async function POST(request: Request) {
+  const user = await getAuthenticatedUser(request);
+  if (!user || !ALLOWED_ROLES.includes(user.role)) {
+    return NextResponse.json({ error: 'Forbidden: You do not have permission.' }, { status: 403 });
+  }
+  
   try {
-    const { document, user } = await request.json();
-
-    if (!user?.role || !ALLOWED_ROLES.includes(user.role)) {
-      return NextResponse.json({ error: 'Forbidden: You do not have permission.' }, { status: 403 });
-    }
+    const { document } = await request.json();
 
     const docToInsert = {
       no_doc: document.no_doc,
@@ -35,14 +38,12 @@ export async function POST(request: Request) {
       throw new Error(error.message);
     }
     
-    if (user.name && user.email) {
-      await logActivity({
-          userName: user.name,
-          userEmail: user.email,
-          action: 'CREATE',
-          details: `Cycle Count Document: ${data.no_doc}`,
-      });
-    }
+    await logActivity({
+        userName: user.name,
+        userEmail: user.email,
+        action: 'CREATE',
+        details: `Cycle Count Document: ${data.no_doc}`,
+    });
 
     return NextResponse.json(data, { status: 201 });
 
