@@ -1,23 +1,89 @@
 
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
-import { Loader2, ChevronLeft, ChevronRight, PackageSearch, AlertCircle, Send, Undo2 } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight, PackageSearch, AlertCircle, Send, Undo2, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import type { Order } from '@/types/order';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Badge } from '@/components/ui/badge';
+import type { BatchProduct } from '@/types/batch-product';
+import { format } from 'date-fns';
+
+const OosOrderItem = ({ order, allBatches, onSendToPacking, onReturnToProduct }: { order: Order, allBatches: BatchProduct[], onSendToPacking: (orderId: number) => void, onReturnToProduct: (order: Order) => void }) => {
+    const availableBatches = useMemo(() => {
+        return allBatches.filter(b => b.sku === order.sku && b.stock > 0);
+    }, [allBatches, order.sku]);
+
+    return (
+        <AccordionItem value={order.reference}>
+            <AccordionTrigger className="p-4 hover:no-underline hover:bg-muted/50 rounded-t-lg">
+                <div className="flex justify-between items-center w-full">
+                    <div className="flex-1 text-left">
+                        <p className="font-mono font-bold text-primary text-lg"># {order.reference}</p>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                            <span>[{order.sku}]</span>
+                            <span>{order.barcode}</span>
+                            <Badge variant="destructive">OOS</Badge>
+                        </div>
+                    </div>
+                     <div className="text-right text-xs text-muted-foreground flex-shrink-0">
+                        <p>{format(new Date(order.order_date), 'EEE, dd/MMM/yyyy HH:mm')}</p>
+                        <p>Qty: <span className="font-bold">{order.qty}</span></p>
+                    </div>
+                </div>
+            </AccordionTrigger>
+            <AccordionContent className="p-4 border-t">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h4 className="font-semibold mb-2">Available Stock Locations</h4>
+                        {availableBatches.length > 0 ? (
+                            <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                                {availableBatches.map(batch => (
+                                    <div key={batch.id} className="flex justify-between items-center p-2 rounded-md border bg-background">
+                                        <div>
+                                            <p className="font-mono text-sm">{batch.location}</p>
+                                            <p className="text-xs text-muted-foreground">EXP: {format(new Date(batch.exp_date), 'dd/MM/yyyy')}</p>
+                                        </div>
+                                        <Badge variant="secondary">Stock: {batch.stock}</Badge>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-sm text-muted-foreground italic">No other available stock found for this SKU.</p>
+                        )}
+                    </div>
+                    <div className="flex flex-col justify-between items-end">
+                         <div className="flex items-center gap-2">
+                            <Input type="number" defaultValue={0} readOnly className="w-20 text-center font-bold" />
+                            <span>/ {order.qty}</span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-4">
+                           <Button size="sm" variant="outline" onClick={() => onReturnToProduct(order)}>
+                                <Undo2 className="mr-2 h-4 w-4" /> Report to CS & Remove
+                            </Button>
+                             <Button size="sm" variant="default" onClick={() => onSendToPacking(order.id)}>
+                                <Send className="mr-2 h-4 w-4" /> Send to Packing
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </AccordionContent>
+        </AccordionItem>
+    )
+}
 
 export default function OutOfStockManagementPage() {
     const [oosOrders, setOosOrders] = useState<Order[]>([]);
+    const [allBatches, setAllBatches] = useState<BatchProduct[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -33,17 +99,27 @@ export default function OutOfStockManagementPage() {
 
     const canManage = user?.role && ['Super Admin', 'Manager', 'Supervisor'].includes(user.role);
 
-    const fetchOosOrders = useCallback(async () => {
+    const fetchData = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch('/api/manual-orders?status=Out of Stock');
-            if (!response.ok) {
-                const errorData = await response.json();
+            const [oosRes, batchesRes] = await Promise.all([
+                 fetch('/api/manual-orders?status=Out of Stock'),
+                 fetch('/api/master-product/batch-products')
+            ]);
+            
+            if (!oosRes.ok) {
+                const errorData = await oosRes.json();
                 throw new Error(errorData.error || 'Failed to fetch Out of Stock orders');
             }
-            const data: Order[] = await response.json();
-            setOosOrders(data);
+             if (!batchesRes.ok) throw new Error('Failed to fetch batch products.');
+            
+            const oosData: Order[] = await oosRes.json();
+            const batchesData: BatchProduct[] = await batchesRes.json();
+            
+            setOosOrders(oosData);
+            setAllBatches(batchesData);
+
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -52,8 +128,8 @@ export default function OutOfStockManagementPage() {
     }, []);
 
     useEffect(() => {
-        fetchOosOrders();
-    }, [fetchOosOrders]);
+        fetchData();
+    }, [fetchData]);
 
     const filteredData = useMemo(() => {
         return oosOrders.filter(order =>
@@ -92,7 +168,7 @@ export default function OutOfStockManagementPage() {
             }
             
             toast({ title: "Success", description: "Order has been sent back to My Orders for packing." });
-            await fetchOosOrders();
+            await fetchData();
 
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Action Failed', description: error.message });
@@ -121,7 +197,7 @@ export default function OutOfStockManagementPage() {
 
             toast({ title: "Order Removed", description: "The out of stock order has been removed.", variant: 'destructive' });
             setReturnDialogOpen(false);
-            await fetchOosOrders();
+            await fetchData();
 
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Action Failed', description: error.message });
@@ -158,59 +234,29 @@ export default function OutOfStockManagementPage() {
                             </div>
                         </div>
                     </CardHeader>
-                    <CardContent>
-                       <div className="border rounded-lg">
-                           <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Order Reference</TableHead>
-                                        <TableHead>SKU</TableHead>
-                                        <TableHead>Last Location</TableHead>
-                                        <TableHead>Qty</TableHead>
-                                        {canManage && <TableHead className="text-right">Actions</TableHead>}
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {loading ? (
-                                        <TableRow>
-                                            <TableCell colSpan={canManage ? 5 : 4} className="h-24 text-center">
-                                                <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
-                                            </TableCell>
-                                        </TableRow>
-                                    ) : paginatedData.length > 0 ? (
-                                        paginatedData.map((order) => (
-                                            <TableRow key={order.id}>
-                                                <TableCell className="font-medium">{order.reference}</TableCell>
-                                                <TableCell>{order.sku}</TableCell>
-                                                <TableCell>{order.location}</TableCell>
-                                                <TableCell>{order.qty}</TableCell>
-                                                {canManage && (
-                                                    <TableCell className="text-right">
-                                                        <div className="flex items-center justify-end gap-2">
-                                                            <Button size="sm" variant="outline" onClick={() => handleSendToPacking(order.id)} disabled={isSubmitting}>
-                                                                <Send className="mr-2 h-4 w-4" /> Send to Packing
-                                                            </Button>
-                                                            <Button size="sm" variant="destructive" onClick={() => { setSelectedOrder(order); setReturnDialogOpen(true); }} disabled={isSubmitting}>
-                                                                <Undo2 className="mr-2 h-4 w-4" /> Return to Product
-                                                            </Button>
-                                                        </div>
-                                                    </TableCell>
-                                                )}
-                                            </TableRow>
-                                        ))
-                                    ) : (
-                                        <TableRow>
-                                            <TableCell colSpan={canManage ? 5 : 4} className="h-24 text-center">
-                                                <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
-                                                     <PackageSearch className="h-8 w-8" />
-                                                     <span>No out-of-stock orders found.</span>
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                       </div>
+                    <CardContent className="space-y-4">
+                       {loading ? (
+                           <div className="flex justify-center items-center h-64"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
+                       ) : paginatedData.length > 0 ? (
+                           <Accordion type="single" collapsible className="w-full space-y-4">
+                               {paginatedData.map((order) => (
+                                   <OosOrderItem 
+                                       key={order.id} 
+                                       order={order} 
+                                       allBatches={allBatches}
+                                       onSendToPacking={() => handleSendToPacking(order.id)}
+                                       onReturnToProduct={() => { setSelectedOrder(order); setReturnDialogOpen(true); }}
+                                   />
+                               ))}
+                           </Accordion>
+                       ) : (
+                           <div className="flex flex-col items-center justify-center h-48 text-center text-muted-foreground">
+                                <PackageSearch className="h-12 w-12 mb-4" />
+                                <h3 className="text-xl font-semibold">All Clear!</h3>
+                                <p>No out-of-stock orders found.</p>
+                            </div>
+                       )}
+
                         <div className="flex items-center justify-end space-x-2 py-4">
                             <div className="flex-1 text-sm text-muted-foreground">
                                 Page {filteredData.length > 0 ? currentPage : 0} of {totalPages}
@@ -220,7 +266,7 @@ export default function OutOfStockManagementPage() {
                                 <Select value={`${rowsPerPage}`} onValueChange={(value) => { setRowsPerPage(Number(value)); }}>
                                     <SelectTrigger className="h-8 w-[70px]"><SelectValue placeholder={rowsPerPage} /></SelectTrigger>
                                     <SelectContent side="top">
-                                        {[5, 20, 50, 100].map((pageSize) => (<SelectItem key={pageSize} value={`${pageSize}`}>{pageSize}</SelectItem>))}
+                                        {[10, 25, 50, 100].map((pageSize) => (<SelectItem key={pageSize} value={`${pageSize}`}>{pageSize}</SelectItem>))}
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -233,9 +279,9 @@ export default function OutOfStockManagementPage() {
                  <Dialog open={isReturnDialogOpen} onOpenChange={setReturnDialogOpen}>
                     <DialogContent>
                         <DialogHeader>
-                            <DialogTitle>Confirm Return to Product</DialogTitle>
+                            <DialogTitle>Confirm Report & Remove</DialogTitle>
                             <DialogDescription>
-                                Are you sure you want to remove order <span className="font-bold">{selectedOrder?.reference}</span>? This action cannot be undone and the order will need to be re-uploaded if this was a mistake.
+                                Are you sure you want to report and remove order <span className="font-bold">{selectedOrder?.reference}</span>? This action cannot be undone and the order will need to be re-uploaded if this was a mistake.
                             </DialogDescription>
                         </DialogHeader>
                         <DialogFooter>
@@ -252,5 +298,3 @@ export default function OutOfStockManagementPage() {
         </MainLayout>
     );
 }
-
-    
