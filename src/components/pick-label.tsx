@@ -33,11 +33,14 @@ export const PickLabel: React.FC<{ order: OrderInfo }> = ({ order }) => {
             boxSizing: 'border-box',
             textAlign: 'center',
         }}>
-            <h1 style={{ fontSize: '18pt', fontWeight: 'bold', margin: '0 0 10px 0' }}>
+            <h1 style={{ fontSize: '18pt', fontWeight: 'bold', margin: '0 0 5px 0' }}>
                 PICKING LIST
             </h1>
-            <p style={{ fontSize: '14pt', margin: '0 0 20px 0', fontWeight: 'bold' }}>
-                FLOOR F01
+            <p style={{ fontSize: '14pt', margin: '0 0 5px 0', fontWeight: 'bold', border: '2px solid red', padding: '2px 8px' }}>
+                {order.location}
+            </p>
+             <p style={{ fontSize: '12pt', margin: '0 0 20px 0', fontWeight: 'bold' }}>
+                {order.from}
             </p>
             
             <div style={{ marginBottom: '20px' }}>
@@ -56,12 +59,6 @@ export const PickLabel: React.FC<{ order: OrderInfo }> = ({ order }) => {
                  <p style={{ fontSize: '16pt', fontWeight: 'bold', margin: '5px 0 0 0', letterSpacing: '2px' }}>
                     #{order.order_reference}
                 </p>
-            </div>
-
-            <div style={{ marginTop: 'auto', paddingTop: '20px', width: '100%', borderTop: '2px dashed #ccc' }}>
-                <p style={{ margin: 0 }}>PT Sociolla Ritel Indonesia</p>
-                <p style={{ margin: 0 }}>E-mail: cs@sociolla.com</p>
-                <p style={{ margin: 0 }}>Web: www.sociolla.com</p>
             </div>
         </div>
     );
