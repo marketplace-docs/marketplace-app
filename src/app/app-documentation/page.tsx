@@ -91,11 +91,11 @@ const featureDescriptions: FeatureDescription[] = [
         ]
     },
      {
-        label: "Master Product",
-        icon: NAV_LINKS.find(l => l.label === "Master Product")!.icon,
+        label: "Batch Product",
+        icon: NAV_LINKS.find(l => l.label === "Batch Product")!.icon,
         description: "Pusat data untuk semua informasi terkait produk, stok, dan lokasi gudang.",
         children: [
-            { label: "Batch Product", description: "Menampilkan data stok terkini yang diagregasi per batch (berdasarkan lokasi & tanggal kedaluwarsa)." },
+            { label: "Product Stock", description: "Menampilkan data stok terkini yang diagregasi per batch (berdasarkan lokasi & tanggal kedaluwarsa)." },
             { label: "Stock Log", description: "Menampilkan riwayat lengkap semua pergerakan stok (masuk, keluar, dan pembaruan internal)." },
             { label: "Location", description: "Mengelola data master semua lokasi gudang. Mendukung penambahan massal via upload CSV." },
         ]
@@ -108,7 +108,6 @@ const featureDescriptions: FeatureDescription[] = [
             { label: "Transfer From Warehouse", description: "Memindahkan stok dari satu lokasi penyimpanan ke lokasi lain di dalam gudang." },
             { label: "Transfer From B2B", description: "Mentransfer stok yang dialokasikan untuk B2B ke lokasi lain." },
             { label: "Transfer From B2C", description: "Mentransfer stok yang dialokasikan untuk B2C (jual umum) ke lokasi lain." },
-            { label: "Transfer From Vendor", description: "Mencatat pergerakan barang dua arah dengan vendor, baik barang masuk (IN) maupun barang keluar (OUT)." },
             { label: "Monitoring", description: "Melihat riwayat lengkap semua transaksi internal transfer yang pernah terjadi." },
         ]
     },
