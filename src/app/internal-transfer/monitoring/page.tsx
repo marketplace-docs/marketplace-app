@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -12,9 +13,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { ProductOutDocument } from '@/types/product-out-document';
-import type { InboundDocument } from '@/types/inbound-document';
-
-type TransferDocument = (ProductOutDocument & { doc_type: 'product_out' }) | (InboundDocument & { doc_type: 'inbound' });
 
 const transferStatuses = [
     'Issue - Internal Transfer',
@@ -24,7 +22,6 @@ const transferStatuses = [
     'Receipt - Internal Transfer In to B2B',
     'Issue - Internal Transfer out B2C',
     'Receipt - Internal Transfer In to B2C',
-    'Receipt - Inbound',
 ];
 
 const getStatusType = (status: string) => {
@@ -34,7 +31,7 @@ const getStatusType = (status: string) => {
 }
 
 export default function InternalTransferMonitoringPage() {
-    const [documents, setDocuments] = useState<TransferDocument[]>([]);
+    const [documents, setDocuments] = useState<ProductOutDocument[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -46,28 +43,16 @@ export default function InternalTransferMonitoringPage() {
         setLoading(true);
         setError(null);
         try {
-            const [productOutRes, inboundRes] = await Promise.all([
-                fetch('/api/product-out-documents'),
-                fetch('/api/inbound-documents')
-            ]);
-            
+            const productOutRes = await fetch('/api/product-out-documents');
             if (!productOutRes.ok) throw new Error('Failed to fetch product out documents');
-            if (!inboundRes.ok) throw new Error('Failed to fetch inbound documents');
             
             const productOutData: ProductOutDocument[] = await productOutRes.json();
-            const inboundData: InboundDocument[] = await inboundRes.json();
 
             const productOutTransfers = productOutData
                 .filter(doc => transferStatuses.includes(doc.status))
-                .map(doc => ({...doc, doc_type: 'product_out' as const }));
-
-            const vendorTransfers = inboundData
-                .filter(doc => doc.reference.startsWith('DOC-TRSF-VNR-'))
-                .map(doc => ({ ...doc, status: 'Receipt - Inbound', doc_type: 'inbound' as const, location: 'Staging Area Inbound' }));
-
-            const combinedData = [...productOutTransfers, ...vendorTransfers].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
             
-            setDocuments(combinedData);
+            setDocuments(productOutTransfers);
 
         } catch (err: any) {
             setError(err.message);
@@ -120,7 +105,7 @@ export default function InternalTransferMonitoringPage() {
                         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                             <div className="flex-1">
                                 <CardTitle>Transfer History</CardTitle>
-                                <CardDescription>A log of all internal stock movements, including from vendors.</CardDescription>
+                                <CardDescription>A log of all internal stock movements.</CardDescription>
                             </div>
                              <div className="flex w-full md:w-auto items-center gap-2">
                                 <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -167,10 +152,10 @@ export default function InternalTransferMonitoringPage() {
                                         </TableRow>
                                     ) : paginatedData.length > 0 ? (
                                         paginatedData.map((doc) => (
-                                            <TableRow key={`${doc.id}-${doc.doc_type}`}>
+                                            <TableRow key={doc.id}>
                                                 <TableCell>{format(new Date(doc.date), 'dd/MM/yyyy HH:mm')}</TableCell>
                                                 <TableCell className="font-medium">
-                                                    {'nodocument' in doc ? doc.nodocument : doc.reference}
+                                                    {doc.nodocument}
                                                 </TableCell>
                                                 <TableCell>{doc.sku}</TableCell>
                                                 <TableCell>{doc.barcode}</TableCell>
@@ -184,7 +169,7 @@ export default function InternalTransferMonitoringPage() {
                                                 </TableCell>
                                                 <TableCell>
                                                     <Badge variant="secondary">
-                                                        {'main_status' in doc ? doc.main_status : doc.status}
+                                                        {doc.status}
                                                     </Badge>
                                                 </TableCell>
                                             </TableRow>

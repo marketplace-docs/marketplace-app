@@ -57,6 +57,11 @@ export const NAV_LINKS: NavLink[] = [
                 label: 'Task',
                 icon: ListTodo,
             },
+             {
+                href: '/internal-transfer/from-vendor',
+                label: 'Transfer From Vendor',
+                icon: Store,
+            },
         ]
     },
     {
@@ -228,11 +233,6 @@ export const NAV_LINKS: NavLink[] = [
                 href: '/internal-transfer/from-b2c',
                 label: 'Transfer From B2C',
                 icon: Users,
-            },
-            {
-                href: '/internal-transfer/from-vendor',
-                label: 'Transfer From Vendor',
-                icon: Store,
             },
             {
                 href: '/internal-transfer/monitoring',
