@@ -13,6 +13,7 @@ import {
   ChevronDown,
   CheckCircle2,
   ClipboardList,
+  User,
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -32,8 +33,7 @@ const DocumentCard = ({ document: inboundDoc, allProductOutDocs }: { document: I
             pd.nodocument === inboundDoc.reference &&
             pd.sku === inboundDoc.sku &&
             pd.barcode === inboundDoc.barcode &&
-            new Date(pd.expdate).toISOString().split('T')[0] === new Date(inboundDoc.exp_date).toISOString().split('T')[0] &&
-            (pd.status === 'Issue - Putaway' || pd.status === 'Receipt - Putaway')
+            new Date(pd.exp_date).toISOString().split('T')[0] === new Date(inboundDoc.exp_date).toISOString().split('T')[0]
         );
     }, [allProductOutDocs, inboundDoc]);
 
@@ -48,6 +48,11 @@ const DocumentCard = ({ document: inboundDoc, allProductOutDocs }: { document: I
         if (totalPutawayQty > 0) return 'In Progress';
         return 'Assign';
     }, [totalPutawayQty, inboundDoc.qty]);
+    
+    const putawayByUser = useMemo(() => {
+        const putawayReceipt = relatedPutaways.find(pd => pd.status === 'Receipt - Putaway');
+        return putawayReceipt?.validatedby || null;
+    }, [relatedPutaways]);
 
     const isDone = currentStatus === 'Done';
 
@@ -71,13 +76,19 @@ const DocumentCard = ({ document: inboundDoc, allProductOutDocs }: { document: I
                 isDone ? "bg-green-50 border-green-200" : "bg-yellow-50 border-yellow-200"
             )}>
                 <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-3">
-                        {isDone ? <CheckCircle2 className="h-6 w-6 text-green-600" /> : <ClipboardList className="h-6 w-6 text-yellow-600" />}
+                    <div className="flex items-start gap-3">
+                        {isDone ? <CheckCircle2 className="h-6 w-6 text-green-600 mt-1" /> : <ClipboardList className="h-6 w-6 text-yellow-600 mt-1" />}
                         <div>
                             <p className={cn("font-semibold", isDone ? "text-green-800" : "text-yellow-800")}>{inboundDoc.reference}</p>
                             <p className={cn("text-xs", isDone ? "text-green-700" : "text-yellow-700")}>
                                 {inboundDoc.reference.startsWith('DOC-TRSF-VNR-') ? 'Vendor Transfer Document' : 'Receipt Inbound Document'}
                             </p>
+                            {putawayByUser && (
+                                <p className={cn("text-xs flex items-center gap-1 mt-1", isDone ? "text-green-700" : "text-yellow-700")}>
+                                    <User className="h-3 w-3" />
+                                    Putaway by: <span className="font-medium">{putawayByUser}</span>
+                                </p>
+                            )}
                         </div>
                     </div>
                     <div className="text-right text-xs text-muted-foreground">
