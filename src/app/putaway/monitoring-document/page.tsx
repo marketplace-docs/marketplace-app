@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
@@ -28,9 +27,15 @@ import { cn } from '@/lib/utils';
 const DocumentCard = ({ document: inboundDoc, allProductOutDocs }: { document: InboundDocument; allProductOutDocs: ProductOutDocument[] }) => {
     const [isExpanded, setIsExpanded] = useState(false);
 
-    const relatedPutaways = useMemo(() => 
-        (allProductOutDocs || []).filter(pd => pd.nodocument === inboundDoc.reference && (pd.status === 'Issue - Putaway' || pd.status === 'Receipt - Putaway'))
-    , [allProductOutDocs, inboundDoc.reference]);
+    const relatedPutaways = useMemo(() => {
+        return (allProductOutDocs || []).filter(pd => 
+            pd.nodocument === inboundDoc.reference &&
+            pd.sku === inboundDoc.sku &&
+            pd.barcode === inboundDoc.barcode &&
+            new Date(pd.expdate).toISOString().split('T')[0] === new Date(inboundDoc.exp_date).toISOString().split('T')[0] &&
+            (pd.status === 'Issue - Putaway' || pd.status === 'Receipt - Putaway')
+        );
+    }, [allProductOutDocs, inboundDoc]);
 
     const totalPutawayQty = useMemo(() => 
         relatedPutaways
@@ -226,7 +231,7 @@ export default function MonitoringPutawayPage() {
                     <CardHeader>
                         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                             <div>
-                                <CardTitle>Putaway Tasks &amp; History</CardTitle>
+                                <CardTitle>Putaway Tasks & History</CardTitle>
                                 <CardDescription>A log of all items that are pending or have been put away.</CardDescription>
                             </div>
                             <div className="w-full md:w-auto">
