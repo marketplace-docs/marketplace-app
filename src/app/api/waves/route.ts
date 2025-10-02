@@ -7,8 +7,9 @@ import { NextResponse } from 'next/server';
 import { logActivity } from '@/lib/logger';
 import { format } from 'date-fns';
 
-async function generateWaveDocumentNumber(): Promise<string> {
-    const prefix = `WV-MP`;
+async function generateWaveDocumentNumber(waveType: 'Bulk' | 'Mix'): Promise<string> {
+    const year = new Date().getFullYear();
+    const prefix = waveType === 'Bulk' ? `WV-MP-BULK-${year}` : `WV-MP-${year}`;
 
     const { data, error } = await supabaseService
         .from('waves')
@@ -62,7 +63,7 @@ export async function POST(request: Request) {
             }
         }
         
-        const waveDocumentNumber = await generateWaveDocumentNumber();
+        const waveDocumentNumber = await generateWaveDocumentNumber(waveType);
 
         // 2. Create the wave entry
         const { data: waveData, error: waveError } = await supabaseService
@@ -127,7 +128,7 @@ export async function POST(request: Request) {
             userName: user.name,
             userEmail: user.email,
             action: 'CREATE_WAVE',
-            details: `Created wave ${waveDocumentNumber} with ${dbOrders.length} orders.`,
+            details: `Created ${waveType} wave ${waveDocumentNumber} with ${dbOrders.length} orders.`,
         });
 
         return NextResponse.json({ message: 'Wave created successfully', wave: waveData }, { status: 201 });

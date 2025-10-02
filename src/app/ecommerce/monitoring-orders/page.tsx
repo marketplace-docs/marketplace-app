@@ -250,7 +250,9 @@ function MonitoringOrdersContent() {
     };
     
     const handlePrintWave = async (wave: Wave) => {
-        const url = `/ecommerce/monitoring-orders/print-wave?waveId=${wave.id}`;
+        const url = wave.wave_type === 'Bulk' 
+            ? `/ecommerce/monitoring-orders/print-wave?waveId=${wave.id}`
+            : `/ecommerce/monitoring-orders/print?waveId=${wave.id}`; // Mix wave prints all order labels
         window.open(url, '_blank');
     };
 

@@ -348,6 +348,11 @@ export default function MyOrdersPage() {
         }
 
         setIsSubmitting(true);
+        
+        // Determine wave type
+        const firstSku = selectedOrdersFull[0]?.sku;
+        const isBulkWave = selectedOrdersFull.every(order => order.sku === firstSku);
+        const waveType = isBulkWave ? 'Bulk' : 'Mix';
 
         try {
             const response = await fetch('/api/waves', {
@@ -356,7 +361,7 @@ export default function MyOrdersPage() {
                 body: JSON.stringify({
                     orderReferences: selectedOrderRefs,
                     user,
-                    waveType: "Manual"
+                    waveType: waveType
                 }),
             });
 
@@ -560,11 +565,11 @@ export default function MyOrdersPage() {
                         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                            <div className="flex items-center gap-8">
                                <div className="flex items-center space-x-2">
-                                    <Label htmlFor="oos-mode">OOS Mode</Label>
+                                    <Label htmlFor="oos-mode">Filter OOS</Label>
                                     <Switch id="oos-mode" checked={isOosMode} onCheckedChange={setIsOosMode} />
                                 </div>
                                 <div className="flex items-center space-x-2">
-                                    <Label htmlFor="bulk-mode">Bulk Mode</Label>
+                                    <Label htmlFor="bulk-mode">Filter SKU Sama</Label>
                                     <Switch id="bulk-mode" checked={isBulkMode} onCheckedChange={setIsBulkMode} />
                                 </div>
                            </div>
