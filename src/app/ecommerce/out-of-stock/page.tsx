@@ -1,11 +1,10 @@
 
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, ChevronLeft, ChevronRight, PackageSearch, AlertCircle, Send, Undo2, ChevronDown } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight, PackageSearch, AlertCircle, Send, Undo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -21,19 +20,38 @@ import { format } from 'date-fns';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
-const OosOrderItem = ({ order, allBatches, onSendToPacking, onReturnToProduct }: { order: Order, allBatches: BatchProduct[], onSendToPacking: (order: Order, selectedBatchId: string) => void, onReturnToProduct: (order: Order) => void }) => {
+const OosOrderItem = ({ order, allBatches, onSendToPacking, onReportToCs }: { order: Order, allBatches: BatchProduct[], onSendToPacking: (order: Order, selectedBatch: BatchProduct, qty: number) => void, onReportToCs: (order: Order) => void }) => {
     const [selectedBatchId, setSelectedBatchId] = useState<string | undefined>();
-    
+    const [qtyToSend, setQtyToSend] = useState<string>('');
+
     const availableBatches = useMemo(() => {
         return allBatches.filter(b => b.sku === order.sku && b.stock > 0);
     }, [allBatches, order.sku]);
 
+    const selectedBatch = availableBatches.find(b => b.id === selectedBatchId);
+    
+    useEffect(() => {
+        if (selectedBatch) {
+            setQtyToSend(Math.min(order.qty, selectedBatch.stock).toString());
+        }
+    }, [selectedBatch, order.qty]);
+
+
     const handleSendClick = () => {
-        if (!selectedBatchId) {
+        if (!selectedBatch) {
             alert('Please select a location to source the stock from.');
             return;
         }
-        onSendToPacking(order, selectedBatchId);
+        const qty = parseInt(qtyToSend, 10);
+        if (isNaN(qty) || qty <= 0) {
+            alert('Please enter a valid quantity to send.');
+            return;
+        }
+        if (qty > selectedBatch.stock) {
+            alert(`Quantity to send cannot exceed available stock (${selectedBatch.stock}) at the selected location.`);
+            return;
+        }
+        onSendToPacking(order, selectedBatch, qty);
     }
 
     return (
@@ -44,13 +62,12 @@ const OosOrderItem = ({ order, allBatches, onSendToPacking, onReturnToProduct }:
                         <p className="font-mono font-bold text-primary text-lg"># {order.reference}</p>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                             <span>[{order.sku}]</span>
-                            <span>{order.barcode}</span>
                             <Badge variant="destructive">OOS</Badge>
                         </div>
                     </div>
                      <div className="text-right text-xs text-muted-foreground flex-shrink-0">
                         <p>{format(new Date(order.order_date), 'EEE, dd/MMM/yyyy HH:mm')}</p>
-                        <p>Qty: <span className="font-bold">{order.qty}</span></p>
+                        <p>Required Qty: <span className="font-bold">{order.qty}</span></p>
                     </div>
                 </div>
             </AccordionTrigger>
@@ -69,7 +86,7 @@ const OosOrderItem = ({ order, allBatches, onSendToPacking, onReturnToProduct }:
                                                 <p className="text-xs text-muted-foreground">EXP: {format(new Date(batch.exp_date), 'dd/MM/yyyy')}</p>
                                             </div>
                                         </div>
-                                        <Badge variant={batch.stock >= order.qty ? "default" : "destructive"}>Stock: {batch.stock}</Badge>
+                                        <Badge variant={batch.stock >= order.qty ? 'default' : 'destructive'}>Stock: {batch.stock}</Badge>
                                     </Label>
                                 ))}
                             </RadioGroup>
@@ -79,14 +96,23 @@ const OosOrderItem = ({ order, allBatches, onSendToPacking, onReturnToProduct }:
                     </div>
                     <div className="flex flex-col justify-between items-end">
                          <div className="flex items-center gap-2">
-                            <Input type="number" defaultValue={0} readOnly className="w-20 text-center font-bold" />
+                            <Label htmlFor={`qty-${order.id}`}>Qty to Pack:</Label>
+                            <Input 
+                                id={`qty-${order.id}`}
+                                type="number" 
+                                value={qtyToSend}
+                                onChange={(e) => setQtyToSend(e.target.value)}
+                                className="w-20 text-center font-bold" 
+                                max={selectedBatch?.stock}
+                                min={1}
+                            />
                             <span>/ {order.qty}</span>
                         </div>
                         <div className="flex items-center gap-2 mt-4">
-                           <Button size="sm" variant="outline" onClick={() => onReturnToProduct(order)}>
+                           <Button size="sm" variant="outline" onClick={() => onReportToCs(order)}>
                                 <Undo2 className="mr-2 h-4 w-4" /> Report to CS & Remove
                             </Button>
-                             <Button size="sm" variant="default" onClick={handleSendClick} disabled={!selectedBatchId}>
+                             <Button size="sm" variant="default" onClick={handleSendClick} disabled={!selectedBatchId || !qtyToSend}>
                                 <Send className="mr-2 h-4 w-4" /> Send to Packing
                             </Button>
                         </div>
@@ -108,7 +134,7 @@ export default function OutOfStockManagementPage() {
     
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-    const [isReturnDialogOpen, setReturnDialogOpen] = useState(false);
+    const [isReportDialogOpen, setReportDialogOpen] = useState(false);
 
     const { user } = useAuth();
     const { toast } = useToast();
@@ -168,20 +194,8 @@ export default function OutOfStockManagementPage() {
     const handleNextPage = () => setCurrentPage((prev) => (prev < totalPages ? prev + 1 : prev));
     const handlePrevPage = () => setCurrentPage((prev) => (prev > 1 ? prev - 1 : prev));
     
-    const handleSendToPacking = async (order: Order, selectedBatchId: string) => {
+    const handleSendToPacking = async (order: Order, selectedBatch: BatchProduct, qty: number) => {
         if (!user || !canManage) return;
-
-        const selectedBatch = allBatches.find(b => b.id === selectedBatchId);
-
-        if (!selectedBatch) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Selected stock location not found.' });
-            return;
-        }
-
-        if (selectedBatch.stock < order.qty) {
-            toast({ variant: 'destructive', title: 'Insufficient Stock', description: `Stock at ${selectedBatch.location} is only ${selectedBatch.stock}, but order requires ${order.qty}.` });
-            return;
-        }
 
         setIsSubmitting(true);
         try {
@@ -189,18 +203,19 @@ export default function OutOfStockManagementPage() {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
-                    status: 'Payment Accepted',
-                    location: selectedBatch.location, // Update the location
+                    action: 'send_to_packing_from_oos',
+                    selectedBatch: selectedBatch,
+                    qty,
                     user 
                 })
             });
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to update order status');
+                throw new Error(errorData.error || 'Failed to process order.');
             }
             
-            toast({ title: "Success", description: "Order has been sent back to My Orders for packing from the new location." });
+            toast({ title: "Success", description: "Order processed and sent to packing. Ready to be handled at the Outbound station." });
             await fetchData();
 
         } catch (error: any) {
@@ -210,10 +225,16 @@ export default function OutOfStockManagementPage() {
         }
     };
     
-    const handleReturnToProduct = async () => {
+    const handleReportToCs = async () => {
         if (!selectedOrder || !user || !canManage) return;
         setIsSubmitting(true);
         try {
+            // This will trigger the email client
+            const subject = `Out of Stock Report for Order: ${selectedOrder.reference}`;
+            const body = `Hi CS Team,\n\nPlease be advised that the following order is currently out of stock and has been removed from the wave creation list:\n\nOrder Reference: ${selectedOrder.reference}\nSKU: ${selectedOrder.sku}\nQuantity: ${selectedOrder.qty}\nCustomer: ${selectedOrder.customer}\n\nPlease take the necessary action.\n\nThanks,\n${user?.name || 'Warehouse Team'}`;
+            window.location.href = `mailto:project.teamedit@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+            // After email is triggered, delete the order from the database
             const response = await fetch(`/api/manual-orders/${selectedOrder.id}`, {
                 method: 'DELETE',
                 headers: {
@@ -225,11 +246,11 @@ export default function OutOfStockManagementPage() {
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to remove the order.');
+                throw new Error(errorData.error || 'Failed to remove the order after reporting.');
             }
 
-            toast({ title: "Order Removed", description: "The out of stock order has been removed.", variant: 'destructive' });
-            setReturnDialogOpen(false);
+            toast({ title: "Order Reported & Removed", description: "The OOS order has been removed." });
+            setReportDialogOpen(false);
             await fetchData();
 
         } catch (error: any) {
@@ -278,7 +299,7 @@ export default function OutOfStockManagementPage() {
                                        order={order} 
                                        allBatches={allBatches}
                                        onSendToPacking={handleSendToPacking}
-                                       onReturnToProduct={() => { setSelectedOrder(order); setReturnDialogOpen(true); }}
+                                       onReportToCs={() => { setSelectedOrder(order); setReportDialogOpen(true); }}
                                    />
                                ))}
                            </Accordion>
@@ -309,19 +330,19 @@ export default function OutOfStockManagementPage() {
                     </CardContent>
                 </Card>
 
-                 <Dialog open={isReturnDialogOpen} onOpenChange={setReturnDialogOpen}>
+                 <Dialog open={isReportDialogOpen} onOpenChange={setReportDialogOpen}>
                     <DialogContent>
                         <DialogHeader>
                             <DialogTitle>Confirm Report & Remove</DialogTitle>
                             <DialogDescription>
-                                Are you sure you want to report and remove order <span className="font-bold">{selectedOrder?.reference}</span>? This action cannot be undone and the order will need to be re-uploaded if this was a mistake.
+                                This will open your email client to report the OOS to CS. After reporting, the order will be permanently removed. Are you sure you want to proceed with removing order <span className="font-bold">{selectedOrder?.reference}</span>?
                             </DialogDescription>
                         </DialogHeader>
                         <DialogFooter>
-                            <Button variant="outline" onClick={() => setReturnDialogOpen(false)}>Cancel</Button>
-                            <Button variant="destructive" onClick={handleReturnToProduct} disabled={isSubmitting}>
+                            <Button variant="outline" onClick={() => setReportDialogOpen(false)}>Cancel</Button>
+                            <Button variant="destructive" onClick={handleReportToCs} disabled={isSubmitting}>
                                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Yes, Remove Order
+                                Yes, Report & Remove Order
                             </Button>
                         </DialogFooter>
                     </DialogContent>
