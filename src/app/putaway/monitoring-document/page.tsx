@@ -30,16 +30,23 @@ const DocumentCard = ({ document: inboundDoc, allProductOutDocs }: { document: I
     const [isExpanded, setIsExpanded] = useState(false);
 
     const relatedPutaways = useMemo(() => {
-        return (allProductOutDocs || []).filter(pd => {
-            const isRelated = pd.nodocument === inboundDoc.reference &&
-                pd.sku === inboundDoc.sku &&
-                pd.barcode === inboundDoc.barcode;
+      return (allProductOutDocs || []).filter(pd => {
+          const isPdDateValid = pd.expdate && !isNaN(new Date(pd.expdate).getTime());
+          const isDocDateValid = inboundDoc.exp_date && !isNaN(new Date(inboundDoc.exp_date).getTime());
 
-            if (!isRelated) return false;
-            
-            // Only show the actual putaway movement transactions
-            return pd.status === 'Issue - Putaway' || pd.status === 'Receipt - Putaway';
-        });
+          if (!isPdDateValid || !isDocDateValid) {
+              return false;
+          }
+
+          const isRelated = pd.nodocument === inboundDoc.reference &&
+              pd.sku === inboundDoc.sku &&
+              pd.barcode === inboundDoc.barcode &&
+              new Date(pd.expdate).toISOString().split('T')[0] === new Date(inboundDoc.exp_date).toISOString().split('T')[0];
+
+          if (!isRelated) return false;
+          
+          return pd.status === 'Issue - Putaway' || pd.status === 'Receipt - Putaway';
+      });
     }, [allProductOutDocs, inboundDoc]);
 
     const totalPutawayQty = useMemo(() => 
