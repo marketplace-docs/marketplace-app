@@ -73,6 +73,10 @@ export default function MyOrdersPage() {
     
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
+    
+    const [isOosMode, setIsOosMode] = useState(false);
+    const [isBulkMode, setIsBulkMode] = useState(false);
+
 
     const defaultNewOrderState: Partial<NewOrder> = {
       qty: 1,
@@ -126,7 +130,6 @@ export default function MyOrdersPage() {
                 }
                 const current = acc.get(product.sku)!;
                 current.total += product.stock;
-                // Simple logic: get the first location. Could be improved if needed.
                 if (current.location === 'N/A' && product.stock > 0) {
                   current.location = product.location;
                 }
@@ -144,7 +147,6 @@ export default function MyOrdersPage() {
             });
 
             setAllOrders(ordersWithStatus);
-            setFilteredOrders(ordersWithStatus);
             
             const fromSet = new Set(ordersWithStatus.map(order => order.from));
             setUniqueFromOptions(Array.from(fromSet));
@@ -160,6 +162,27 @@ export default function MyOrdersPage() {
     useEffect(() => {
         fetchOrders();
     }, [fetchOrders]);
+    
+    useEffect(() => {
+        let tempOrders = [...allOrders];
+
+        // Apply OOS Mode filter first
+        if (isOosMode) {
+            tempOrders = tempOrders.filter(order => order.status === 'Out of Stock');
+        }
+
+        // Apply Bulk Mode filter
+        if (isBulkMode) {
+            const skuCounts = tempOrders.reduce((acc, order) => {
+                acc[order.sku] = (acc[order.sku] || 0) + 1;
+                return acc;
+            }, {} as Record<string, number>);
+            const bulkSkus = Object.keys(skuCounts).filter(sku => skuCounts[sku] > 1);
+            tempOrders = tempOrders.filter(order => bulkSkus.includes(order.sku));
+        }
+
+        setFilteredOrders(tempOrders);
+    }, [allOrders, isOosMode, isBulkMode]);
     
     const handleFilterChange = (name: keyof Filters, value: any) => {
         setFilters(prev => ({ ...prev, [name]: value }));
@@ -203,6 +226,8 @@ export default function MyOrdersPage() {
             reference: '', customer: '', orderType: '', from: '', sku: '', qty: '',
             deliveryType: '', dateRange: undefined, reserved: false, ecobox: false
         });
+        setIsOosMode(false);
+        setIsBulkMode(false);
         setFilteredOrders(allOrders);
     };
     
@@ -530,8 +555,14 @@ export default function MyOrdersPage() {
                     <CardContent className="p-4">
                         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                            <div className="flex items-center gap-8">
-                                <div className="flex items-center space-x-2"><Label htmlFor="aisle-mode">Aisle Mode</Label><Switch id="aisle-mode" /></div>
-                                <div className="flex items-center space-x-2"><Label htmlFor="bulk-mode">Bulk Mode</Label><Switch id="bulk-mode" /></div>
+                               <div className="flex items-center space-x-2">
+                                    <Label htmlFor="oos-mode">OOS Mode</Label>
+                                    <Switch id="oos-mode" checked={isOosMode} onCheckedChange={setIsOosMode} />
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <Label htmlFor="bulk-mode">Bulk Mode</Label>
+                                    <Switch id="bulk-mode" checked={isBulkMode} onCheckedChange={setIsBulkMode} />
+                                </div>
                            </div>
                             <div className="flex-1 w-full border-t sm:border-t-0 sm:border-l sm:pl-4 sm:ml-4 flex items-center justify-between">
                                 <div className="flex items-center gap-2">
