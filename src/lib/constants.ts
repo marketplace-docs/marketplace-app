@@ -194,7 +194,7 @@ export const NAV_LINKS: NavLink[] = [
     },
     {
         href: '/master-product',
-        label: 'Master Product',
+        label: 'Batch Product',
         icon: Package,
         children: [
              {
