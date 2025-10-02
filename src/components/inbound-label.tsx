@@ -38,7 +38,7 @@ export const InboundLabel: React.FC<{ document: InboundPrintData }> = ({ documen
                         displayValue={false}
                         margin={0}
                     />
-                    <div style={{ marginTop: '5px' }}>
+                    <div style={{ marginTop: '5mm' }}>
                       <QRCode value={doc.reference} size={80} level="M" />
                     </div>
                 </div>
