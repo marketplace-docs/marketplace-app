@@ -1,3 +1,4 @@
+
 'use server';
 
 import { supabaseService } from '@/lib/supabase-service';
@@ -90,12 +91,14 @@ export async function POST(request: Request) {
   
   const docsToInsert = [];
   for (const doc of documents) {
-      if (!doc.expdate) {
+      if (!doc.expdate && doc.status !== 'Issue - Order') { // Issue - Order may not have expdate initially if FEFO is used
           throw new Error(`Expiration date (expdate) is missing for SKU: ${doc.sku}`);
       }
 
-      // Prioritize existing reference, otherwise generate a new one.
-      const finalDocNumber = doc.order_reference || doc.nodocument || await generateNewDocumentNumber(doc.status);
+      // If it's an Issue-Order, the order_reference is the definitive doc number
+      const finalDocNumber = doc.status === 'Issue - Order' && doc.order_reference 
+          ? doc.order_reference 
+          : (doc.nodocument || await generateNewDocumentNumber(doc.status));
       
       const { data: productData } = await supabaseService
           .from('master_products')
@@ -114,7 +117,7 @@ export async function POST(request: Request) {
           date: doc.date,
           validatedby: doc.validatedby,
           expdate: doc.expdate,
-          order_reference: finalDocNumber, // Ensure this is always populated for traceability
+          order_reference: doc.order_reference || finalDocNumber, // Ensure this is always populated for traceability
       });
   }
 

@@ -9,6 +9,7 @@ type ProductOutDocument = {
     id: string;
     date: string;
     nodocument: string;
+    order_reference: string;
     sku: string;
     barcode: string;
     location: string;
@@ -57,7 +58,7 @@ export async function GET() {
         const [docsRes, productsRes] = await Promise.all([
             supabaseService
                 .from('product_out_documents')
-                .select('id, date, nodocument, sku, barcode, location, qty, status, validatedby')
+                .select('id, date, nodocument, order_reference, sku, barcode, location, qty, status, validatedby')
                 .order('date', { ascending: false }),
             supabaseService.from('master_products').select('sku, name')
         ]);
