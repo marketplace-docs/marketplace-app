@@ -110,7 +110,7 @@ export function AppSidebar() {
           <SidebarMenuItem key={`${link.href}-${link.label}`}>
             {link.children ? (
               <Collapsible open={openSubmenu === link.label} onOpenChange={() => handleSubmenuToggle(link.label)}>
-                <CollapsibleTrigger asChild>
+                <CollapsibleTrigger asChild className="group">
                    <SidebarMenuButton
                     isActive={isActive(link)}
                     tooltip={{
@@ -124,7 +124,7 @@ export function AppSidebar() {
                       <link.icon className="h-5 w-5" />
                       <span>{link.label}</span>
                     </span>
-                    <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 data-[state=open]:rotate-180 group-data-[collapsible=icon]:hidden" />
+                    <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180 group-data-[collapsible=icon]:hidden" />
                   </SidebarMenuButton>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
