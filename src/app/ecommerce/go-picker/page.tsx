@@ -15,6 +15,7 @@ import type { BatchProduct } from '@/types/batch-product';
 import type { Order } from '@/types/order';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { useRouter } from 'next/navigation';
 
 type PickingStep = 'scanOrder' | 'scanLocation' | 'scanProduct' | 'enterQuantity';
 
@@ -26,6 +27,7 @@ type FoundOrder = Order & {
 export default function GoPickerPage() {
     const { user } = useAuth();
     const { toast } = useToast();
+    const router = useRouter();
     
     // State for the process
     const [step, setStep] = useState<PickingStep>('scanOrder');
@@ -230,14 +232,6 @@ export default function GoPickerPage() {
                     const errorData = await issueRes.json();
                     throw new Error(errorData.error || 'Failed to create picking log document.');
                 }
-
-                const response = await fetch(`/api/waves/${foundOrder.waveId}`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'update_status', status: 'Wave Done', user }),
-                });
-
-                if (!response.ok) throw new Error('Failed to update wave status.');
                 
                 toast({ title: 'Pick Confirmed', description: `Order ${foundOrder.reference} picked and logged. Ready for packing.`});
             }
@@ -249,6 +243,7 @@ export default function GoPickerPage() {
             setScannedBarcode('');
             setPickedQty('');
             setStep('scanOrder');
+            router.push('/ecommerce/monitoring-orders');
 
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Error', description: error.message });

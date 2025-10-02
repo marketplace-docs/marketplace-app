@@ -97,22 +97,31 @@ function MonitoringOrdersContent() {
             );
 
             const wavesWithProgress = await Promise.all(wavesData.map(async (wave) => {
-                 // Fetch orders for this specific wave
                 const waveDetailsRes = await fetch(`/api/waves/${wave.id}`);
                 if (!waveDetailsRes.ok) {
                     console.warn(`Could not fetch details for wave ${wave.id}`);
-                    return { ...wave, picked_orders_count: 0, status: wave.status };
+                    return { ...wave, picked_orders_count: 0 };
                 }
                 const waveDetails = await waveDetailsRes.json();
                 const ordersInWaveRefs = new Set(waveDetails.orders.map((o: any) => o.order_reference));
 
-                // Count how many orders in this wave have been picked
                 const pickedCount = Array.from(ordersInWaveRefs).filter(ref => allPickedOrderRefs.has(ref)).length;
+
+                // Auto-update status if all orders are picked
+                if (wave.status === 'Wave Progress' && wave.total_orders > 0 && pickedCount === wave.total_orders) {
+                    if (user) {
+                        fetch(`/api/waves/${wave.id}`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'update_status', status: 'Wave Done', user })
+                        }).catch(e => console.error("Failed to auto-update wave status:", e));
+                    }
+                    return { ...wave, picked_orders_count: pickedCount, status: 'Wave Done' as WaveStatus };
+                }
 
                 return {
                     ...wave,
                     picked_orders_count: pickedCount,
-                    status: (wave.total_orders > 0 && pickedCount === wave.total_orders) ? 'Wave Done' : 'Wave Progress',
                 };
             }));
             
@@ -123,7 +132,7 @@ function MonitoringOrdersContent() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [user]);
 
 
     useEffect(() => {
@@ -455,7 +464,7 @@ function MonitoringOrdersContent() {
                                         <SelectValue placeholder={rowsPerPage} />
                                     </SelectTrigger>
                                     <SelectContent side="top">
-                                        {[5, 20, 50, 100].map((pageSize) => (
+                                        {[10, 25, 50, 100].map((pageSize) => (
                                         <SelectItem key={pageSize} value={`${pageSize}`}>
                                             {pageSize}
                                         </SelectItem>
