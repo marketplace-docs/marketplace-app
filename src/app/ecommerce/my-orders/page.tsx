@@ -87,6 +87,8 @@ export default function MyOrdersPage() {
       address: 'Jln. Testing Order, No.Blok A 92, 28, Tangerang Selatan, 15677',
       phone: '08956103267566',
       delivery_type: 'Regular',
+      type: "Shopee",
+      from: "Shopee",
     };
     
     const [newOrder, setNewOrder] = useState<Partial<NewOrder>>(defaultNewOrderState);
@@ -277,6 +279,7 @@ export default function MyOrdersPage() {
       setIsSubmitting(true);
       try {
         const payload = {
+          ...defaultNewOrderState,
           ...newOrder,
           order_date: new Date().toISOString()
         }
@@ -583,22 +586,6 @@ export default function MyOrdersPage() {
                                                  <div className="grid grid-cols-4 items-center gap-4">
                                                     <Label htmlFor="sku" className="text-right">SKU</Label>
                                                     <Input id="sku" value={newOrder.sku || ''} onChange={(e) => setNewOrder({...newOrder, sku: e.target.value})} className="col-span-3" />
-                                                </div>
-                                                <div className="grid grid-cols-4 items-center gap-4">
-                                                    <Label htmlFor="customer" className="text-right">Customer</Label>
-                                                    <Input id="customer" value={newOrder.customer || ''} onChange={(e) => setNewOrder({...newOrder, customer: e.target.value})} className="col-span-3" />
-                                                </div>
-                                                <div className="grid grid-cols-4 items-center gap-4">
-                                                    <Label htmlFor="type" className="text-right">Type</Label>
-                                                    <Input id="type" value={newOrder.type || ''} onChange={(e) => setNewOrder({...newOrder, type: e.target.value})} className="col-span-3" />
-                                                </div>
-                                                <div className="grid grid-cols-4 items-center gap-4">
-                                                    <Label htmlFor="from" className="text-right">From</Label>
-                                                    <Input id="from" value={newOrder.from || ''} onChange={(e) => setNewOrder({...newOrder, from: e.target.value})} className="col-span-3" />
-                                                </div>
-                                                <div className="grid grid-cols-4 items-center gap-4">
-                                                    <Label htmlFor="delivery_type" className="text-right">Delivery Type</Label>
-                                                    <Input id="delivery_type" value={newOrder.delivery_type || ''} onChange={(e) => setNewOrder({...newOrder, delivery_type: e.target.value})} className="col-span-3" />
                                                 </div>
                                                 <div className="grid grid-cols-4 items-center gap-4">
                                                     <Label htmlFor="qty" className="text-right">Qty</Label>
